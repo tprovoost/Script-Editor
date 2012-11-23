@@ -12,9 +12,9 @@ import java.net.URLDecoder;
 
 import org.xeustechnologies.jcl.JarClassLoader;
 
-import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.gui.ScriptingEditor;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
 public class ScriptEditorPlugin extends PluginActionable {
 

@@ -11,7 +11,7 @@ import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 
 public class IcyCompletionCellRenderer extends CompletionCellRenderer {
 
