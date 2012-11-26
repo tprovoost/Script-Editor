@@ -6,6 +6,5 @@
 	<classpathentry kind="lib" path="/Icy-App/icy.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/AutoComplete"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/RSyntaxTextArea"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/Script Engine Handler"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
