@@ -361,8 +361,10 @@ public class JSScriptingHandler extends ScriptingHandler {
 	list.put(offset, type);
 	localVariables.put(name, list);
     }
-    
+
     private Class<?> getVariableType(Node n, String text, int commandStartOffset, int commandEndOffset) throws ScriptException {
+	if (n == null)
+	    return null;
 	switch (n.getType()) {
 	case Token.NUMBER:
 	    return Number.class;
@@ -380,6 +382,10 @@ public class JSScriptingHandler extends ScriptingHandler {
 	case Token.NEW: {
 	    return resolveNewType(n.getFirstChild(), text, commandStartOffset, commandEndOffset);
 	}
+	case Token.GETPROP:
+	    if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.CALL)
+		return resolveCallType(n.getFirstChild(), text, commandStartOffset, commandEndOffset);
+	    return null;
 	default:
 	    return null;
 	}
@@ -520,15 +526,12 @@ public class JSScriptingHandler extends ScriptingHandler {
 			Method m = clazz.getMethod(firstCall.substring(lastDot + 1, idxP1), clazzes);
 			returnType = m.getReturnType();
 		    }
-		    // {
-		    // // String textTmp = text.substring(commandStartOffset +
-		    // // lastDot, commandEndOffset);
-		    // JSFunctionBlock jsfb = new
-		    // JSFunctionBlock(firstCall.substring(lastDot + 1, idxP1),
-		    // commandStartOffset + lastDot, commandStartOffset
-		    // + decal, returnType);
-		    // blockFunctions.add(jsfb);
-		    // }
+		    {
+			// String textTmp = text.substring(commandStartOffset +
+			// lastDot, commandEndOffset);
+			IcyFunctionBlock jsfb = new IcyFunctionBlock(firstCall.substring(0, idxP1), commandStartOffset, commandStartOffset + decal, returnType);
+			blockFunctions.add(jsfb);
+		    }
 
 		    // iterate over the next functions, based on the returnType
 		    while (match.find(decal) && !(firstCall = match.group()).isEmpty()) {
@@ -551,6 +554,8 @@ public class JSScriptingHandler extends ScriptingHandler {
 			}
 			Method m = returnType.getMethod(firstCall.substring(0, idxP1), clazzes);
 			returnType = m.getReturnType();
+			IcyFunctionBlock jsfb = new IcyFunctionBlock(firstCall.substring(0, idxP1), commandStartOffset, commandStartOffset + decal, returnType);
+			blockFunctions.add(jsfb);
 		    }
 		    return returnType;
 		} catch (ClassNotFoundException e) {

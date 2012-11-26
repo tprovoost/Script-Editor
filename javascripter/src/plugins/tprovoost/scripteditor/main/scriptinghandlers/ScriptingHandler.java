@@ -41,7 +41,6 @@ import org.fife.ui.rtextarea.RTextArea;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.gui.BindingsScriptFrame;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.Context;
 import sun.org.mozilla.javascript.internal.EvaluatorException;
@@ -95,10 +94,9 @@ public abstract class ScriptingHandler implements KeyListener {
     /** Contains all declared variables in the script AND in the engine. */
     protected HashMap<String, TreeMap<Integer, Class<?>>> localVariables;
     protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
-    protected HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();
     protected ArrayList<String> scriptDeclaredImports = new ArrayList<String>();
     protected ArrayList<String> scriptDeclaredImportClasses = new ArrayList<String>();
-    protected ArrayList<JSFunctionBlock> blockFunctions = new ArrayList<JSFunctionBlock>();
+    protected ArrayList<IcyFunctionBlock> blockFunctions = new ArrayList<IcyFunctionBlock>();
 
     /**
      * This is where the warning / errors are displayed, contained in this
@@ -185,11 +183,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	return localVariables;
     }
 
-    public HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> getEngineTypesMethod() {
-	return engineTypesMethod;
-    }
-
-    public ArrayList<JSFunctionBlock> getBlockFunctions() {
+    public ArrayList<IcyFunctionBlock> getBlockFunctions() {
 	return blockFunctions;
     }
 
@@ -239,7 +233,7 @@ public abstract class ScriptingHandler implements KeyListener {
 		@Override
 		public void run() {
 		    ProgressFrame frame = new ProgressFrame("Loading functions...");
-		    ((IcyCompletionProvider) provider).findAllMethods(engineTypesMethod, engine, frame);
+		    ((IcyCompletionProvider) provider).findAllMethods(engine, frame);
 		    frame.setVisible(false);
 		}
 	    });
@@ -249,7 +243,7 @@ public abstract class ScriptingHandler implements KeyListener {
 		    Class<?> clazz = Class.forName(pd.getClassName());
 		    @SuppressWarnings("unchecked")
 		    Class<? extends Plugin> clazz2 = (Class<? extends Plugin>) clazz;
-		    ((IcyCompletionProvider) provider).findBindingsMethods(engineTypesMethod, engine, clazz2);
+		    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz2);
 		} catch (ClassNotFoundException e) {
 		    e.printStackTrace();
 		} catch (SecurityException e) {
@@ -365,12 +359,14 @@ public abstract class ScriptingHandler implements KeyListener {
 
 		    String textToRemove = s.substring(lineOffset, lineEndOffset);
 
-		    if (autocompilation && ee.getMessage().contains("\'.\'") && textToRemove.endsWith(".")) {
-			textToRemove = textToRemove.substring(0, textToRemove.length() - 1);
-		    } else {
-			textToRemove = "\n";
-			ignoredLines.put(lineError, ee);
-		    }
+		    // if (autocompilation && ee.getMessage().contains("\'.\'")
+		    // && textToRemove.endsWith(".")) {
+		    // textToRemove = textToRemove.substring(0,
+		    // textToRemove.length() - 1);
+		    // } else {
+		    textToRemove = "\n";
+		    ignoredLines.put(lineError, ee);
+		    // }
 		    s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 		    interpret(s, autocompilation, exec);
 		} else {

@@ -246,14 +246,20 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	if (provider == null) {
 	    provider = new IcyCompletionProvider();
 	    provider.setAutoActivationRules(false, ".");
-	    provider.setListCellRenderer(new IcyCompletionCellRenderer());
+	    ThreadUtil.invokeLater(new Runnable() {
+
+		@Override
+		public void run() {
+		    provider.setListCellRenderer(new IcyCompletionCellRenderer());
+		}
+	    });
 	}
 	provider.clear();
 
 	if (ac != null) {
 	    ac.uninstall();
 	}
-	
+
 	// set the syntax
 	if (language.contentEquals("javascript")) {
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
@@ -369,9 +375,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
      */
     class PanelOptions extends JPanel {
 
-	/**
-		 * 
-		 */
+	/** */
 	private static final long serialVersionUID = 1L;
 	private JComboBox combo;
 
@@ -406,7 +410,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 
 		}
 	    });
-	    combo.setSelectedIndex(0);
+	    combo.setSelectedItem("javascript");
 	    add(combo);
 	    add(Box.createHorizontalStrut(4));
 
