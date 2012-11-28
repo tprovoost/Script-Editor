@@ -39,7 +39,6 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.gui.BindingsScriptFrame;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.Context;
@@ -170,6 +169,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	}
 	try {
 	    installDefaultLanguageCompletions(engineType);
+	    
 	} catch (ScriptException e) {
 	    e.printStackTrace();
 	}
@@ -338,7 +338,6 @@ public abstract class ScriptingHandler implements KeyListener {
 	    setCompilationOk(true);
 	    if (exec && isCompilationOk()) {
 		engine.eval(s);
-		BindingsScriptFrame.getInstance().update();
 		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
 		for (String key : localVariables.keySet())

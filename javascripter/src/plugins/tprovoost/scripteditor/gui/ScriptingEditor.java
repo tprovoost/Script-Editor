@@ -72,19 +72,6 @@ public class ScriptingEditor extends IcyFrame {
 			}
 			if (handler == null)
 			    new AnnounceFrame("An error occured.");
-			else {
-			    ThreadUtil.invokeLater(new Runnable() {
-
-				@Override
-				public void run() {
-				    BindingsScriptFrame bindingsFrame = BindingsScriptFrame.getInstance();
-				    bindingsFrame.setEngine(handler.getEngine());
-				    // if (!bindingsFrame.isVisible())
-				    // bindingsFrame.setVisible(true);
-				    // bindingsFrame.update();
-				}
-			    });
-			}
 		    }
 		});
 

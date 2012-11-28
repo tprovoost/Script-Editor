@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -36,7 +35,6 @@ import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
-import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -274,7 +272,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	}
 
 	// install the default completion words: eg. "for", "while", etc.
-	installDefaultCompletions(provider, language);
+	provider.installDefaultCompletions(language);
 
 	// install the text area with the completion system.
 	ac.install(textArea);
@@ -313,19 +311,6 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 		}
 	    }
 	});
-    }
-
-    public void installDefaultCompletions(DefaultCompletionProvider provider, String language) {
-	InputStream in = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
-	try {
-	    if (in != null) {
-		provider.loadFromXML(in);
-		in.close();
-	    } else
-		System.out.println("File not found: " + "plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
-	} catch (IOException ioe) {
-	    ioe.printStackTrace();
-	}
     }
 
     /**
