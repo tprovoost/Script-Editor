@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
+import icy.file.FileUtil;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
@@ -18,6 +19,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
@@ -144,6 +146,17 @@ public class ScriptingEditor extends IcyFrame {
 	ScriptingPanel panel = createNewPane(f.getName());
 	panel.openFile(f);
 	previousFiles.add(f.getPath());
+    }
+
+    /**
+     * Open the file f into the editor as a new tab.
+     * 
+     * @param f
+     * @throws IOException
+     */
+    public void openStream(String name, InputStream stream) throws IOException {
+	ScriptingPanel panel = createNewPane(name);
+	panel.openStream(stream);
     }
 
     /**
@@ -285,9 +298,56 @@ public class ScriptingEditor extends IcyFrame {
 
 	// MENU EDIT
 	JMenu menuEdit = new JMenu("Edit");
+	JMenuItem menuUndo = new JMenuItem("Undo");
+	menuUndo.addActionListener(new ActionListener() {
+
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		Component comp = tabbedPane.getTabComponentAt(0);
+		if (!(comp instanceof ScriptingPanel))
+		    return;
+		ScriptingPanel panel = (ScriptingPanel) comp;
+		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask)).actionPerformed(e);
+	    }
+	});
+	menuUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask));
+	menuEdit.add(menuUndo);
+
+	JMenuItem menuRedo = new JMenuItem("Redo");
+	menuRedo.addActionListener(new ActionListener() {
+
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		Component comp = tabbedPane.getTabComponentAt(0);
+		if (!(comp instanceof ScriptingPanel))
+		    return;
+		ScriptingPanel panel = (ScriptingPanel) comp;
+		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask)).actionPerformed(e);
+	    }
+	});
+	menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask));
+	menuEdit.add(menuRedo);
 
 	// MENU RUN
 	JMenu menuTemplate = new JMenu("Templates");
+	JMenu menuTemplateJS = new JMenu("Javascript");
+	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
+	menuTemplate.add(menuTemplateJS);
+
+	itemJSDuplicateSequence.addActionListener(new ActionListener() {
+
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		String current = FileUtil.getCurrentDirectory();
+		current = current.substring(0, current.length() - 1);
+		try {
+		    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/js/duplicateSequence.js");
+		    openStream("duplicateSequence.js", is);
+		} catch (IOException e1) {
+		}
+	    }
+	});
+	menuTemplateJS.add(itemJSDuplicateSequence);
 
 	// MENU TEMPLATES
 	JMenu menuRun = new JMenu("Run");

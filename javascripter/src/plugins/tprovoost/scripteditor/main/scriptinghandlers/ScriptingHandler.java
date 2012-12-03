@@ -95,7 +95,7 @@ public abstract class ScriptingHandler implements KeyListener {
     protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
     protected ArrayList<String> scriptDeclaredImports = new ArrayList<String>();
     protected ArrayList<String> scriptDeclaredImportClasses = new ArrayList<String>();
-    protected ArrayList<IcyFunctionBlock> blockFunctions = new ArrayList<IcyFunctionBlock>();
+    protected HashMap<Integer, IcyFunctionBlock> blockFunctions = new HashMap<Integer, IcyFunctionBlock>();
 
     /**
      * This is where the warning / errors are displayed, contained in this
@@ -111,8 +111,10 @@ public abstract class ScriptingHandler implements KeyListener {
 
     private boolean advanced;
 
+    private boolean autoCompilation;
+
     /** Turn to true if you need to display more information in the console. */
-    protected static final boolean DEBUG = false;
+    protected static final boolean DEBUG = true;
 
     // Different relevance of items. Simplify code, but integer values can
     // always be used.
@@ -137,6 +139,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	this.textArea = textArea;
 	this.gutter = gutter;
 	setLanguage(engineType);
+
 	textArea.getDocument().addDocumentListener(new AutoVerify());
 
 	localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
@@ -169,7 +172,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	}
 	try {
 	    installDefaultLanguageCompletions(engineType);
-	    
+
 	} catch (ScriptException e) {
 	    e.printStackTrace();
 	}
@@ -183,7 +186,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	return localVariables;
     }
 
-    public ArrayList<IcyFunctionBlock> getBlockFunctions() {
+    public HashMap<Integer, IcyFunctionBlock> getBlockFunctions() {
 	return blockFunctions;
     }
 
@@ -310,6 +313,20 @@ public abstract class ScriptingHandler implements KeyListener {
     }
 
     /**
+     * Evaluate the script and register the imports
+     * 
+     * @param s
+     */
+    public void evalScript(String s) {
+	registerImports();
+	try {
+	    engine.eval(s);
+	} catch (ScriptException e) {
+	    System.out.println(e.getLocalizedMessage());
+	}
+    }
+
+    /**
      * This method interprets the code in one or two steps (depending on the
      * user willing to immediately run the code or not). First, the code is
      * Parsed. If any error occurs, the line containing it will be highlighted
@@ -364,6 +381,10 @@ public abstract class ScriptingHandler implements KeyListener {
 		    // textToRemove.length() - 1);
 		    // } else {
 		    textToRemove = "\n";
+		    if (ignoredLines.containsKey(lineError)) {
+			System.out.println("An error occured with the error parsing.");
+			return;
+		    }
 		    ignoredLines.put(lineError, ee);
 		    // }
 		    s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
@@ -411,6 +432,8 @@ public abstract class ScriptingHandler implements KeyListener {
      * @param s
      */
     public abstract void registerImports();
+    
+    public abstract void autoDownloadPlugins();
 
     /**
      * This method will detect the variables and add them to the provider.
@@ -551,7 +574,7 @@ public abstract class ScriptingHandler implements KeyListener {
      * @param type
      * @return
      */
-    public Class<?> resolveClassDeclaration(String type) {
+    public Class<?> resolveClassDeclaration(String type, boolean strict) {
 	// try with declared in the script importClass
 	for (String s : scriptDeclaredImportClasses) {
 	    if (ClassUtil.getSimpleClassName(s).contentEquals(type))
@@ -571,27 +594,34 @@ public abstract class ScriptingHandler implements KeyListener {
 	    }
 	}
 
-	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	if (!strict) {
+	    // declared in engine
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
-	// try with declared in the engine importClass
-	for (String s : engineHandler.getEngineDeclaredImportClasses()) {
-	    if (ClassUtil.getSimpleClassName(s).contentEquals(type))
+	    // try with declared in the engine importClass
+	    for (String s : engineHandler.getEngineDeclaredImportClasses()) {
+		if (ClassUtil.getSimpleClassName(s).contentEquals(type))
+		    try {
+			return Class.forName(s);
+		    } catch (ClassNotFoundException e) {
+		    } catch (NoClassDefFoundError e2) {
+		    }
+	    }
+
+	    // try with declared in the script importPackage
+	    for (String s : engineHandler.getEngineDeclaredImports()) {
 		try {
-		    return Class.forName(s);
+		    return Class.forName(s + "." + type);
 		} catch (ClassNotFoundException e) {
 		} catch (NoClassDefFoundError e2) {
 		}
-	}
-
-	// try with declared in the script importPackage
-	for (String s : engineHandler.getEngineDeclaredImports()) {
-	    try {
-		return Class.forName(s + "." + type);
-	    } catch (ClassNotFoundException e) {
-	    } catch (NoClassDefFoundError e2) {
 	    }
 	}
 	return null;
+    }
+
+    public void setActiveAutoCompilation(boolean b) {
+	autoCompilation = b;
     }
 
     public ScriptEngine getEngine() {
@@ -636,7 +666,8 @@ public abstract class ScriptingHandler implements KeyListener {
 	@Override
 	public void changedUpdate(DocumentEvent e) {
 	    lastChange = true;
-	    timer.restart();
+	    if (autoCompilation)
+		timer.restart();
 	}
 
 	@Override

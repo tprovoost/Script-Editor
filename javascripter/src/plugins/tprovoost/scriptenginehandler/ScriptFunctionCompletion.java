@@ -12,75 +12,76 @@ import org.fife.ui.autocomplete.FunctionCompletion;
 
 public class ScriptFunctionCompletion extends FunctionCompletion {
 
-	private Method method;
-	private boolean isStatic;
+    private Method method;
+    private boolean isStatic;
 
-	@Retention(RetentionPolicy.RUNTIME)
-	@Target(ElementType.METHOD)
-	public @interface BindingFunction {
-		String value();
-		String pluginClassName();
-	}
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface BindingFunction {
+	String value();
 
-	public ScriptFunctionCompletion() {
-		super(null, "", "");
-	}
+	String pluginClassName();
+    }
 
-	public ScriptFunctionCompletion(CompletionProvider provider, Method method) {
-		super(provider, method.getReturnType().getName(), method.getName().toString());
-		this.method = method;
-	}
+    public ScriptFunctionCompletion() {
+	super(null, "", "");
+    }
 
-	public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method) {
-		super(provider, name, method.getReturnType().getName());
-		this.method = method;
-	}
+    public ScriptFunctionCompletion(CompletionProvider provider, Method method) {
+	super(provider, method.getReturnType().getName(), method.getName().toString());
+	this.method = method;
+    }
 
-	/**
-	 * Get the correct function call in java.
-	 * 
-	 * @return
-	 */
-	public String getMethodCall() {
-		String parametersAsString = "";
-		Class<?>[] paramTypes = method.getParameterTypes();
-		for (int i = 0; i < paramTypes.length; ++i) {
-			if (i != 0)
-				parametersAsString += " ,arg" + i;
-			else
-				parametersAsString += "arg" + i;
-		}
-		return "Packages." + method.getDeclaringClass().getName() + "." + method.getName() + "(" + parametersAsString + ");";
-	}
+    public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method) {
+	super(provider, name, method.getReturnType().getName());
+	this.method = method;
+    }
 
-	/**
-	 * Returns if the function should be accessed in a static way.
-	 * 
-	 * @return
-	 */
-	public boolean isStatic() {
-		return Modifier.isStatic(method.getModifiers());
+    /**
+     * Get the correct function call in java.
+     * 
+     * @return
+     */
+    public String getMethodCall() {
+	String parametersAsString = "";
+	Class<?>[] paramTypes = method.getParameterTypes();
+	for (int i = 0; i < paramTypes.length; ++i) {
+	    if (i != 0)
+		parametersAsString += " ,arg" + i;
+	    else
+		parametersAsString += "arg" + i;
 	}
+	return "Packages." + method.getDeclaringClass().getName() + "." + method.getName() + "(" + parametersAsString + ");";
+    }
 
-	/**
-	 * 
-	 * @return
-	 */
-	public Class<?> getOriginatingClass() {
-		if (isStatic)
-			return null;
-		return method.getDeclaringClass();
-	}
+    /**
+     * Returns if the function should be accessed in a static way.
+     * 
+     * @return
+     */
+    public boolean isStatic() {
+	return Modifier.isStatic(method.getModifiers());
+    }
 
-	public Method getMethod() {
-		return method;
-	}
-	
-	@Override
-	public boolean equals(Object arg0) {
-		if (!(arg0 instanceof ScriptFunctionCompletion))
-			return false;
-		return ((ScriptFunctionCompletion)arg0).getName().contentEquals(getName()); 
-	}
-	
+    /**
+     * 
+     * @return
+     */
+    public Class<?> getOriginatingClass() {
+	if (isStatic)
+	    return null;
+	return method.getDeclaringClass();
+    }
+
+    public Method getMethod() {
+	return method;
+    }
+
+    @Override
+    public boolean equals(Object arg0) {
+	if (!(arg0 instanceof ScriptFunctionCompletion))
+	    return false;
+	return ((ScriptFunctionCompletion) arg0).getName().contentEquals(getName());
+    }
+
 }

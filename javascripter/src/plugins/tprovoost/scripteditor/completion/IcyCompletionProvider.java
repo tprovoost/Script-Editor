@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.completion;
 
+import icy.file.FileUtil;
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.abstract_.Plugin;
 import icy.util.ClassUtil;
@@ -12,6 +13,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -143,61 +145,67 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	HashMap<String, Class<?>> listFunction = engineHandler.getEngineFunctions();
 	HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 
+	ArrayList<String> clazzes;
+
 	try {
-	    ArrayList<String> clazzes = getClassNamesFromPackage("icy");
-	    if (frame != null)
-		frame.setLength(clazzes.size());
-	    Collections.sort(clazzes);
-	    for (int idxClass = 0; idxClass < clazzes.size(); ++idxClass) {
-		if (frame != null)
-		    frame.setPosition(idxClass);
-		String className = clazzes.get(idxClass).replace('/', '.');
-		try {
-		    // the current class
-		    Class<?> clazz = Class.forName(className);
-
-		    // get all methods
-		    Method[] methods = clazz.getMethods();
-
-		    // iterate through each
-		    for (final Method method : methods) {
-			ArrayList<Parameter> fParams = new ArrayList<Parameter>();
-
-			Class<?>[] paramTypes = method.getParameterTypes();
-
-			// get the parameters
-			for (int i = 0; i < paramTypes.length; ++i) {
-			    fParams.add(new Parameter(getType(paramTypes[i], true), "arg" + i));
-			}
-
-			ScriptFunctionCompletion sfc = new ScriptFunctionCompletion(this, method.getName(), method);
-			sfc.setDefinedIn(clazz.getName());
-			sfc.setParams(fParams);
-			BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
-			if (blockFunction == null)
-			    sfc.setRelevance(2);
-			else
-			    sfc.setRelevance(4);
-			addCompletion(sfc);
-			if (getCompletionByInputText(clazz.getSimpleName()) == null)
-			    addCompletion(new BasicJavaClassCompletion(this, clazz));
-
-			if (listFunction != null)
-			    listFunction.put(sfc.getMethodCall().substring("packages.".length()), method.getReturnType());
-			if (engineTypesMethod != null) {
-			    ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
-			    if (methodsExisting == null)
-				methodsExisting = new ArrayList<ScriptFunctionCompletion>();
-			    methodsExisting.add(sfc);
-			    engineTypesMethod.put(clazz, methodsExisting);
-			}
-		    }
-		} catch (ClassNotFoundException e) {
-		}
-	    }
-	} catch (IOException e) {
-	    e.printStackTrace();
+	    String sep = FileUtil.separator;
+	    clazzes = getClassNamesFromPackage("icy");
+	    ArrayList<String> clazzes2 = getNames("." + sep + "plugins" + sep + "adufour" + sep + "blocks" + sep + "Blocks.jar", "plugins/adufour/blocks");
+	} catch (IOException e1) {
+	    e1.printStackTrace();
+	    return;
 	}
+	if (frame != null)
+	    frame.setLength(clazzes.size());
+	Collections.sort(clazzes);
+	for (int idxClass = 0; idxClass < clazzes.size(); ++idxClass) {
+	    if (frame != null)
+		frame.setPosition(idxClass);
+	    String className = clazzes.get(idxClass).replace('/', '.');
+	    try {
+		// the current class
+		Class<?> clazz = Class.forName(className);
+
+		// get all methods
+		Method[] methods = clazz.getMethods();
+
+		// iterate through each
+		for (final Method method : methods) {
+		    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
+
+		    Class<?>[] paramTypes = method.getParameterTypes();
+
+		    // get the parameters
+		    for (int i = 0; i < paramTypes.length; ++i) {
+			fParams.add(new Parameter(getType(paramTypes[i], true), "arg" + i));
+		    }
+
+		    ScriptFunctionCompletion sfc = new ScriptFunctionCompletion(this, method.getName(), method);
+		    sfc.setDefinedIn(clazz.getName());
+		    sfc.setParams(fParams);
+		    BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
+		    if (blockFunction == null)
+			sfc.setRelevance(2);
+		    else
+			sfc.setRelevance(4);
+		    addCompletion(sfc);
+		    if (getCompletionByInputText(clazz.getSimpleName()) == null)
+			addCompletion(new BasicJavaClassCompletion(this, clazz));
+
+		    if (listFunction != null)
+			listFunction.put(sfc.getMethodCall().substring("packages.".length()), method.getReturnType());
+		    if (engineTypesMethod != null) {
+			ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
+			if (methodsExisting == null)
+			    methodsExisting = new ArrayList<ScriptFunctionCompletion>();
+			methodsExisting.add(sfc);
+			engineTypesMethod.put(clazz, methodsExisting);
+		    }
+		}
+	    } catch (ClassNotFoundException e) {
+	    }
+	}
+
     }
 
     @Override
@@ -332,7 +340,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
     @Override
     protected boolean isValidChar(char ch) {
-	return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',';
+	return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
 	// return super.isValidChar(ch);
     }
 
@@ -391,39 +399,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
 	HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
 	HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
-	ArrayList<IcyFunctionBlock> localFunctions = handler.getBlockFunctions();
+	HashMap<Integer, IcyFunctionBlock> localFunctions;
+	if (handler != null)
+	    localFunctions = handler.getBlockFunctions();
+	else
+	    localFunctions = new HashMap<Integer, IcyFunctionBlock>();
 
 	if (text != null) {
 
-	    if (text.isEmpty() || text.startsWith("Math.")) {
-		int index = Collections.binarySearch(completions, text, comparator);
-		if (index < 0) { // No exact match
-		    index = -index - 1;
-		} else {
-		    // If there are several overloads for the function being
-		    // completed, Collections.binarySearch() will return the
-		    // index of one of those overloads, but we must return all
-		    // of them, so search backward until we find the first one.
-		    int pos = index - 1;
-		    while (pos > 0 && comparator.compare(completions.get(pos), text) == 0) {
-			retVal.add((Completion) completions.get(pos));
-			pos--;
-		    }
-		}
-
-		while (index < completions.size()) {
-		    Completion c = (Completion) completions.get(index);
-		    if (Util.startsWithIgnoreCase(c.getInputText(), text)) {
-			if (c instanceof ScriptFunctionCompletion) {
-			    if (((ScriptFunctionCompletion) c).isStatic())
-				retVal.add(c);
-			} else
-			    retVal.add(c);
-			index++;
-		    } else {
-			break;
-		    }
-		}
+	    if (text.isEmpty() || text.startsWith("Math.") || lastIdx == -1) {
+		doClassicCompletion(text, retVal);
 	    } else {
 		if (handler != null) {
 		    String command;
@@ -438,7 +423,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
 		    try {
 			// is the command a classname ?
-			Class<?> clazz = handler.resolveClassDeclaration(command);
+			Class<?> clazz = handler.resolveClassDeclaration(command, true);
 			if (clazz != null) {
 			    // test if this is a static call
 			    if ((methods = engineTypesMethod.get(Class.forName(clazz.getName()))) != null) {
@@ -467,31 +452,26 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			}
 		    } else {
 			// if not : look the type of the function (if declared).
-
-			int[] startEndOffsets = getStartEndOffsets(comp);
-			if (startEndOffsets.length == 2) {
-			    boolean found = false;
-			    for (IcyFunctionBlock fb : localFunctions) {
-				if (fb.getStartOffset() == startEndOffsets[0] && fb.getEndOffset() == startEndOffsets[1]) {
-				    found = true;
-				    type = fb.getReturnType();
-				    for (ScriptFunctionCompletion complete : methods) {
-					if (complete.isStatic() && Util.startsWithIgnoreCase(text, complete.getName()))
-					    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-					else if (!complete.isStatic() && Util.startsWithIgnoreCase(complete.getInputText(), text))
-					    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-					retVal.add(complete);
-				    }
-				}
+			int startOffset = getStartOffset(comp);
+			IcyFunctionBlock fb = localFunctions.get(startOffset);
+			if (fb != null) {
+			    // int fbSo = fb.getStartOffset();
+			    // int fbEo = fb.getEndOffset();
+			    // int lastDot = command.lastIndexOf('.');
+			    type = fb.getReturnType();
+			    methods = engineTypesMethod.get(type);
+			    for (ScriptFunctionCompletion complete : methods) {
+				if (complete.isStatic() && Util.startsWithIgnoreCase(text, complete.getName()))
+				    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+				else if (!complete.isStatic() && Util.startsWithIgnoreCase(complete.getInputText(), text))
+				    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+				retVal.add(complete);
 			    }
-			    if (!found)
-				doClassicCompletion(text, retVal);
-			} else {
-			    doClassicCompletion(text, retVal);
 			}
 		    }
-		} else
-		    doClassicCompletion(text, retVal);
+		} else {
+		    // doClassicCompletion(text, retVal);
+		}
 	    }
 	}
 	return retVal;
@@ -591,7 +571,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			ArrayList<ScriptFunctionCompletion> methods = null;
 
 			try {
-			    Class<?> clazz = handler.resolveClassDeclaration(text);
+			    Class<?> clazz = handler.resolveClassDeclaration(text, true);
 			    if (clazz != null) {
 				// test if this is a static call
 				if ((methods = engineTypesMethod.get(Class.forName(clazz.getName()))) != null) {
@@ -670,7 +650,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	return len == 0 ? EMPTY_STRING : new String(seg.array, start, len);
     }
 
-    public int[] getStartEndOffsets(JTextComponent comp) {
+    public int getStartOffset(JTextComponent comp) {
 
 	Document doc = comp.getDocument();
 
@@ -684,7 +664,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    doc.getText(start, len, seg);
 	} catch (BadLocationException ble) {
 	    ble.printStackTrace();
-	    return new int[0];
+	    return -1;
 	}
 
 	int segEnd = seg.offset + len;
@@ -694,7 +674,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	}
 	start++;
 
-	return new int[] { start, segEnd };
+	return start;
     }
 
     /**
@@ -720,27 +700,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
 	if (packageURL.getProtocol().equals("jar")) {
 	    String jarFileName;
-	    JarFile jf;
-	    Enumeration<JarEntry> jarEntries;
-	    String entryName;
 
 	    // build jar file name, then loop through zipped entries
 	    jarFileName = URLDecoder.decode(packageURL.getFile(), "UTF-8");
 	    jarFileName = jarFileName.substring(5, jarFileName.indexOf("!"));
 	    // System.out.println(">" + jarFileName);
-	    jf = new JarFile(jarFileName);
-	    jarEntries = jf.entries();
-	    while (jarEntries.hasMoreElements()) {
-		entryName = jarEntries.nextElement().getName();
-		if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
-		    Pattern p = Pattern.compile("((\\w|\\.|\\\\|/)+)(|\\$[a-zA-Z0-9]*[a-zA-Z]).class");
-		    Matcher m = p.matcher(entryName);
-		    if (m.matches()) {
-			entryName = m.group(1) + m.group(3);
-			names.add(entryName);
-		    }
-		}
-	    }
+	    names.addAll(getNames(jarFileName, packageName));
 
 	    // loop through files in classpath
 	} else {
@@ -754,6 +719,28 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    }
 	}
 	return names;
+    }
+
+    private ArrayList<String> getNames(String jarFileName, String packageName) throws IOException {
+	JarFile jf;
+	Enumeration<JarEntry> jarEntries;
+	String entryName;
+	ArrayList<String> toReturn = new ArrayList<String>();
+
+	jf = new JarFile(jarFileName);
+	jarEntries = jf.entries();
+	while (jarEntries.hasMoreElements()) {
+	    entryName = jarEntries.nextElement().getName();
+	    if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
+		Pattern p = Pattern.compile("((\\w|\\.|\\\\|/)+)(|\\$[a-zA-Z0-9]*[a-zA-Z]).class");
+		Matcher m = p.matcher(entryName);
+		if (m.matches()) {
+		    entryName = m.group(1) + m.group(3);
+		    toReturn.add(entryName);
+		}
+	    }
+	}
+	return toReturn;
     }
 
     public void installDefaultCompletions(String language) {

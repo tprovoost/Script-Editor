@@ -56,9 +56,9 @@ public class ScriptEditorPlugin extends PluginActionable {
     public void displayHello(int a) {
 	System.out.println("Hello " + a + "!");
     }
-    
+
     @BindingFunction(value = "getThis", pluginClassName = "plugins.tprovoost.scripteditor.main.ScriptEditorPlugin")
-    public ScriptEditorPlugin getThis() {
+    public ScriptEditorPlugin getThis(String lol) {
 	return this;
     }
 

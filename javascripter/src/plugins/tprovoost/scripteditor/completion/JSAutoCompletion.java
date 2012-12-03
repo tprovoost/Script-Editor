@@ -22,6 +22,7 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 
     @Override
     protected void insertCompletion(Completion c, boolean typedParamListStartChar) {
+	super.insertCompletion(c, typedParamListStartChar);
 	if (c instanceof ScriptFunctionCompletion) {
 	    JTextComponent tc = getTextComponent();
 	    Method m = ((ScriptFunctionCompletion) c).getMethod();
@@ -36,7 +37,6 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 	    JTextComponent tc = getTextComponent();
 	    addImport(tc, ((BasicJavaClassCompletion) c).getClazz().getName(), true);
 	}
-	super.insertCompletion(c, typedParamListStartChar);
     }
 
     @Override
