@@ -338,7 +338,7 @@ public class ScriptingEditor extends IcyFrame {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
-		String current = FileUtil.getCurrentDirectory();
+		String current = new File(".").getAbsolutePath();
 		current = current.substring(0, current.length() - 1);
 		try {
 		    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/js/duplicateSequence.js");
