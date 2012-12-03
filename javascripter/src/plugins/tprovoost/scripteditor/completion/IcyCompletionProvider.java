@@ -13,7 +13,6 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -428,7 +427,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			    // test if this is a static call
 			    if ((methods = engineTypesMethod.get(Class.forName(clazz.getName()))) != null) {
 				for (ScriptFunctionCompletion complete : methods) {
-				    if (complete.isStatic() && Util.startsWithIgnoreCase(complete.getInputText(), text))
+				    if (complete.isStatic() && (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase())))
 					retVal.add(complete);
 				}
 			    }
@@ -443,11 +442,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			methods = engineTypesMethod.get(type);
 			if (methods != null) {
 			    for (ScriptFunctionCompletion complete : methods) {
-				if (complete.isStatic() && (text.isEmpty() || Util.startsWithIgnoreCase(text, complete.getName())))
+				if (complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-				else if (!complete.isStatic() && (text.isEmpty() || Util.startsWithIgnoreCase(text, complete.getName())))
+				else if (!complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-				retVal.add(complete);
+				if (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
+				    retVal.add(complete);
 			    }
 			}
 		    } else {
@@ -461,11 +461,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			    type = fb.getReturnType();
 			    methods = engineTypesMethod.get(type);
 			    for (ScriptFunctionCompletion complete : methods) {
-				if (complete.isStatic() && Util.startsWithIgnoreCase(text, complete.getName()))
+				if (complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-				else if (!complete.isStatic() && Util.startsWithIgnoreCase(complete.getInputText(), text))
+				else if (!complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-				retVal.add(complete);
+				if (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
+				    retVal.add(complete);
 			    }
 			}
 		    }
@@ -483,15 +484,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	if (index < 0) { // No exact match
 	    index = -index - 1;
 	} else {
-	    // If there are several overloads for the
-	    // function
-	    // being
+	    // If there are several overloads for the function being
 	    // completed, Collections.binarySearch() will
-	    // return
-	    // the
-	    // index of one of those overloads, but we must
-	    // return all
-	    // of them, so search backward until we find the
+	    // return the index of one of those overloads, but we must
+	    // return all of them, so search backward until we find the
 	    // first one.
 	    int pos = index - 1;
 	    while (pos > 0 && comparator.compare(completions.get(pos), text) == 0) {

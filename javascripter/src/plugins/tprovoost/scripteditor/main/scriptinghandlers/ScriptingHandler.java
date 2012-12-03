@@ -114,7 +114,7 @@ public abstract class ScriptingHandler implements KeyListener {
     private boolean autoCompilation;
 
     /** Turn to true if you need to display more information in the console. */
-    protected static final boolean DEBUG = true;
+    protected static final boolean DEBUG = false;
 
     // Different relevance of items. Simplify code, but integer values can
     // always be used.
@@ -379,10 +379,10 @@ public abstract class ScriptingHandler implements KeyListener {
 		    // && textToRemove.endsWith(".")) {
 		    // textToRemove = textToRemove.substring(0,
 		    // textToRemove.length() - 1);
-		    // } else {
+		    // } else
 		    textToRemove = "\n";
 		    if (ignoredLines.containsKey(lineError)) {
-			System.out.println("An error occured with the error parsing.");
+			System.out.println("An error occured with the parsing.");
 			return;
 		    }
 		    ignoredLines.put(lineError, ee);
@@ -432,7 +432,7 @@ public abstract class ScriptingHandler implements KeyListener {
      * @param s
      */
     public abstract void registerImports();
-    
+
     public abstract void autoDownloadPlugins();
 
     /**
@@ -652,7 +652,11 @@ public abstract class ScriptingHandler implements KeyListener {
 		if (doc.getText(offset, len).contentEquals(".")) {
 		    timer.stop();
 		    lastChange = false;
-		    interpret(doc.getText(0, doc.getLength() - len), true, false);
+		    String fullTxt = doc.getText(0, doc.getLength());
+		    String s = fullTxt.substring(0, offset);
+		    s += fullTxt.substring(offset + len, doc.getLength());
+
+		    interpret(s, true, false);
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();

@@ -6,6 +6,7 @@ import icy.plugin.abstract_.PluginActionable;
 import icy.sequence.Sequence;
 
 import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -22,10 +23,10 @@ public class ScriptEditorPlugin extends PluginActionable {
     public void run() {
 	ClassLoader clazzLoader = getClass().getClassLoader();
 	if (clazzLoader instanceof JarClassLoader) {
-	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(clazzLoader
-		    .getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/autocomplete.jar")));
-	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(clazzLoader
-		    .getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/rsyntaxtextarea.jar")));
+	    InputStream is = clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/autocomplete.jar");
+	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(is));
+	    is = clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/rsyntaxtextarea.jar");
+	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(is));
 	    // ((JarClassLoader) clazzLoader).add(new
 	    // BufferedInputStream(clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/jython.jar")));
 	}
