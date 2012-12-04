@@ -49,22 +49,22 @@ public class ScriptEditorPlugin extends PluginActionable {
 	frame.requestFocus();
     }
 
-    @BindingFunction(value = "displayHello", pluginClassName = "plugins.tprovoost.scripteditor.main.ScriptEditorPlugin")
+    @BindingFunction(value = "displayHello")
     public static void displayHello(String h, int b, Sequence s) {
 	System.out.println("Hello World!");
     }
 
-    @BindingFunction(value = "displayHello", pluginClassName = "plugins.tprovoost.scripteditor.main.ScriptEditorPlugin")
+    @BindingFunction(value = "displayHello")
     public static void displayHello(String h) {
 	System.out.println("Hello " + h + "!");
     }
 
-    @BindingFunction(value = "displayHello", pluginClassName = "plugins.tprovoost.scripteditor.main.ScriptEditorPlugin")
+    @BindingFunction(value = "displayHello")
     public void displayHello(int a) {
 	System.out.println("Hello " + a + "!");
     }
 
-    @BindingFunction(value = "getThis", pluginClassName = "plugins.tprovoost.scripteditor.main.ScriptEditorPlugin")
+    @BindingFunction(value = "getThis")
     public ScriptEditorPlugin getThis(String lol) {
 	return this;
     }

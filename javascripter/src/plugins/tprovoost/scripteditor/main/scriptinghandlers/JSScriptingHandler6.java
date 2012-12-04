@@ -5,6 +5,7 @@ import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginInstaller;
 import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
+import icy.util.ClassUtil;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import sun.org.mozilla.javascript.internal.CompilerEnvirons;
 import sun.org.mozilla.javascript.internal.Context;
 import sun.org.mozilla.javascript.internal.FunctionNode;
+import sun.org.mozilla.javascript.internal.NativeArray;
 import sun.org.mozilla.javascript.internal.Node;
 import sun.org.mozilla.javascript.internal.Parser;
 import sun.org.mozilla.javascript.internal.ScriptOrFnNode;
@@ -80,7 +82,6 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
 	// IMPORT PLUGINS FUNCTIONS
 	importFunctions();
-
     }
 
     public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException {
@@ -132,7 +133,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    offset = idxString + foundString.length();
 	}
     }
-    
+
     @Override
     public void autoDownloadPlugins() {
 	String s = textArea.getText();
@@ -142,10 +143,20 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	while (m.find(offset)) {
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
-	    for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins()) {
-		if (pd.getClassName().contentEquals(imported) && !pd.isInstalled())
-		    PluginInstaller.install(pd, false);
+
+	    PluginDescriptor plugindesc = PluginRepositoryLoader.getPlugin(imported);
+	    if (plugindesc != null) {
+		// method is in the exact plugin
+		if (!plugindesc.isInstalled())
+		    PluginInstaller.install(plugindesc, false);
+	    } else {
+		// class around plugin
+		for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins()) {
+		    if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
+			PluginInstaller.install(pd, false);
+		}
 	    }
+
 	    int idxString = s.indexOf(foundString, offset);
 	    if (idxString == -1)
 		break;
@@ -158,12 +169,12 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	while (m.find(offset)) {
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
-	    
+
 	    for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins()) {
 		if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
 		    PluginInstaller.install(pd, false);
 	    }
-	    
+
 	    int idxString = s.indexOf(foundString, offset);
 	    if (idxString == -1)
 		break;
@@ -504,10 +515,15 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     @Override
     public Class<?> resolveClassDeclaration(String type, boolean strict) {
 	// try absolute
+	if (type.contentEquals("Array")) {
+	    return NativeArray.class;
+	} else if (type.contentEquals("String")) {
+	    return String.class;
+	}
 	try {
 	    if (type.startsWith("Packages."))
 		type = type.substring("Packages.".length());
-	    return Class.forName(type);
+	    return ClassUtil.findClass(type);
 	} catch (ClassNotFoundException e) {
 	}
 	return super.resolveClassDeclaration(type, strict);
@@ -611,7 +627,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		    } else {
 			clazzes = new Class<?>[args.length];
 			for (int i = 0; i < clazzes.length; ++i)
-			    clazzes[i] = Class.forName(args[i]);
+			    clazzes[i] = ClassUtil.findClass(args[i]);
 			clazzes = getGenericNumberTypes(text, clazz, firstCall.substring(lastDot + 1, idxP1), clazzes);
 		    }
 
@@ -643,7 +659,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			} else {
 			    clazzes = new Class<?>[args.length];
 			    for (int i = 0; i < clazzes.length; ++i)
-				clazzes[i] = Class.forName(args[i]);
+				clazzes[i] = ClassUtil.findClass(args[i]);
 			    lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
 			    if (lastDot < 0) {
 				lastDot = -1; // in case of new for instance.

@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.file.FileUtil;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.plugin.PluginRepositoryLoader;
 import icy.system.thread.ThreadUtil;
 
 import java.awt.BorderLayout;
@@ -11,7 +12,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -40,6 +40,7 @@ import javax.swing.event.CaretListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import plugins.tprovoost.scripteditor.completion.IcyAutoCompletion;
@@ -82,11 +83,23 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 
     /** Boolean used to know if the file was modified since the last save. */
     private JTabbedPane tabbedPane;
+
+    /** Provider used for autocompletion. */
     private IcyCompletionProvider provider;
     private JScrollPane scrollpane;
     private JTextArea console;
+
+    /** Autocompletion system. Uses provider item. */
     private IcyAutoCompletion ac;
 
+    /**
+     * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
+     * text and {@link Gutter} to display line numbers and errors. Error is
+     * shown in the output window as a {@link JTextArea} in a
+     * {@link JScrollPane}.
+     * 
+     * @param name
+     */
     public ScriptingPanel(String name) {
 	this.name = name;
 	setLayout(new BorderLayout());
@@ -240,6 +253,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	// Autocompletion is done with the following item
 	if (scriptHandler != null) {
 	    textArea.removeKeyListener(scriptHandler);
+	    PluginRepositoryLoader.removeListener(scriptHandler);
 	}
 
 	// the provider provides the results when hitting Ctrl + Space.
@@ -290,27 +304,18 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript")) {
 		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter());
-		    provider.setHandler(scriptHandler);
-		    textArea.addKeyListener(scriptHandler);
-		    scriptHandler.setErrorOutput(console);
-		    rebuildGUI();
 		} else if (language.contentEquals("python")) {
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter());
-		    provider.setHandler(scriptHandler);
-		    textArea.addKeyListener(scriptHandler);
-		    rebuildGUI();
 		} else {
 		    scriptHandler = null;
-		    rebuildGUI();
 		}
 		if (scriptHandler != null) {
-		    // BindingsScriptFrame bindingsFrame =
-		    // BindingsScriptFrame.getInstance();
-		    // bindingsFrame.setEngine(scriptHandler.getEngine());
-		    // if (!bindingsFrame.isVisible())
-		    // bindingsFrame.setVisible(true);
-		    // bindingsFrame.update();
+		    provider.setHandler(scriptHandler);
+		    textArea.addKeyListener(scriptHandler);
+		    PluginRepositoryLoader.addListener(scriptHandler);
+		    scriptHandler.setErrorOutput(console);
 		}
+		rebuildGUI();
 	    }
 	});
     }
@@ -356,6 +361,8 @@ public class ScriptingPanel extends JPanel implements CaretListener {
     }
 
     /**
+     * This panel creates the tools needed to choose the language (for each
+     * language) and run the code.
      * 
      * @author Thomas Provoost
      * 
@@ -367,7 +374,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	private JComboBox combo;
 
 	public PanelOptions() {
-	    final JButton btnBuild = new JButton("Build");
+	    final JButton btnBuild = new JButton("Verify");
 	    final JButton btnRun = new JButton("Run");
 
 	    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
@@ -489,20 +496,29 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	saveFileString = all;
 	textArea.setText(all);
 	reader.close();
-	scriptHandler.autoDownloadPlugins();
+	ThreadUtil.bgRun(new Runnable() {
+
+	    @Override
+	    public void run() {
+		scriptHandler.autoDownloadPlugins();
+	    }
+	});
     }
 
     public void openStream(InputStream stream) throws IOException {
-	if (stream instanceof BufferedInputStream) {
-	    BufferedInputStream bis = (BufferedInputStream) stream;
-	    byte[] data = new byte[bis.available()];
-	    bis.read(data);
-	    String s = "";
-	    for (byte b : data)
-		s += (char) b;
-	    textArea.setText(s);
-	    bis.close();
-	    scriptHandler.autoDownloadPlugins();
-	}
+	byte[] data = new byte[stream.available()];
+	stream.read(data);
+	String s = "";
+	for (byte b : data)
+	    s += (char) b;
+	textArea.setText(s);
+	stream.close();
+	ThreadUtil.bgRun(new Runnable() {
+
+	    @Override
+	    public void run() {
+		scriptHandler.autoDownloadPlugins();
+	    }
+	});
     }
 }

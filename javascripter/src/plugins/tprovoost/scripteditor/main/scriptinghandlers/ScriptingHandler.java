@@ -3,8 +3,10 @@ package plugins.tprovoost.scripteditor.main.scriptinghandlers;
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
+import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
 import icy.plugin.abstract_.Plugin;
 import icy.resource.icon.IcyIcon;
+import icy.system.profile.Chronometer;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 
@@ -16,6 +18,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.TreeMap;
 
@@ -37,9 +40,11 @@ import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
+import org.xeustechnologies.jcl.JarClassLoader;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
+import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.Context;
 import sun.org.mozilla.javascript.internal.EvaluatorException;
@@ -52,7 +57,7 @@ import sun.org.mozilla.javascript.internal.EvaluatorException;
  * @author Thomas Provoost
  * 
  */
-public abstract class ScriptingHandler implements KeyListener {
+public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener {
 
     /**
      * This {@link HashMap} is used to avoid multiple different engines for the
@@ -241,18 +246,38 @@ public abstract class ScriptingHandler implements KeyListener {
 		}
 	    });
 	} else {
-	    for (PluginDescriptor pd : PluginLoader.getPlugins()) {
-		try {
-		    Class<?> clazz = Class.forName(pd.getClassName());
-		    @SuppressWarnings("unchecked")
-		    Class<? extends Plugin> clazz2 = (Class<? extends Plugin>) clazz;
-		    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz2);
-		} catch (ClassNotFoundException e) {
-		    e.printStackTrace();
-		} catch (SecurityException e) {
-		    e.printStackTrace();
+	    ThreadUtil.bgRun(new Runnable() {
+
+		@Override
+		public void run() {
+		    ProgressFrame frame = new ProgressFrame("Loading functions...");
+		    Chronometer chrono = new Chronometer("chrono");
+
+		    if (getClass().getClassLoader() instanceof JarClassLoader) {
+			Collection<Class> col = PluginLoader.getAllClasses().values();
+
+			frame.setLength(col.size());
+			int i = 0;
+			for (Class<?> clazz : new ArrayList<Class>(col)) {
+			    // System.out.println(i + " : " + clazz.getName());
+			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
+			    ++i;
+			    frame.setPosition(i);
+			}
+		    } else {
+			ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
+			frame.setLength(list.size());
+			int i = 0;
+			for (PluginDescriptor pd : list) {
+			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, pd.getPluginClass());
+			    ++i;
+			    frame.setPosition(i);
+			}
+		    }
+		    chrono.displayInSeconds();
+		    frame.close();
 		}
-	    }
+	    });
 	}
     }
 
@@ -284,7 +309,11 @@ public abstract class ScriptingHandler implements KeyListener {
      */
     public void interpret(boolean autocompilation, boolean runAfterCompile) {
 	ignoredLines.clear();
-	interpret(textArea.getText(), autocompilation, runAfterCompile);
+	String s = textArea.getSelectedText();
+	if (s == null)
+	    interpret(textArea.getText(), autocompilation, runAfterCompile);
+	else
+	    interpret(s, autocompilation, runAfterCompile);
 	if (errorOutput != null) {
 	    String textResult = "";
 	    for (Integer a : ignoredLines.keySet()) {
@@ -579,8 +608,9 @@ public abstract class ScriptingHandler implements KeyListener {
 	for (String s : scriptDeclaredImportClasses) {
 	    if (ClassUtil.getSimpleClassName(s).contentEquals(type))
 		try {
-		    return Class.forName(s);
+		    return ClassUtil.findClass(s);
 		} catch (ClassNotFoundException e) {
+		    System.out.println(e.getLocalizedMessage());
 		} catch (NoClassDefFoundError e2) {
 		}
 	}
@@ -588,7 +618,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	// try with declared in the script importPackage
 	for (String s : scriptDeclaredImports) {
 	    try {
-		return Class.forName(s + "." + type);
+		return ClassUtil.findClass(s + "." + type);
 	    } catch (ClassNotFoundException e) {
 	    } catch (NoClassDefFoundError e2) {
 	    }
@@ -602,7 +632,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	    for (String s : engineHandler.getEngineDeclaredImportClasses()) {
 		if (ClassUtil.getSimpleClassName(s).contentEquals(type))
 		    try {
-			return Class.forName(s);
+			return ClassUtil.findClass(s);
 		    } catch (ClassNotFoundException e) {
 		    } catch (NoClassDefFoundError e2) {
 		    }
@@ -611,7 +641,7 @@ public abstract class ScriptingHandler implements KeyListener {
 	    // try with declared in the script importPackage
 	    for (String s : engineHandler.getEngineDeclaredImports()) {
 		try {
-		    return Class.forName(s + "." + type);
+		    return ClassUtil.findClass(s + "." + type);
 		} catch (ClassNotFoundException e) {
 		} catch (NoClassDefFoundError e2) {
 		}
@@ -690,5 +720,31 @@ public abstract class ScriptingHandler implements KeyListener {
 	    if (lastChange)
 		timer.restart();
 	}
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void pluginRepositeryLoaderChanged(PluginDescriptor plugin) {
+	if (plugin == null)
+	    return;
+	Class<? extends Plugin> clazz;
+	try {
+	    clazz = (Class<? extends Plugin>) ClassUtil.findClass(plugin.getClassAsString());
+	} catch (ClassNotFoundException e) {
+	    return;
+	}
+
+	if (!plugin.isInstalled()) {
+	    // uninstalled the plugin
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	    HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
+	    engineTypesMethod.remove(clazz);
+	} else {
+	    // plugin installed
+	    if (provider instanceof IcyCompletionProvider) {
+		((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
+	    }
+	}
+
     }
 }

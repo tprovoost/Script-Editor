@@ -1,6 +1,5 @@
 package plugins.tprovoost.scripteditor.gui;
 
-import icy.file.FileUtil;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
@@ -332,7 +331,6 @@ public class ScriptingEditor extends IcyFrame {
 	JMenu menuTemplate = new JMenu("Templates");
 	JMenu menuTemplateJS = new JMenu("Javascript");
 	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
-	menuTemplate.add(menuTemplateJS);
 
 	itemJSDuplicateSequence.addActionListener(new ActionListener() {
 
@@ -349,12 +347,31 @@ public class ScriptingEditor extends IcyFrame {
 	});
 	menuTemplateJS.add(itemJSDuplicateSequence);
 
+	JMenuItem itemJSThreshold = new JMenuItem("Threshold");
+	itemJSThreshold.addActionListener(new ActionListener() {
+
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		String current = new File(".").getAbsolutePath();
+		current = current.substring(0, current.length() - 1);
+		try {
+		    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/js/tresholder.js");
+		    openStream("thresholder.js", is);
+		} catch (IOException e1) {
+		}
+	    }
+	});
+	menuTemplateJS.add(itemJSThreshold);
+
+	// add JS templates.
+	menuTemplate.add(menuTemplateJS);
+
 	// MENU TEMPLATES
-	JMenu menuRun = new JMenu("Run");
+	// JMenu menuRun = new JMenu("Run");
 
 	toReturn.add(menuFile);
 	toReturn.add(menuEdit);
-	toReturn.add(menuRun);
+	// toReturn.add(menuRun);
 	toReturn.add(menuTemplate);
 
 	return toReturn;

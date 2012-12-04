@@ -11,7 +11,6 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 
 public class JSAutoCompletion extends IcyAutoCompletion {
@@ -22,21 +21,30 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 
     @Override
     protected void insertCompletion(Completion c, boolean typedParamListStartChar) {
-	super.insertCompletion(c, typedParamListStartChar);
+
 	if (c instanceof ScriptFunctionCompletion) {
+	    // get position before insertion
 	    JTextComponent tc = getTextComponent();
+
+	    // get method added
 	    Method m = ((ScriptFunctionCompletion) c).getMethod();
 	    if (m != null) {
 		String neededClass = m.getDeclaringClass().getName();
+
+		// test eventual needed importClasses
 		if (!classAlreadyImported(neededClass)) {
-		    addImport(tc, neededClass, true);
-		    JSScriptingHandler6.organizeImportsStatic(tc);
+		    addImport(tc, neededClass, true).length();
 		}
 	    }
 	} else if (c instanceof BasicJavaClassCompletion) {
 	    JTextComponent tc = getTextComponent();
-	    addImport(tc, ((BasicJavaClassCompletion) c).getClazz().getName(), true);
+	    String neededClass = ((BasicJavaClassCompletion) c).getClazz().getName();
+
+	    if (!classAlreadyImported(neededClass))
+		addImport(tc, neededClass, true);
 	}
+	// do insertion
+	super.insertCompletion(c, typedParamListStartChar);
     }
 
     @Override
@@ -64,7 +72,7 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 	return toReturn;
     }
 
-    public void addImport(JTextComponent tc, String neededClass, boolean isClass) {
+    public String addImport(JTextComponent tc, String neededClass, boolean isClass) {
 	String resultingImport;
 	if (isClass)
 	    resultingImport = "importClass(Packages." + neededClass + ")\n";
@@ -74,6 +82,7 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 	if (!tc.getText().contains(resultingImport))
 	    // add at the beginning
 	    tc.setText(resultingImport + "\n" + tc.getText());
+	return resultingImport;
     }
 
 }

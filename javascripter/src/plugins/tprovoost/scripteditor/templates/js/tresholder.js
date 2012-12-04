@@ -1,4 +1,4 @@
-importClass(Packages.plugins.adufour.thresholder.Tresholder)
+importClass(Packages.plugins.adufour.thresholder.Thresholder)
 
 var seq = getSequence()
 

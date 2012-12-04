@@ -2,7 +2,6 @@ package plugins.tprovoost.scripteditor.completion;
 
 import icy.file.FileUtil;
 import icy.gui.frame.progress.ProgressFrame;
-import icy.plugin.abstract_.Plugin;
 import icy.util.ClassUtil;
 
 import java.io.File;
@@ -22,6 +21,7 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.text.BadLocationException;
@@ -54,8 +54,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
     }
 
     @SuppressWarnings("unchecked")
-    public void findBindingsMethods(ScriptEngine engine, Class<? extends Plugin> clazz) {
-
+    public void findBindingsMethods(ScriptEngine engine, Class<?> clazz) {
+	if (clazz == null)
+	    return;
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	HashMap<String, Class<?>> listFunction = engineHandler.getEngineFunctions();
 	HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
@@ -74,8 +75,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    if (blockFunction == null)
 		continue;
 	    // Generate the function for the provider
-	    Class<?> declaredIn = method.getDeclaringClass();
-
 	    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
 
 	    Class<?>[] paramTypes = method.getParameterTypes();
@@ -91,7 +90,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 		params = params.substring(1);
 
 	    ScriptFunctionCompletion sfc = new ScriptFunctionCompletion(this, blockFunction.value(), method);
-	    sfc.setDefinedIn(declaredIn.getName());
+	    sfc.setDefinedIn(clazz.getName());
 	    sfc.setParams(fParams);
 	    sfc.setRelevance(2);
 
@@ -99,31 +98,36 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    if (list != null)
 		removeCompletion(list.get(0));
 	    addCompletion(sfc);
-	    list = getCompletionByInputText(declaredIn.getSimpleName());
+	    list = getCompletionByInputText(clazz.getSimpleName());
 	    if (list == null)
-		addCompletion(new BasicJavaClassCompletion(this, declaredIn));
+		addCompletion(new BasicJavaClassCompletion(this, clazz));
 
 	    if (sfc.isStatic()) {
 		try {
-		    if (sfc.getMethod().getReturnType() == void.class)
-			engine.eval("function " + blockFunction.value() + " (" + params + ") { " + sfc.getMethodCall() + "; }");
-		    else
-			engine.eval("function " + blockFunction.value() + " (" + params + ") { return " + sfc.getMethodCall() + "; }");
+		    if (sfc.getMethod().getReturnType() == void.class) {
+			engine.eval("function " + blockFunction.value() + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+			System.out.println("added into engine:" + "function " + blockFunction.value() + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+		    }
+		    else {
+			engine.eval("function " + blockFunction.value() + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+			System.out.println("added into engine:" + "function " + blockFunction.value() + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+		    }
 		} catch (ScriptException e) {
 		    e.printStackTrace();
 		}
 
 	    }
+	    
 	    if (listFunction != null)
-		listFunction.put(sfc.getMethodCall().substring("packages.".length()), method.getReturnType());
+		listFunction.put(blockFunction.value(), method.getReturnType());
 	    if (engineTypesMethod != null) {
-		ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(declaredIn);
+		ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
 		if (methodsExisting == null)
 		    methodsExisting = new ArrayList<ScriptFunctionCompletion>();
 		if (methodsExisting.contains(sfc))
 		    methodsExisting.remove(sfc);
 		methodsExisting.add(sfc);
-		engineTypesMethod.put(declaredIn, methodsExisting);
+		engineTypesMethod.put(clazz, methodsExisting);
 	    }
 
 	}
@@ -340,7 +344,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
     @Override
     protected boolean isValidChar(char ch) {
 	return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
-	// return super.isValidChar(ch);
     }
 
     public static boolean exists(Completion c, List<Completion> list) {
@@ -420,19 +423,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			command = text;
 		    ArrayList<ScriptFunctionCompletion> methods = null;
 
-		    try {
-			// is the command a classname ?
-			Class<?> clazz = handler.resolveClassDeclaration(command, true);
-			if (clazz != null) {
-			    // test if this is a static call
-			    if ((methods = engineTypesMethod.get(Class.forName(clazz.getName()))) != null) {
-				for (ScriptFunctionCompletion complete : methods) {
-				    if (complete.isStatic() && (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase())))
-					retVal.add(complete);
-				}
+		    // is the command a classname ?
+		    Class<?> clazz = handler.resolveClassDeclaration(command, true);
+		    if (clazz != null) {
+			// test if this is a static call
+			if ((methods = engineTypesMethod.get(clazz)) != null) {
+			    for (ScriptFunctionCompletion complete : methods) {
+				if (complete.isStatic() && (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase())))
+				    retVal.add(complete);
 			    }
 			}
-		    } catch (ClassNotFoundException e1) {
 		    }
 
 		    // check in the local variables if it is a variable
@@ -570,7 +570,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 			    Class<?> clazz = handler.resolveClassDeclaration(text, true);
 			    if (clazz != null) {
 				// test if this is a static call
-				if ((methods = engineTypesMethod.get(Class.forName(clazz.getName()))) != null) {
+				if ((methods = engineTypesMethod.get(ClassUtil.findClass(clazz.getName()))) != null) {
 				    for (ScriptFunctionCompletion complete : methods) {
 					if (complete.isStatic())
 					    retVal.add(complete);
@@ -680,6 +680,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
      */
     private static Object getType(Class<?> clazz, boolean simpleName) {
 	if (simpleName) {
+	    if (clazz.isArray())
+		return clazz.getCanonicalName();
 	    return ClassUtil.getSimpleClassName(clazz.getName());
 	} else {
 	    return clazz.getName();

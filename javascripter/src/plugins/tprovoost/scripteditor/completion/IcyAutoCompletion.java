@@ -35,6 +35,7 @@ public abstract class IcyAutoCompletion extends AutoCompletion {
      *            : the class to be added
      * @param isClass
      *            : is is a class or a package ?
+     * @return 
      */
-    public abstract void addImport(JTextComponent tc, String neededClass, boolean isClass);
+    public abstract String addImport(JTextComponent tc, String neededClass, boolean isClass);
 }

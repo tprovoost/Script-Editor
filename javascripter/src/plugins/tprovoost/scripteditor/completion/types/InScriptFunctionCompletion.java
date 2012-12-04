@@ -5,8 +5,8 @@ import org.fife.ui.autocomplete.VariableCompletion;
 
 public class InScriptFunctionCompletion extends VariableCompletion {
 
-	public InScriptFunctionCompletion(CompletionProvider provider, String name, String type) {
-		super(provider, name, type);
-	}
+    public InScriptFunctionCompletion(CompletionProvider provider, String name, String type) {
+	super(provider, name, type);
+    }
 
 }
