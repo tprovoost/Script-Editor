@@ -47,7 +47,7 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionCellRenderer;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.JSAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler;
+import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 
@@ -289,7 +289,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript")) {
-		    scriptHandler = new JSScriptingHandler(provider, textArea, pane.getGutter());
+		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter());
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
 		    scriptHandler.setErrorOutput(console);

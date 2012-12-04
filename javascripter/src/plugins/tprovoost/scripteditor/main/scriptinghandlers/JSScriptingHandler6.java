@@ -37,12 +37,12 @@ import sun.org.mozilla.javascript.internal.Parser;
 import sun.org.mozilla.javascript.internal.ScriptOrFnNode;
 import sun.org.mozilla.javascript.internal.Token;
 
-public class JSScriptingHandler extends ScriptingHandler {
+public class JSScriptingHandler6 extends ScriptingHandler {
 
     private int commandStartOffset;
     private int commandEndOffset;
 
-    public JSScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter) {
+    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter) {
 	super(provider, "javascript", textArea, gutter);
     }
 

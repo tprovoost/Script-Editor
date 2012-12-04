@@ -11,7 +11,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler;
+import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 
 public class JSAutoCompletion extends IcyAutoCompletion {
@@ -30,7 +30,7 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 		String neededClass = m.getDeclaringClass().getName();
 		if (!classAlreadyImported(neededClass)) {
 		    addImport(tc, neededClass, true);
-		    JSScriptingHandler.organizeImportsStatic(tc);
+		    JSScriptingHandler6.organizeImportsStatic(tc);
 		}
 	    }
 	} else if (c instanceof BasicJavaClassCompletion) {
