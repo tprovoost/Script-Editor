@@ -6,13 +6,9 @@ import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.plugin.abstract_.PluginActionable;
 import icy.sequence.Sequence;
 
-import java.io.BufferedInputStream;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
-
-import org.xeustechnologies.jcl.JarClassLoader;
 
 import plugins.tprovoost.scripteditor.gui.ScriptingEditor;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
@@ -27,21 +23,11 @@ public class ScriptEditorPlugin extends PluginActionable {
 	    MessageDialog.showDialog("This Plugin is only compatible with Java 6. A version for Java 7 will be released in the future.");
 	    return;
 	}
-	ClassLoader clazzLoader = getClass().getClassLoader();
-	if (clazzLoader instanceof JarClassLoader) {
-	    InputStream is = clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/autocomplete.jar");
-	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(is));
-	    is = clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/rsyntaxtextarea.jar");
-	    ((JarClassLoader) clazzLoader).add(new BufferedInputStream(is));
-	    // ((JarClassLoader) clazzLoader).add(new
-	    // BufferedInputStream(clazzLoader.getResourceAsStream("plugins/tprovoost/scripteditor/neededPackages/jython.jar")));
-	}
 	if (ScriptingHandler.factory.getEngineFactories().isEmpty()) {
 	    new FailedAnnounceFrame("No interpreter found. Impossible to compile/run a script.");
 	    System.out.println("No interpreter found. Impossible to compile/run a script.");
 	    return;
 	}
-
 	IcyFrame frame = new ScriptingEditor();
 	frame.setSize(500, 500);
 	frame.addToMainDesktopPane();

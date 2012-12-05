@@ -86,8 +86,12 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
     public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException {
 	// icy important packages
-	engine.eval("importPackage(Packages.icy.main)\n" + "importPackage(Packages.icy.plugin)\n" + "importPackage(Packages.icy.sequence)\n"
-		+ "importPackage(Packages.icy.image)\n" + "importPackage(Packages.icy.file)\n" + "importPackage(Packages.icy.file.xls)");
+	engine.eval("importPackage(Packages.icy.main);");
+	engine.eval("importPackage(Packages.icy.plugin);");
+	engine.eval("importPackage(Packages.icy.sequence)\n");
+	engine.eval("importPackage(Packages.icy.image)");
+	engine.eval("importPackage(Packages.icy.file);");
+	engine.eval("importPackage(Packages.icy.file.xls)");
 
 	ArrayList<String> engineDeclaredImports = ScriptEngineHandler.getEngineHandler(engine).getEngineDeclaredImports();
 	if (!engineDeclaredImports.contains("icy.main"))
@@ -506,7 +510,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      */
     private Class<?> resolveNewType(Node n, String text) throws ScriptException {
 	String type = buildNew(n, commandStartOffset, commandEndOffset);
-	Class<?> clazz = resolveClassDeclaration(type, true);
+	Class<?> clazz = resolveClassDeclaration(type, false);
 	if (clazz == null)
 	    throw new ScriptException("Type: " + type + " is undefined. Please check imports.", null, findLineContaining(text));
 	return clazz;
@@ -616,7 +620,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			clazz = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
 		    if (clazz == null)
 			// class
-			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable, true);
+			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable, false);
 		    if (clazz == null)
 			throw new ScriptException("Unknown class: " + classNameOrFunctionNameOrVariable, null, findLineContaining(text));
 

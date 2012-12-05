@@ -259,7 +259,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			frame.setLength(col.size());
 			int i = 0;
 			for (Class<?> clazz : new ArrayList<Class>(col)) {
-			    // System.out.println(i + " : " + clazz.getName());
+			    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
+				continue;
+			    System.out.println(i + " : " + clazz.getName());
 			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
 			    ++i;
 			    frame.setPosition(i);
@@ -269,6 +271,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			frame.setLength(list.size());
 			int i = 0;
 			for (PluginDescriptor pd : list) {
+			    System.out.println(pd);
 			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, pd.getPluginClass());
 			    ++i;
 			    frame.setPosition(i);

@@ -129,11 +129,10 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	String ext = FileUtil.getFileExtension(name, false);
 	if (ext.contentEquals("py")) {
 	    options.combo.setSelectedItem(ScriptLanguage.PYTHON);
+	} else {
+	    // install the language: javascript / python / ruby / etc.
+	    installLanguage(options.combo.getSelectedItem().toString());
 	}
-
-	// install the language: javascript / python / ruby / etc.
-	installLanguage(options.combo.getSelectedItem().toString());
-
 	rebuildGUI();
 
 	// set the default theme: eclipse.
@@ -387,6 +386,7 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 		values.add(getLanguageName(factory));
 	    }
 	    combo = new JComboBox(values.toArray());
+	    combo.setSelectedItem("javascript");
 	    combo.addItemListener(new ItemListener() {
 
 		@Override
@@ -404,7 +404,6 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 
 		}
 	    });
-	    combo.setSelectedItem("javascript");
 	    add(combo);
 	    add(Box.createHorizontalStrut(4));
 
