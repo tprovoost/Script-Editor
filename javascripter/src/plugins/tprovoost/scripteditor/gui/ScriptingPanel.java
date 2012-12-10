@@ -119,6 +119,8 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	textArea.addCaretListener(this);
 	textArea.setCodeFoldingEnabled(true);
 	textArea.setPaintMarkOccurrencesBorder(true);
+	textArea.setPaintMatchedBracketPair(true);
+	textArea.setPaintTabLines(true);
 
 	pane = new RTextScrollPane(textArea);
 	pane.setIconRowHeaderEnabled(true);
@@ -302,9 +304,9 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript")) {
-		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter());
+		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter(), true);
 		} else if (language.contentEquals("python")) {
-		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter());
+		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
 		} else {
 		    scriptHandler = null;
 		}

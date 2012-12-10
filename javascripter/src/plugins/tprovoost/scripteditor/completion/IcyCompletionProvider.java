@@ -35,9 +35,13 @@ import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 import org.fife.ui.autocomplete.Util;
 import org.fife.ui.autocomplete.VariableCompletion;
+import org.python.jsr223.PyScriptEngine;
+
+import com.sun.script.javascript.RhinoScriptEngine;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.InScriptBasicCompletion;
+import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.IcyFunctionBlock;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
@@ -52,7 +56,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	this.handler = handler;
     }
 
-    @SuppressWarnings("unchecked")
     public void findBindingsMethods(ScriptEngine engine, Class<?> clazz) {
 	if (clazz == null)
 	    return;
@@ -78,8 +81,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
 	    Class<?>[] paramTypes = method.getParameterTypes();
 
+	    // get the parameters
 	    String params = "";
-
+	    String functionName = blockFunction.value();
 	    // get the parameters
 	    for (int i = 0; i < paramTypes.length; ++i) {
 		fParams.add(new Parameter(getType(paramTypes[i], true), "arg" + i));
@@ -88,12 +92,19 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    if (params.length() > 0)
 		params = params.substring(1);
 
-	    ScriptFunctionCompletion sfc = new ScriptFunctionCompletion(this, blockFunction.value(), method);
+	    // the object for the provider
+	    ScriptFunctionCompletion sfc;
+	    if (Modifier.isStatic(method.getModifiers()))
+		sfc = new ScriptFunctionCompletion(this, functionName, method);
+	    else 
+		sfc = new ScriptFunctionCompletion(this, method.getName(), method);
 	    sfc.setDefinedIn(clazz.getName());
 	    sfc.setParams(fParams);
 	    sfc.setRelevance(2);
 
-	    List<Completion> list = getCompletionByInputText(sfc.getName());
+	    // remove existing completions with same name (since it is
+	    // impossible de have the same name in scripting).
+	    List<Completion> list = getCompletionByInputText(functionName);
 	    if (list != null)
 		removeCompletion(list.get(0));
 	    addCompletion(sfc);
@@ -103,22 +114,31 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
 	    if (sfc.isStatic()) {
 		try {
-		    if (sfc.getMethod().getReturnType() == void.class) {
-			engine.eval("function " + blockFunction.value() + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
-			System.out.println("added into engine:" + "function " + blockFunction.value() + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+		    if (engine instanceof RhinoScriptEngine) {
+			if (sfc.getMethod().getReturnType() == void.class) {
+			    engine.eval("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+			    // System.out.println("added into engine:" +
+			    // "function "
+			    // + functionName + " (" + params + ") {\n\t" +
+			    // sfc.getMethodCall() + "\n}");
+			} else {
+			    engine.eval("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+			    // System.out.println("added into engine:" +
+			    // "function "
+			    // + functionName + " (" + params + ") {\n\treturn "
+			    // +
+			    // sfc.getMethodCall() + "\n}");
+			}
 		    }
-		    else {
-			engine.eval("function " + blockFunction.value() + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
-			System.out.println("added into engine:" + "function " + blockFunction.value() + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
-		    }
+		    // TODO python
 		} catch (ScriptException e) {
 		    e.printStackTrace();
 		}
 
 	    }
-	    
+
 	    if (listFunction != null)
-		listFunction.put(blockFunction.value(), method.getReturnType());
+		listFunction.put(functionName, method.getReturnType());
 	    if (engineTypesMethod != null) {
 		ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
 		if (methodsExisting == null)
@@ -342,6 +362,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
     @Override
     protected boolean isValidChar(char ch) {
+	return super.isValidChar(ch) || ch == '\"';
+    }
+
+    protected boolean isValidCharStrict(char ch) {
 	return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
     }
 
@@ -394,8 +418,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
 	// return completions;
 	List<Completion> retVal = new ArrayList<Completion>();
-	String text = getAlreadyEnteredText(comp);
+	String text = getAlreadyEnteredTextWithFunc(comp);
 	int lastIdx = text.lastIndexOf('.');
+	boolean insideParenthesis;
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
 	HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
@@ -407,7 +432,27 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	    localFunctions = new HashMap<Integer, IcyFunctionBlock>();
 
 	if (text != null) {
-
+	    // test if inside parenthesis
+	    if (text.contains("(")) {
+		String text2 = String.copyValueOf(text.toCharArray());
+		int idx;
+		int i = 0;
+		int pOpen = 0;
+		int pClose = 0;
+		while (i < text2.length() - 1 && (idx = text2.indexOf('(', i)) != -1) {
+		    ++pOpen;
+		    i += idx + 1;
+		}
+		while (i < text2.length() - 1 && (idx = text2.indexOf(')', i)) != -1) {
+		    ++pClose;
+		    i += idx + 1;
+		}
+		int ppCount = pOpen - pClose;
+		if (ppCount >= 0) {
+		    text2 = text2.substring(text2.lastIndexOf('(') + 1);
+		    insideParenthesis = true;
+		}
+	    }
 	    if (text.isEmpty() || text.startsWith("Math.") || lastIdx == -1) {
 		doClassicCompletion(text, retVal);
 	    } else {
@@ -423,7 +468,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 		    ArrayList<ScriptFunctionCompletion> methods = null;
 
 		    // is the command a classname ?
-		    Class<?> clazz = handler.resolveClassDeclaration(command, true);
+		    Class<?> clazz = handler.resolveClassDeclaration(command, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
 		    if (clazz != null) {
 			// test if this is a static call
 			if ((methods = engineTypesMethod.get(clazz)) != null) {
@@ -511,114 +556,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 
     }
 
-    @SuppressWarnings("unchecked")
-    protected List<Completion> getCompletionsImplOld(JTextComponent comp) {
-
-	// return completions;
-	List<Completion> retVal = new ArrayList<Completion>();
-	String text = getAlreadyEnteredText(comp);
-
-	ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
-	HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
-	HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
-
-	if (text != null) {
-
-	    if (text.isEmpty() || text.charAt(text.length() - 1) != '.' || text.contentEquals("Math.")) {
-
-		int index = Collections.binarySearch(completions, text, comparator);
-		if (index < 0) { // No exact match
-		    index = -index - 1;
-		} else {
-		    // If there are several overloads for the function being
-		    // completed, Collections.binarySearch() will return the
-		    // index
-		    // of one of those overloads, but we must return all of
-		    // them,
-		    // so search backward until we find the first one.
-		    int pos = index - 1;
-		    while (pos > 0 && comparator.compare(completions.get(pos), text) == 0) {
-			retVal.add((Completion) completions.get(pos));
-			pos--;
-		    }
-		}
-
-		while (index < completions.size()) {
-		    Completion c = (Completion) completions.get(index);
-		    if (c instanceof ScriptFunctionCompletion) {
-			if (!((ScriptFunctionCompletion) c).isStatic()) {
-			    index++;
-			    continue;
-			}
-		    }
-		    if (Util.startsWithIgnoreCase(c.getInputText(), text)) {
-			retVal.add(c);
-			index++;
-		    } else {
-			break;
-		    }
-		}
-	    } else {
-		if (handler != null) {
-		    if (text.charAt(text.length() - 1) == '.') {
-			text = text.substring(0, text.length() - 1);
-
-			ArrayList<ScriptFunctionCompletion> methods = null;
-
-			try {
-			    Class<?> clazz = handler.resolveClassDeclaration(text, true);
-			    if (clazz != null) {
-				// test if this is a static call
-				if ((methods = engineTypesMethod.get(ClassUtil.findClass(clazz.getName()))) != null) {
-				    for (ScriptFunctionCompletion complete : methods) {
-					if (complete.isStatic())
-					    retVal.add(complete);
-				    }
-				}
-			    }
-			} catch (ClassNotFoundException e1) {
-			}
-
-			// check in the local variables if it is a variable
-			// if it is : propose depending on the variable type
-			Class<?> type = null;
-			if ((type = handler.getVariableDeclaration(text)) != null || (type = engineVariables.get(text)) != null) {
-			    methods = engineTypesMethod.get(type);
-			    if (methods != null) {
-				for (ScriptFunctionCompletion complete : methods) {
-				    if (complete.isStatic())
-					complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-				    else
-					complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-				    retVal.add(complete);
-				}
-			    }
-			} else {
-			    // if not : look the type of the function (if
-			    // declared).
-			    // TODO
-			}
-		    }
-		}
-	    }
-	}
-
-	return retVal;
-
-    }
-
-    /**
-     * Returns the text just before the current caret position that could be the
-     * start of something auto-completable.
-     * <p>
-     * 
-     * This method returns all characters before the caret that are matched by
-     * {@link #isValidChar(char)}.
-     * 
-     * {@inheritDoc}
-     */
+    @Override
     public String getAlreadyEnteredText(JTextComponent comp) {
-
+	// used only for insertion of text
 	Document doc = comp.getDocument();
 
 	int dot = comp.getCaretPosition();
@@ -637,6 +577,34 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 	int segEnd = seg.offset + len;
 	start = segEnd - 1;
 	while (start >= seg.offset && isValidChar(seg.array[start])) {
+	    start--;
+	}
+	start++;
+
+	len = segEnd - start;
+	return len == 0 ? EMPTY_STRING : new String(seg.array, start, len);
+    }
+
+    public String getAlreadyEnteredTextWithFunc(JTextComponent comp) {
+
+	Document doc = comp.getDocument();
+
+	int dot = comp.getCaretPosition();
+	Element root = doc.getDefaultRootElement();
+	int index = root.getElementIndex(dot);
+	Element elem = root.getElement(index);
+	int start = elem.getStartOffset();
+	int len = dot - start;
+	try {
+	    doc.getText(start, len, seg);
+	} catch (BadLocationException ble) {
+	    ble.printStackTrace();
+	    return EMPTY_STRING;
+	}
+
+	int segEnd = seg.offset + len;
+	start = segEnd - 1;
+	while (start >= seg.offset && isValidCharStrict(seg.array[start])) {
 	    start--;
 	}
 	start++;

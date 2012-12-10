@@ -4,11 +4,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 
 import icy.plugin.abstract_.Plugin;
 
 public class ScriptEngineHandler extends Plugin {
 
+    /**
+     * This {@link HashMap} is used to avoid multiple different engines for the
+     * same language to be initialized.
+     */
+    private static final HashMap<String, ScriptEngine> engines = new HashMap<String, ScriptEngine>();
+
+    /** The factory contains all the engines. */
+    public static final ScriptEngineManager factory = new ScriptEngineManager();
+    
     private static HashMap<ScriptEngine, ScriptEngineHandler> engineHandlers = new HashMap<ScriptEngine, ScriptEngineHandler>();
 
     private static ScriptEngineHandler lastEngineHandler = null;
@@ -26,6 +36,15 @@ public class ScriptEngineHandler extends Plugin {
 	return lastEngineHandler;
     }
 
+    public static ScriptEngine getEngine(String engineType) {
+	ScriptEngine engine = engines.get(engineType);
+	if (engine == null) {
+	    engine = factory.getEngineByName(engineType);
+	    engines.put(engineType, engine);
+	}
+	return engine;
+    }
+    
     public static ScriptEngineHandler getEngineHandler(ScriptEngine engine) {
 	ScriptEngineHandler engineHandler = engineHandlers.get(engine);
 	if (engineHandler == null) {

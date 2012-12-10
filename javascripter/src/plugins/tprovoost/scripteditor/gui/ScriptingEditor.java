@@ -4,6 +4,7 @@ import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.network.NetworkUtil;
 import icy.resource.icon.IcyIcon;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
@@ -241,8 +242,8 @@ public class ScriptingEditor extends IcyFrame {
 		showOpenFileDialog();
 	    }
 	});
-	menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ctrlMask));
-	menuOpen.setDisplayedMnemonicIndex(0);
+//	menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ctrlMask));
+//	menuOpen.setDisplayedMnemonicIndex(0);
 	menuFile.add(menuOpen);
 
 	JMenuItem menuOpenRecent = new JMenuItem("Open Recent");
@@ -264,7 +265,7 @@ public class ScriptingEditor extends IcyFrame {
 		}
 	    }
 	});
-	menuSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlMask));
+//	menuSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlMask));
 	menuFile.add(menuSave);
 
 	JMenuItem menuSaveAs = new JMenuItem("Save As");
@@ -309,7 +310,7 @@ public class ScriptingEditor extends IcyFrame {
 		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask)).actionPerformed(e);
 	    }
 	});
-	menuUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask));
+//	menuUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask));
 	menuEdit.add(menuUndo);
 
 	JMenuItem menuRedo = new JMenuItem("Redo");
@@ -324,7 +325,7 @@ public class ScriptingEditor extends IcyFrame {
 		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask)).actionPerformed(e);
 	    }
 	});
-	menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask));
+//	menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask));
 	menuEdit.add(menuRedo);
 
 	// MENU RUN
@@ -365,6 +366,29 @@ public class ScriptingEditor extends IcyFrame {
 
 	// add JS templates.
 	menuTemplate.add(menuTemplateJS);
+	
+	JMenu menuOptions = new JMenu("Options");
+	JMenuItem menuPreferences = new JMenuItem("Preferences");
+	menuPreferences.addActionListener(new ActionListener() {
+	    
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+		prefs.addToMainDesktopPane();
+		prefs.setVisible(true);	
+	    }
+	});
+	menuOptions.add(menuPreferences);
+	
+	JMenuItem menuHelp = new JMenuItem("Help (online)");
+	menuHelp.addActionListener(new ActionListener() {
+	    
+	    @Override
+	    public void actionPerformed(ActionEvent arg0) {
+		NetworkUtil.openURL("http://icy.bioimageanalysis.org/plugin/Script_Editor#documentation");
+	    }
+	});
+	menuOptions.add(menuHelp);
 
 	// MENU TEMPLATES
 	// JMenu menuRun = new JMenu("Run");
@@ -373,6 +397,7 @@ public class ScriptingEditor extends IcyFrame {
 	toReturn.add(menuEdit);
 	// toReturn.add(menuRun);
 	toReturn.add(menuTemplate);
+	toReturn.add(menuOptions);
 
 	return toReturn;
     }

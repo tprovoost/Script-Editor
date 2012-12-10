@@ -31,11 +31,6 @@ public class ScriptFunctionCompletion extends FunctionCompletion {
 	super(null, "", "");
     }
 
-    public ScriptFunctionCompletion(CompletionProvider provider, Method method) {
-	super(provider, method.getReturnType().getName(), method.getName().toString());
-	this.method = method;
-    }
-
     public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method) {
 	super(provider, name, method.getReturnType().getName());
 	this.method = method;
@@ -119,7 +114,7 @@ public class ScriptFunctionCompletion extends FunctionCompletion {
     }
 
     private boolean isValidChar(char ch) {
-	return Character.isLetterOrDigit(ch) || ch == '_' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
+	return Character.isLetterOrDigit(ch) || ch == '_' || ch == '\"';
     }
 
 }

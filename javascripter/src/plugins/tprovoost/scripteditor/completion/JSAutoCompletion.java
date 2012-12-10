@@ -25,14 +25,15 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 	if (c instanceof ScriptFunctionCompletion) {
 	    // get position before insertion
 	    JTextComponent tc = getTextComponent();
+	    ScriptFunctionCompletion sfc = ((ScriptFunctionCompletion) c);
 
 	    // get method added
-	    Method m = ((ScriptFunctionCompletion) c).getMethod();
+	    Method m = sfc.getMethod();
 	    if (m != null) {
 		String neededClass = m.getDeclaringClass().getName();
 
 		// test eventual needed importClasses
-		if (!classAlreadyImported(neededClass)) {
+		if (!sfc.isStatic() && !classAlreadyImported(neededClass)) {
 		    addImport(tc, neededClass, true).length();
 		}
 	    }
@@ -60,11 +61,11 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 		    int lastIdx = textBefore.lastIndexOf('.');
 		    if (lastIdx != -1)
 			textBefore = textBefore.substring(0, lastIdx + 1);
-		    else
-			textBefore += '.';
+		    else 
+			textBefore = "";
 		}
-	    }
-	    toReturn = textBefore + fc.getMethod().getName();
+		toReturn = textBefore + fc.getMethod().getName();
+	    }	    
 	} else if (c instanceof BasicJavaClassCompletion) {
 	    Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
 	    toReturn = clazz.getSimpleName();

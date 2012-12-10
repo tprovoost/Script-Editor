@@ -27,8 +27,8 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	 */
     private static final long serialVersionUID = 1L;
 
-    public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter) {
-	super(provider, "python", textArea, gutter);
+    public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
+	super(provider, "python", textArea, gutter, autocompilation);
     }
 
     @Override
@@ -38,13 +38,14 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     public void importPythonPackages(ScriptEngine engine) throws ScriptException {
-
+	// IMPORT PLUGINS FUNCTIONS
+	importFunctions();
     }
-    
+
     @Override
     public void autoDownloadPlugins() {
-        // TODO Auto-generated method stub
-        
+	// TODO Auto-generated method stub
+
     }
 
     @Override
@@ -69,7 +70,9 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	    switch (tree.getAntlrType()) {
 	    case 46:
 		// assign
-		VariableCompletion c = new VariableCompletion(provider, tree.getChild(0).getText(), "");
+		String name = tree.getChild(0).getText();
+		Class<?> type = getType(name);
+		VariableCompletion c = new VariableCompletion(provider, name, type == null ? "" : type.getName());
 		c.setDefinedIn(fileName);
 		c.setSummary("variable");
 		c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
@@ -102,6 +105,10 @@ public class PythonScriptingHandler extends ScriptingHandler {
     protected void organizeImports(JTextComponent textArea2) {
 	// TODO Auto-generated method stub
 
+    }
+
+    private Class<?> getType(String varName) {
+	return engine.getBindings(ScriptContext.ENGINE_SCOPE).get(varName).getClass();
     }
 
 }

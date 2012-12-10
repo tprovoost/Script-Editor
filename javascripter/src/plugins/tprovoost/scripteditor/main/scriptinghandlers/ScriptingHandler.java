@@ -25,7 +25,6 @@ import java.util.TreeMap;
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.Timer;
@@ -43,6 +42,7 @@ import org.fife.ui.rtextarea.RTextArea;
 import org.xeustechnologies.jcl.JarClassLoader;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
+import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
@@ -59,16 +59,7 @@ import sun.org.mozilla.javascript.internal.EvaluatorException;
  */
 public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener {
 
-    /**
-     * This {@link HashMap} is used to avoid multiple different engines for the
-     * same language to be initialized.
-     */
-    private static final HashMap<String, ScriptEngine> engines = new HashMap<String, ScriptEngine>();
-
-    /** The factory contains all the engines. */
-    public static final ScriptEngineManager factory = new ScriptEngineManager();
-
-    /**
+     /**
      * {@link HashMap} containing all ignored Lines if they contains errors.
      * This allows the parser to no stop at the first line where the error is.
      */
@@ -116,8 +107,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
     private boolean advanced;
 
-    private boolean autoCompilation;
-
     /** Turn to true if you need to display more information in the console. */
     protected static final boolean DEBUG = false;
 
@@ -138,8 +127,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param gutter
      *            : reference to the gutter attached to the scrollpane of the
      *            textArea.
+     * @param autocompilation2
      */
-    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter) {
+    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
 	this.provider = provider;
 	this.textArea = textArea;
 	this.gutter = gutter;
@@ -148,7 +138,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	textArea.getDocument().addDocumentListener(new AutoVerify());
 
 	localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
-
     }
 
     public void setErrorOutput(JTextArea errorOutput) {
@@ -170,11 +159,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param engineType
      */
     private void setLanguage(String engineType) {
-	engine = engines.get(engineType);
-	if (engine == null) {
-	    engine = factory.getEngineByName(engineType);
-	    engines.put(engineType, engine);
-	}
+	engine = ScriptEngineHandler.getEngine(engineType);
 	try {
 	    installDefaultLanguageCompletions(engineType);
 
@@ -261,7 +246,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			for (Class<?> clazz : new ArrayList<Class>(col)) {
 			    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
 				continue;
-			    System.out.println(i + " : " + clazz.getName());
+			    // System.out.println(i + " : " + clazz.getName());
 			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
 			    ++i;
 			    frame.setPosition(i);
@@ -271,7 +256,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			frame.setLength(list.size());
 			int i = 0;
 			for (PluginDescriptor pd : list) {
-			    System.out.println(pd);
+			    // System.out.println(pd);
 			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, pd.getPluginClass());
 			    ++i;
 			    frame.setPosition(i);
@@ -317,28 +302,29 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    interpret(textArea.getText(), autocompilation, runAfterCompile);
 	else
 	    interpret(s, autocompilation, runAfterCompile);
-	if (errorOutput != null) {
-	    String textResult = "";
-	    for (Integer a : ignoredLines.keySet()) {
-		try {
-		    if (gutter != null) {
-			gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
-			gutter.repaint();
-		    }
-		} catch (BadLocationException e) {
-		}
-		Exception ee = ignoredLines.get(a);
-		String msg = ee.getLocalizedMessage();
 
-		System.out.println(msg);
-		textResult += msg + "\n";
+	String textResult = "";
+	for (Integer a : ignoredLines.keySet()) {
+	    try {
+		if (gutter != null) {
+		    gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
+		    gutter.repaint();
+		}
+	    } catch (BadLocationException e) {
 	    }
-	    if (textResult.contentEquals("")) {
-		if (runAfterCompile)
-		    textResult = "Run with no issues.";
-		else
-		    textResult = "Compiled with no issues.";
-	    }
+	    Exception ee = ignoredLines.get(a);
+	    String msg = ee.getLocalizedMessage();
+
+	    System.out.println(msg);
+	    textResult += msg + "\n";
+	}
+	if (textResult.contentEquals("")) {
+	    if (runAfterCompile)
+		textResult = "Run with no issues.";
+	    else
+		textResult = "Compiled with no issues.";
+	}
+	if (errorOutput != null) {
 	    errorOutput.setText(textResult);
 	    errorOutput.repaint();
 	}
@@ -370,6 +356,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : run after compile or not.
      */
     private void interpret(String s, boolean autocompilation, boolean exec) {
+	PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 	RTextArea textArea = new RTextArea();
 	textArea.setText(s);
 	try {
@@ -385,16 +372,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (provider != null)
 		detectVariables(s, context);
 	    setCompilationOk(true);
-	    if (exec && isCompilationOk()) {
-		engine.eval(s);
-		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
-
-		for (String key : localVariables.keySet())
-		    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
-		engineHandler.getEngineFunctions().putAll(localFunctions);
-		engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
-		engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
-	    }
 	} catch (EvaluatorException ee) {
 	    int lineError = ee.lineNumber() - 1;
 	    int columnNumber = ee.columnNumber();
@@ -423,6 +400,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    interpret(s, autocompilation, exec);
 		} else {
 		    System.out.println("error at unknown line: " + lineError);
+		    ee.printStackTrace();
+		    if (errorOutput != null)
+			errorOutput.append(ee.getMessage());
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
@@ -447,6 +427,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    interpret(s, autocompilation, exec);
 		} else {
 		    System.out.println("error at unknown line: " + lineError);
+		    se.printStackTrace();
+		    if (errorOutput != null)
+			errorOutput.append(se.getMessage());
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
@@ -454,6 +437,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	} catch (Exception e) {
 	    e.printStackTrace();
 	} finally {
+	    if (exec && (isCompilationOk() || prefWin.isOverrideEnabled())) {
+		try {
+		    engine.eval(s);
+		    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+
+		    for (String key : localVariables.keySet())
+			engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+		    engineHandler.getEngineFunctions().putAll(localFunctions);
+		    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
+		    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
+		} catch (ScriptException se) {
+		    System.out.println(se.getMessage());
+		}
+	    }
 	    Context.exit();
 	}
     }
@@ -482,6 +479,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
     @Override
     public void keyPressed(KeyEvent e) {
+	if (e.getKeyChar() == '/') {
+	    System.out.println("slash hit");
+	    return;
+	}
 	switch (e.getKeyCode()) {
 	case KeyEvent.VK_ENTER:
 	    if (e.isControlDown()) {
@@ -501,16 +502,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (e.isControlDown()) {
 		Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
 		for (String s : bindings.keySet()) {
+		    // try {
+		    // Object o = bindings.get(s);
+		    // if (o instanceof NativeFunction) {
+		    // System.out.print(s + ": ");
+		    // engine.eval("print(" + s + ")");
+		    // } else {
 		    System.out.println(s + " : " + bindings.get(s));
+		    // }
+		    // } catch (ScriptException e1) {
+		    // System.out.println(s + " : " + bindings.get(s));
+		    // }
 		}
-		for (String s : localVariables.keySet()) {
-		    System.out.println(s + ": " + localVariables.get(s));
-		}
-		// for (String s : engineDeclaredImportClasses) {
-		// System.out.println("importClass(" + s + ")");
-		// }
-		// for (String s : engineDeclaredImports) {
-		// System.out.println("importPackage(" + s + ")");
+		// for (String s : localVariables.keySet()) {
+		// System.out.println(s + ": " + localVariables.get(s));
 		// }
 	    }
 	    break;
@@ -653,10 +658,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	return null;
     }
 
-    public void setActiveAutoCompilation(boolean b) {
-	autoCompilation = b;
-    }
-
     public ScriptEngine getEngine() {
 	return engine;
     }
@@ -703,7 +704,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void changedUpdate(DocumentEvent e) {
 	    lastChange = true;
-	    if (autoCompilation)
+	    if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
 		timer.restart();
 	}
 

@@ -4,14 +4,14 @@ import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.plugin.abstract_.PluginActionable;
-import icy.sequence.Sequence;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import javax.script.ScriptEngineManager;
+
 import plugins.tprovoost.scripteditor.gui.ScriptingEditor;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
 public class ScriptEditorPlugin extends PluginActionable {
@@ -23,7 +23,7 @@ public class ScriptEditorPlugin extends PluginActionable {
 	    MessageDialog.showDialog("This Plugin is only compatible with Java 6. A version for Java 7 will be released in the future.");
 	    return;
 	}
-	if (ScriptingHandler.factory.getEngineFactories().isEmpty()) {
+	if (new ScriptEngineManager().getEngineFactories().isEmpty()) {
 	    new FailedAnnounceFrame("No interpreter found. Impossible to compile/run a script.");
 	    System.out.println("No interpreter found. Impossible to compile/run a script.");
 	    return;
@@ -35,24 +35,24 @@ public class ScriptEditorPlugin extends PluginActionable {
 	frame.requestFocus();
     }
 
-    @BindingFunction(value = "displayHello")
-    public static void displayHello(String h, int b, Sequence s) {
-	System.out.println("Hello World!");
-    }
-
-    @BindingFunction(value = "displayHello")
+    @BindingFunction(value = "displayHelloString")
     public static void displayHello(String h) {
 	System.out.println("Hello " + h + "!");
     }
-
-    @BindingFunction(value = "displayHello")
-    public void displayHello(int a) {
+    
+    @BindingFunction(value = "displayHelloInt")
+    public void displayHello(Object a) {
 	System.out.println("Hello " + a + "!");
     }
 
-    @BindingFunction(value = "getThis")
+    @BindingFunction(value = "getThisSEP")
     public ScriptEditorPlugin getThis(String lol) {
 	return this;
+    }
+    
+    @BindingFunction(value = "fnTest")
+    public static int testFuncStatic() {
+	return 42;
     }
 
     /**

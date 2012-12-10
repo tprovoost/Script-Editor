@@ -29,6 +29,7 @@ import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 
+import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import sun.org.mozilla.javascript.internal.CompilerEnvirons;
 import sun.org.mozilla.javascript.internal.Context;
@@ -44,8 +45,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     private int commandStartOffset;
     private int commandEndOffset;
 
-    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter) {
-	super(provider, "javascript", textArea, gutter);
+    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
+	super(provider, "javascript", textArea, gutter, autocompilation);
     }
 
     @Override
@@ -510,7 +511,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      */
     private Class<?> resolveNewType(Node n, String text) throws ScriptException {
 	String type = buildNew(n, commandStartOffset, commandEndOffset);
-	Class<?> clazz = resolveClassDeclaration(type, false);
+	Class<?> clazz = resolveClassDeclaration(type, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
 	if (clazz == null)
 	    throw new ScriptException("Type: " + type + " is undefined. Please check imports.", null, findLineContaining(text));
 	return clazz;
@@ -518,6 +519,13 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
     @Override
     public Class<?> resolveClassDeclaration(String type, boolean strict) {
+	Class<?> toReturn = null;
+	boolean isArray = false;
+	if (type.endsWith("[]")) {
+	    type = type.substring(0, type.length() - 2);
+	    isArray = true;
+	}
+
 	// try absolute
 	if (type.contentEquals("Array")) {
 	    return NativeArray.class;
@@ -527,10 +535,18 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	try {
 	    if (type.startsWith("Packages."))
 		type = type.substring("Packages.".length());
-	    return ClassUtil.findClass(type);
+	    toReturn = ClassUtil.findClass(type);
 	} catch (ClassNotFoundException e) {
 	}
-	return super.resolveClassDeclaration(type, strict);
+	if (toReturn == null)
+	    toReturn = super.resolveClassDeclaration(type, strict);
+	if (isArray) {
+	    try {
+		toReturn = ClassUtil.findClass("[L" + toReturn.getName());
+	    } catch (ClassNotFoundException e) {
+	    }
+	}
+	return toReturn;
     }
 
     private String buildNew(Node n, int commandStartOffset, int commandEndOffset) {
@@ -544,6 +560,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		break;
 	    case Token.NAME:
 		newCall = "." + currentChild.getString() + newCall;
+		currentChild = null;
+		break;
+	    case Token.GETELEM: // table
+		newCall = currentChild.getFirstChild().getString() + "[]" + newCall;
 		currentChild = null;
 		break;
 	    default:
@@ -620,7 +640,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			clazz = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
 		    if (clazz == null)
 			// class
-			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable, false);
+			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
 		    if (clazz == null)
 			throw new ScriptException("Unknown class: " + classNameOrFunctionNameOrVariable, null, findLineContaining(text));
 
@@ -640,8 +660,13 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		    if (containsNew) {
 			returnType = clazz;
 		    } else {
-			Method m = clazz.getMethod(firstCall.substring(lastDot + 1, idxP1), clazzes);
-			returnType = m.getReturnType();
+			String call = firstCall.substring(lastDot + 1, idxP1);
+			if (call.contentEquals("newInstance")) {
+			    returnType = clazz;
+			} else {
+			    Method m = clazz.getMethod(call, clazzes);
+			    returnType = m.getReturnType();
+			}
 		    }
 
 		    if (DEBUG)
@@ -670,8 +695,17 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			    }
 			    clazzes = getGenericNumberTypes(text, returnType, firstCall.substring(lastDot + 1, idxP1), clazzes);
 			}
-			Method m = returnType.getMethod(firstCall.substring(0, idxP1), clazzes);
-			returnType = m.getReturnType();
+			String call = firstCall.substring(lastDot + 1, idxP1);
+			if (call.contentEquals("newInstance")) {
+			    clazz.getConstructor(clazzes);
+			    returnType = clazz;
+			} else {
+			    // a =
+			    // java.lang.reflect.Array.newInstance(java.lang.Double,5)
+
+			    Method m = returnType.getMethod(firstCall.substring(0, idxP1), clazzes);
+			    returnType = m.getReturnType();
+			}
 			if (DEBUG)
 			    System.out.println("function created: " + commandStartOffset + text.substring(commandStartOffset));
 			fb = new IcyFunctionBlock(firstCall.substring(lastDot + 1, idxP1), commandStartOffset, returnType);
@@ -898,10 +932,26 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    Class<?> res = resolveCallType(n, text, false);
 	    return res;
 	case Token.GETPROP:
-	    return String.class;
+	    // class wanted
+	    String className = generateClassName(n, "");
+	    Class<?> toReturn = null;
+	    try {
+		toReturn = ClassUtil.findClass(className);
+	    } catch (ClassNotFoundException e) {
+	    }
+	    return toReturn;
 	}
 
 	return null;
+    }
+
+    private String generateClassName(Node n, String toReturn) {
+	if (n.getType() == Token.GETPROP) {
+	    toReturn += generateClassName(n.getFirstChild(), toReturn) + "." + generateClassName(n.getLastChild(), toReturn);
+	} else if (n.getType() == Token.STRING || n.getType() == Token.NAME) {
+	    return n.getString();
+	}
+	return toReturn;
     }
 
     @Override
