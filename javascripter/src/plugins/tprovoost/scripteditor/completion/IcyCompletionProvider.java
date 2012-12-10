@@ -35,9 +35,6 @@ import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 import org.fife.ui.autocomplete.Util;
 import org.fife.ui.autocomplete.VariableCompletion;
-import org.python.jsr223.PyScriptEngine;
-
-import com.sun.script.javascript.RhinoScriptEngine;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.InScriptBasicCompletion;
@@ -47,6 +44,8 @@ import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+
+import com.sun.script.javascript.RhinoScriptEngine;
 
 public class IcyCompletionProvider extends DefaultCompletionProvider {
 
@@ -413,14 +412,13 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
     protected List<Completion> getCompletionsImpl(JTextComponent comp) {
 
 	// return completions;
 	List<Completion> retVal = new ArrayList<Completion>();
 	String text = getAlreadyEnteredTextWithFunc(comp);
 	int lastIdx = text.lastIndexOf('.');
-	boolean insideParenthesis;
+	boolean insideParentheses = false;
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
 	HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
@@ -449,11 +447,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider {
 		}
 		int ppCount = pOpen - pClose;
 		if (ppCount >= 0) {
-		    text2 = text2.substring(text2.lastIndexOf('(') + 1);
-		    insideParenthesis = true;
+		    text = text2.substring(text2.lastIndexOf('(') + 1);
+		    insideParentheses = true;
 		}
 	    }
-	    if (text.isEmpty() || text.startsWith("Math.") || lastIdx == -1) {
+	    if (text.isEmpty() || insideParentheses || text.startsWith("Math.") || lastIdx == -1) {
 		doClassicCompletion(text, retVal);
 	    } else {
 		if (handler != null) {
