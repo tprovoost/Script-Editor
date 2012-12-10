@@ -7,6 +7,7 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
 import icy.util.ClassUtil;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -520,10 +521,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     @Override
     public Class<?> resolveClassDeclaration(String type, boolean strict) {
 	Class<?> toReturn = null;
-	boolean isArray = false;
-	if (type.endsWith("[]")) {
+	int arraySize = 0;
+	while (type.endsWith("[]")) {
 	    type = type.substring(0, type.length() - 2);
-	    isArray = true;
+	    arraySize++;
 	}
 
 	// try absolute
@@ -540,38 +541,17 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	}
 	if (toReturn == null)
 	    toReturn = super.resolveClassDeclaration(type, strict);
-	if (isArray) {
-	    try {
-		toReturn = ClassUtil.findClass("[L" + toReturn.getName());
-	    } catch (ClassNotFoundException e) {
-	    }
+	while (toReturn != null && arraySize > 0) {
+	    toReturn = Array.newInstance(toReturn, 1).getClass();
+	    arraySize--;
 	}
 	return toReturn;
     }
 
     private String buildNew(Node n, int commandStartOffset, int commandEndOffset) {
 	String newCall = "";
-	Node currentChild = n;
-	while (currentChild != null) {
-	    switch (currentChild.getType()) {
-	    case Token.GETPROP:
-		newCall = "." + currentChild.getLastChild().getString() + newCall;
-		currentChild = currentChild.getFirstChild();
-		break;
-	    case Token.NAME:
-		newCall = "." + currentChild.getString() + newCall;
-		currentChild = null;
-		break;
-	    case Token.GETELEM: // table
-		newCall = currentChild.getFirstChild().getString() + "[]" + newCall;
-		currentChild = null;
-		break;
-	    default:
-		newCall = "." + currentChild.getString() + newCall;
-		currentChild = null;
-		break;
-	    }
-	}
+	newCall = buildRecursiveNew(n);
+
 	// removes the first dot
 	if (newCall.startsWith("."))
 	    newCall = newCall.substring(1);
@@ -579,6 +559,21 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    newCall = newCall.substring("Packages.".length());
 
 	return newCall;
+    }
+
+    private String buildRecursiveNew(Node n) {
+	Node currentChild = n;
+	switch (currentChild.getType()) {
+	case Token.GETPROP:
+	    return buildRecursiveNew(currentChild.getFirstChild()) + "." + buildRecursiveNew(currentChild.getLastChild());
+	case Token.STRING:
+	case Token.NAME:
+	    return currentChild.getString();
+	case Token.GETELEM: // table
+	    return buildRecursiveNew(currentChild.getFirstChild()) + "[]";
+	default:
+	    return "";
+	}
     }
 
     /**
@@ -857,7 +852,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			    s += ',';
 			Class<?> result = getRealType(nextChild, text);
 			if (result == null)
-			    throw new ScriptException("unknown type.");
+			    throw new ScriptException("unknown type.", "", findLineContaining(text));
 			s += result.getName();
 			nextChild = nextChild.getNext();
 			cptAdded++;

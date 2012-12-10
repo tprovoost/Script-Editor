@@ -59,7 +59,7 @@ import sun.org.mozilla.javascript.internal.EvaluatorException;
  */
 public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener {
 
-     /**
+    /**
      * {@link HashMap} containing all ignored Lines if they contains errors.
      * This allows the parser to no stop at the first line where the error is.
      */
@@ -448,7 +448,32 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
 		    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
 		} catch (ScriptException se) {
-		    System.out.println(se.getMessage());
+		    int lineError = lineNumber(se) - 1;
+		    Integer columnNumberI = columnNumber(se);
+		    int columnNumber = columnNumberI != null ? columnNumberI : -1;
+		    if (columnNumber == -1)
+			columnNumber = 0;
+		    try {
+			if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1)) {
+			    int lineOffset = textArea.getLineStartOffset(lineError);
+			    int lineEndOffset = textArea.getLineEndOffset(lineError);
+
+			    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
+			    if (ignoredLines.containsKey(lineError)) {
+				System.out.println("An error occured with the error parsing.");
+				return;
+			    }
+			    ignoredLines.put(lineError, se);
+			    interpret(s, autocompilation, exec);
+			} else {
+			    System.out.println("error at unknown line: " + lineError);
+			    se.printStackTrace();
+			    if (errorOutput != null)
+				errorOutput.append(se.getMessage());
+			}
+		    } catch (BadLocationException e1) {
+			e1.printStackTrace();
+		    }
 		}
 	    }
 	    Context.exit();
