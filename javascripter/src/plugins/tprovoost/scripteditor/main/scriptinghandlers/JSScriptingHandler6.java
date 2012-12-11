@@ -51,39 +51,69 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     @Override
-    public void installDefaultLanguageCompletions(String language) throws ScriptException {
+    public void installDefaultLanguageCompletions(String language) {
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
 	// IMPORT PACKAGES
-	importJavaScriptPackages(engine);
+	try {
+	    importJavaScriptPackages(engine);
+	} catch (ScriptException e1) {
+	}
 
 	// IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
 	FunctionCompletion c;
 	// ArrayList<Parameter> params = new ArrayList<Parameter>();
-	engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
-	c = new FunctionCompletion(provider, "getSequence", "Sequence");
-	c.setDefinedIn("MainInterface");
-	c.setReturnValueDescription("The focused sequence is returned.");
-	c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-	provider.addCompletion(c);
-	engineFunctions.put("getSequence", Sequence.class);
+	try {
+	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+	    c = new FunctionCompletion(provider, "getSequence", "Sequence");
+	    c.setDefinedIn("MainInterface");
+	    c.setReturnValueDescription("The focused sequence is returned.");
+	    c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+	    provider.addCompletion(c);
+	    engineFunctions.put("getSequence", Sequence.class);
+	} catch (ScriptException e) {
+	    System.out.println(e.getMessage());
+	}
 
-	engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
-	c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
-	c.setDefinedIn("MainInterface");
-	c.setShortDescription("Returns the current image viewed in the focused sequence.");
-	c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
-	provider.addCompletion(c);
-	engineFunctions.put("getImage", IcyBufferedImage.class);
+	try {
+	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+	    c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
+	    c.setDefinedIn("MainInterface");
+	    c.setShortDescription("Returns the current image viewed in the focused sequence.");
+	    c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
+	    provider.addCompletion(c);
+	    engineFunctions.put("getImage", IcyBufferedImage.class);
+	} catch (ScriptException e) {
+	    System.out.println(e.getMessage());
+	}
 
+	// try {
+	// engine.eval("function initArray(a,type,dim,len,curN) {\n" +
+	// "\tfor (i=;i < a.length; ++i) {\n"
+	// + "\t\ta[i]=java.lang.reflect.Array.newInstance(type,len);\n" +
+	// "\t\tif (curN < dim - 1)\n" +
+	// "\t\t\tgenerateArray(a[i],type,dim,curN + 1)"
+	// + "\t}\n" + "}");
+	// c = new FunctionCompletion(provider, "initArray", "");
+	// c.setShortDescription("Recursively initialize the array.");
+	// provider.addCompletion(c);
+	// engineFunctions.put("getImage", IcyBufferedImage.class);
+	// } catch (ScriptException e) {
+	// e.printStackTrace();
+	// }
+	
 	// ADD JS FUNCTIONS
 	engineFunctions.put("importClass", void.class);
 	engineFunctions.put("importPackage", void.class);
 
 	// IMPORT PLUGINS FUNCTIONS
-	importFunctions();
+	try {
+	    importFunctions();
+	} catch (ScriptException e) {
+	    e.printStackTrace();
+	}
     }
 
     public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException {
@@ -1048,6 +1078,30 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    return offset;
     }
 
+    // public static Object generateArray(String stype, int dim, int len) {
+    // Class<?> type;
+    // try {
+    // type = ClassUtil.findClass(stype);
+    // } catch (ClassNotFoundException e) {
+    // e.printStackTrace();
+    // }
+    // for (int i = 0 ; i < dim ; ++i) {
+    // type = Array.newInstance(type, len).getClass();
+    // }
+    // Object o = Array.newInstance(type, len);
+    // return o;
+    // }
+    //
+    // private static void initArray(Class<?> type, dim, len) {
+    // + "\tfor (i=;i < a.length; ++i) {\n"
+    // + "\t\ta[i]=java.lang.reflect.Array.newInstance(type,len);\n"
+    // + "\t\tif (curN < dim - 1)\n"
+    // + "\t\t\tgenerateArray(a[i],type,dim,curN + 1)"
+    // + "\t}\n"
+    // + "\treturn a\n"
+    // + "}");
+    // }
+    
     /**
      * <i>Extracted from rhino for debugging puproses.</i><br/>
      * Always returns a human-readable string for the token name. For instance,

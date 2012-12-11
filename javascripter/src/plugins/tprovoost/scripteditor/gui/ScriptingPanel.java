@@ -413,16 +413,16 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-		    scriptHandler.interpret(false, false);
+		    scriptHandler.interpret(false, false, false);
 		}
 	    });
-	    add(btnBuild);
+//	    add(btnBuild);
 
 	    btnRun.addActionListener(new ActionListener() {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-		    scriptHandler.interpret(false, true);
+		    scriptHandler.interpret(false, false, true);
 		}
 	    });
 	    add(btnRun);
@@ -497,13 +497,6 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 	saveFileString = all;
 	textArea.setText(all);
 	reader.close();
-	ThreadUtil.bgRun(new Runnable() {
-
-	    @Override
-	    public void run() {
-		scriptHandler.autoDownloadPlugins();
-	    }
-	});
     }
 
     public void openStream(InputStream stream) throws IOException {
@@ -518,6 +511,8 @@ public class ScriptingPanel extends JPanel implements CaretListener {
 
 	    @Override
 	    public void run() {
+		while (scriptHandler == null)
+		    ThreadUtil.sleep(1000);
 		scriptHandler.autoDownloadPlugins();
 	    }
 	});

@@ -3,8 +3,8 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="/Icy-App/icy.jar"/>
-	<classpathentry kind="lib" path="jython.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/AutoComplete"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/RSyntaxTextArea"/>
+	<classpathentry kind="lib" path="jython.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

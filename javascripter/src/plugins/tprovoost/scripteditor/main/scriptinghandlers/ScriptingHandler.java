@@ -237,33 +237,36 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		public void run() {
 		    ProgressFrame frame = new ProgressFrame("Loading functions...");
 		    Chronometer chrono = new Chronometer("chrono");
+		    try {
+			if (getClass().getClassLoader() instanceof JarClassLoader) {
+			    Collection<Class> col = PluginLoader.getAllClasses().values();
 
-		    if (getClass().getClassLoader() instanceof JarClassLoader) {
-			Collection<Class> col = PluginLoader.getAllClasses().values();
-
-			frame.setLength(col.size());
-			int i = 0;
-			for (Class<?> clazz : new ArrayList<Class>(col)) {
-			    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
-				continue;
-			    // System.out.println(i + " : " + clazz.getName());
-			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
-			    ++i;
-			    frame.setPosition(i);
+			    frame.setLength(col.size());
+			    int i = 0;
+			    for (Class<?> clazz : new ArrayList<Class>(col)) {
+				if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
+				    continue;
+				// System.out.println(i + " : " +
+				// clazz.getName());
+				((IcyCompletionProvider) provider).findBindingsMethods(engine, clazz);
+				++i;
+				frame.setPosition(i);
+			    }
+			} else {
+			    ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
+			    frame.setLength(list.size());
+			    int i = 0;
+			    for (PluginDescriptor pd : list) {
+				// System.out.println(pd);
+				((IcyCompletionProvider) provider).findBindingsMethods(engine, pd.getPluginClass());
+				++i;
+				frame.setPosition(i);
+			    }
 			}
-		    } else {
-			ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
-			frame.setLength(list.size());
-			int i = 0;
-			for (PluginDescriptor pd : list) {
-			    // System.out.println(pd);
-			    ((IcyCompletionProvider) provider).findBindingsMethods(engine, pd.getPluginClass());
-			    ++i;
-			    frame.setPosition(i);
-			}
+		    } finally {
+			chrono.displayInSeconds();
+			frame.close();
 		    }
-		    chrono.displayInSeconds();
-		    frame.close();
 		}
 	    });
 	}
@@ -294,14 +297,15 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @param runAfterCompile
      *            : if true, runs the code.
+     * @param b
      */
-    public void interpret(boolean autocompilation, boolean runAfterCompile) {
+    public void interpret(boolean forceRun, boolean autocompilation, boolean runAfterCompile) {
 	ignoredLines.clear();
 	String s = textArea.getSelectedText();
 	if (s == null)
-	    interpret(textArea.getText(), autocompilation, runAfterCompile);
+	    interpret(forceRun, textArea.getText(), autocompilation, runAfterCompile);
 	else
-	    interpret(s, autocompilation, runAfterCompile);
+	    interpret(forceRun, s, autocompilation, runAfterCompile);
 
 	String textResult = "";
 	for (Integer a : ignoredLines.keySet()) {
@@ -350,12 +354,14 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * Parsed. If any error occurs, the line containing it will be highlighted
      * in the gutter.
      * 
+     * @param forceRun
+     * 
      * @param s
      *            : the code to interpret.
      * @param exec
      *            : run after compile or not.
      */
-    private void interpret(String s, boolean autocompilation, boolean exec) {
+    private void interpret(boolean forceRun, String s, boolean autocompilation, boolean exec) {
 	PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 	RTextArea textArea = new RTextArea();
 	textArea.setText(s);
@@ -369,7 +375,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    scriptDeclaredImportClasses.clear();
 	    blockFunctions.clear();
 	    registerImports();
-	    if (provider != null)
+	    if (provider != null && !forceRun)
 		detectVariables(s, context);
 	    setCompilationOk(true);
 	} catch (EvaluatorException ee) {
@@ -397,7 +403,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    ignoredLines.put(lineError, ee);
 		    // }
 		    s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
-		    interpret(s, autocompilation, exec);
+		    interpret(forceRun, s, autocompilation, exec);
 		} else {
 		    System.out.println("error at unknown line: " + lineError);
 		    ee.printStackTrace();
@@ -424,7 +430,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			return;
 		    }
 		    ignoredLines.put(lineError, se);
-		    interpret(s, autocompilation, exec);
+		    interpret(forceRun, s, autocompilation, exec);
 		} else {
 		    System.out.println("error at unknown line: " + lineError);
 		    se.printStackTrace();
@@ -464,7 +470,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				return;
 			    }
 			    ignoredLines.put(lineError, se);
-			    interpret(s, autocompilation, exec);
+			    interpret(false, s, autocompilation, exec);
 			} else {
 			    System.out.println("error at unknown line: " + lineError);
 			    se.printStackTrace();
@@ -511,7 +517,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	switch (e.getKeyCode()) {
 	case KeyEvent.VK_ENTER:
 	    if (e.isControlDown()) {
-		interpret(false, false);
+		interpret(false, false, false);
 		e.consume();
 		break;
 	    } else if (e.isShiftDown()) {
@@ -520,7 +526,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	case KeyEvent.VK_R:
 	    if (e.isControlDown())
-		interpret(false, true);
+		interpret(false, false, true);
 	    break;
 
 	case KeyEvent.VK_M:
@@ -533,7 +539,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    // System.out.print(s + ": ");
 		    // engine.eval("print(" + s + ")");
 		    // } else {
-		    System.out.println(s + " : " + bindings.get(s));
+		    Object o = bindings.get(s);
+		    System.out.println(s + " : " + o);
 		    // }
 		    // } catch (ScriptException e1) {
 		    // System.out.println(s + " : " + bindings.get(s));
@@ -715,7 +722,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    String s = fullTxt.substring(0, offset);
 		    s += fullTxt.substring(offset + len, doc.getLength());
 
-		    interpret(s, true, false);
+		    interpret(false, s, true, false);
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
@@ -729,14 +736,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void changedUpdate(DocumentEvent e) {
 	    lastChange = true;
-	    if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
-		timer.restart();
+	    ThreadUtil.invokeLater(new Runnable() {
+
+		@Override
+		public void run() {
+		    if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
+			timer.restart();
+		}
+	    });
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 	    lastChange = false;
-	    interpret(true, false);
+	    interpret(false, true, false);
 	}
 
 	@Override

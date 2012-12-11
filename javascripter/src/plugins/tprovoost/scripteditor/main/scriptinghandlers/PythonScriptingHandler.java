@@ -35,11 +35,45 @@ public class PythonScriptingHandler extends ScriptingHandler {
     public void installDefaultLanguageCompletions(String language) throws ScriptException {
 	importPythonPackages(engine);
 
+	// ScriptEngineHandler engineHandler =
+	// ScriptEngineHandler.getEngineHandler(engine);
+	// HashMap<String, Class<?>> engineFunctions =
+	// engineHandler.getEngineFunctions();
+	//
+	// // IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
+	// FunctionCompletion c;
+	// // ArrayList<Parameter> params = new ArrayList<Parameter>();
+	// try {
+	// engine.eval("from icy.main import Icy\ndef getSequence() :\n\treturn Icy.getMainInterface().getFocusedSequence()");
+	// c = new FunctionCompletion(provider, "getSequence", "Sequence");
+	// c.setDefinedIn("MainInterface");
+	// c.setReturnValueDescription("The focused sequence is returned.");
+	// c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+	// provider.addCompletion(c);
+	// engineFunctions.put("getSequence", Sequence.class);
+	// } catch (ScriptException e) {
+	// System.out.println(e.getMessage());
+	// }
+	//
+	// try {
+	// engine.eval("from icy.main import Icy\ndef getImage() :\n\treturn Icy.getMainInterface().getFocusedImage()");
+	// c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
+	// c.setDefinedIn("MainInterface");
+	// c.setShortDescription("Returns the current image viewed in the focused sequence.");
+	// c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
+	// provider.addCompletion(c);
+	// engineFunctions.put("getImage", IcyBufferedImage.class);
+	// } catch (ScriptException e) {
+	// System.out.println(e.getMessage());
+	// }
+
+	// IMPORT PLUGINS FUNCTIONS
+	importFunctions();
+
     }
 
     public void importPythonPackages(ScriptEngine engine) throws ScriptException {
-	// IMPORT PLUGINS FUNCTIONS
-	importFunctions();
+	// icy important packages
     }
 
     @Override
