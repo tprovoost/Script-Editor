@@ -6,6 +6,7 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 
+
 public class PythonAutoCompletion extends IcyAutoCompletion {
 
     public PythonAutoCompletion(CompletionProvider provider) {

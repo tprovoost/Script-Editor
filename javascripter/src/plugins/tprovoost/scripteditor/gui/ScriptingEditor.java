@@ -2,7 +2,6 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
-import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.network.NetworkUtil;
 import icy.resource.icon.IcyIcon;
@@ -72,8 +71,6 @@ public class ScriptingEditor extends IcyFrame {
 			    ThreadUtil.sleep(500);
 			    ++i;
 			}
-			if (handler == null)
-			    new AnnounceFrame("An error occured.");
 		    }
 		});
 

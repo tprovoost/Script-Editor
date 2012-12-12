@@ -108,6 +108,10 @@ public class PreferencesWindow extends IcyFrame {
     public boolean isStrictModeEnabled() {
 	return (Boolean) tableModel.getValueAt(3, 1);
     }
+    
+    public boolean isRunNewEngineEnabled() {
+	return (Boolean) tableModel.getValueAt(4, 1);
+    }
 
     public class PreferencesTableModel extends DefaultTableModel {
 
@@ -118,8 +122,13 @@ public class PreferencesWindow extends IcyFrame {
 	Class<?>[] columnTypes = new Class[] { String.class, Boolean.class };
 
 	public PreferencesTableModel() {
-	    super(new Object[][] { { "Enable variable interpretation", Boolean.FALSE }, { "Override verification", Boolean.TRUE },
-		    { "Enable auto verification", Boolean.FALSE }, { "Enable Strict Mode", Boolean.FALSE }, }, new String[] { "Property", "Value" });
+	    super(new Object[][] { 
+		    { "Enable variable interpretation", Boolean.FALSE }, 
+		    { "Override verification", Boolean.TRUE },
+		    { "Enable auto verification", Boolean.FALSE }, 
+		    { "Enable Strict Mode", Boolean.FALSE },
+		    { "Always run in a new Engine", Boolean.TRUE },
+		    }, new String[] { "Property", "Value" });
 	}
 
 	public Class<?> getColumnClass(int columnIndex) {

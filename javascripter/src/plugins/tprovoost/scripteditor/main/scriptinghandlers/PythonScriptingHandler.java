@@ -1,6 +1,8 @@
 package plugins.tprovoost.scripteditor.main.scriptinghandlers;
 
 import java.io.StringReader;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -131,18 +133,18 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     @Override
     public void registerImports() {
-	// TODO Auto-generated method stub
-
     }
 
     @Override
     protected void organizeImports(JTextComponent textArea2) {
-	// TODO Auto-generated method stub
-
     }
 
     private Class<?> getType(String varName) {
 	return engine.getBindings(ScriptContext.ENGINE_SCOPE).get(varName).getClass();
+    }
+
+    @Override
+    public void installMethods(ArrayList<Method> functions) {
     }
 
 }

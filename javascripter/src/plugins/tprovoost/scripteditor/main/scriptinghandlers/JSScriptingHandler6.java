@@ -9,6 +9,7 @@ import icy.util.ClassUtil;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,8 +31,11 @@ import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 
+import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
+import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
+import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.CompilerEnvirons;
 import sun.org.mozilla.javascript.internal.Context;
 import sun.org.mozilla.javascript.internal.FunctionNode;
@@ -40,6 +44,8 @@ import sun.org.mozilla.javascript.internal.Node;
 import sun.org.mozilla.javascript.internal.Parser;
 import sun.org.mozilla.javascript.internal.ScriptOrFnNode;
 import sun.org.mozilla.javascript.internal.Token;
+
+import com.sun.script.javascript.RhinoScriptEngine;
 
 public class JSScriptingHandler6 extends ScriptingHandler {
 
@@ -103,7 +109,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	// } catch (ScriptException e) {
 	// e.printStackTrace();
 	// }
-	
+
 	// ADD JS FUNCTIONS
 	engineFunctions.put("importClass", void.class);
 	engineFunctions.put("importPackage", void.class);
@@ -796,6 +802,50 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    return 1;
     }
 
+    @Override
+    public void installMethods(ArrayList<Method> methods) {
+	for (Method method : methods) {
+	    // is it an annotated with BindingFunction?
+	    BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
+	    if (blockFunction == null)
+		continue;
+	    // Generate the function for the provider
+	    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
+	    Class<?>[] paramTypes = method.getParameterTypes();
+
+	    // get the parameters
+	    String params = "";
+	    String functionName = blockFunction.value();
+	    // get the parameters
+	    for (int i = 0; i < paramTypes.length; ++i) {
+		fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
+		params += ",arg" + i;
+	    }
+	    if (params.length() > 0)
+		params = params.substring(1);
+
+	    // the object for the provider
+	    ScriptFunctionCompletion sfc;
+	    if (Modifier.isStatic(method.getModifiers()))
+		sfc = new ScriptFunctionCompletion(null, functionName, method);
+	    else
+		sfc = new ScriptFunctionCompletion(null, method.getName(), method);
+
+	    try {
+		if (engine instanceof RhinoScriptEngine) {
+		    if (method.getReturnType() == void.class) {
+			engine.eval("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+		    } else {
+			engine.eval("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+		    }
+		}
+	    } catch (ScriptException e) {
+		e.printStackTrace();
+	    }
+	}
+
+    }
+
     /**
      * FIXME : issue with same name functions, will always use the first one.
      * 
@@ -1078,30 +1128,6 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    return offset;
     }
 
-    // public static Object generateArray(String stype, int dim, int len) {
-    // Class<?> type;
-    // try {
-    // type = ClassUtil.findClass(stype);
-    // } catch (ClassNotFoundException e) {
-    // e.printStackTrace();
-    // }
-    // for (int i = 0 ; i < dim ; ++i) {
-    // type = Array.newInstance(type, len).getClass();
-    // }
-    // Object o = Array.newInstance(type, len);
-    // return o;
-    // }
-    //
-    // private static void initArray(Class<?> type, dim, len) {
-    // + "\tfor (i=;i < a.length; ++i) {\n"
-    // + "\t\ta[i]=java.lang.reflect.Array.newInstance(type,len);\n"
-    // + "\t\tif (curN < dim - 1)\n"
-    // + "\t\t\tgenerateArray(a[i],type,dim,curN + 1)"
-    // + "\t}\n"
-    // + "\treturn a\n"
-    // + "}");
-    // }
-    
     /**
      * <i>Extracted from rhino for debugging puproses.</i><br/>
      * Always returns a human-readable string for the token name. For instance,

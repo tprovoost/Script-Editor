@@ -39,7 +39,8 @@ public class JSAutoCompletion extends IcyAutoCompletion {
 	    }
 	} else if (c instanceof BasicJavaClassCompletion) {
 	    JTextComponent tc = getTextComponent();
-	    String neededClass = ((BasicJavaClassCompletion) c).getClazz().getName();
+	    Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
+	    String neededClass = clazz.getName();
 
 	    if (!classAlreadyImported(neededClass))
 		addImport(tc, neededClass, true);
