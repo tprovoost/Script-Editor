@@ -239,9 +239,8 @@ public class ScriptingEditor extends IcyFrame {
 		showOpenFileDialog();
 	    }
 	});
-	// menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
-	// ctrlMask));
-	// menuOpen.setDisplayedMnemonicIndex(0);
+	menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ctrlMask));
+	menuOpen.setDisplayedMnemonicIndex(0);
 	menuFile.add(menuOpen);
 
 	JMenuItem menuOpenRecent = new JMenuItem("Open Recent");
@@ -263,8 +262,7 @@ public class ScriptingEditor extends IcyFrame {
 		}
 	    }
 	});
-	// menuSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S,
-	// ctrlMask));
+	menuSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlMask));
 	menuFile.add(menuSave);
 
 	JMenuItem menuSaveAs = new JMenuItem("Save As");

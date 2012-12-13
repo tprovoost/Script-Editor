@@ -48,11 +48,12 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionCellRenderer;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.JSAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
+import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 
-public class ScriptingPanel extends JPanel implements CaretListener
+public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
 {
 
     public enum ScriptLanguage
@@ -97,6 +98,8 @@ public class ScriptingPanel extends JPanel implements CaretListener
 
     /** Autocompletion system. Uses provider item. */
     private IcyAutoCompletion ac;
+    public JButton btnRun;
+    public JButton btnStop;
 
     /**
      * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
@@ -136,18 +139,17 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	options = new PanelOptions();
 
 	String ext = FileUtil.getFileExtension(name, false);
+	installLanguage(options.combo.getSelectedItem().toString());
+	rebuildGUI();
+
 	if (ext.contentEquals("py"))
 	{
-	    options.combo.setSelectedItem(ScriptLanguage.PYTHON);
-	} else
-	{
-	    // install the language: javascript / python / ruby / etc.
-	    installLanguage(options.combo.getSelectedItem().toString());
+	    options.combo.setSelectedItem(ScriptLanguage.PYTHON.toString());
 	}
-	rebuildGUI();
 
 	// set the default theme: eclipse.
 	setTheme("eclipse");
+	textArea.requestFocus();
     }
 
     public RSyntaxTextArea getTextArea()
@@ -181,7 +183,8 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	{
 	    Theme t = Theme.load(getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/themes/" + s + ".xml"));
 	    t.apply(textArea);
-	} catch (IOException e)
+	}
+	catch (IOException e)
 	{
 	    System.out.println("Couldn't load theme");
 	}
@@ -210,7 +213,8 @@ public class ScriptingPanel extends JPanel implements CaretListener
 		scriptHandler.setFileName(saveFileString);
 		updateTitle();
 		return true;
-	    } catch (IOException e)
+	    }
+	    catch (IOException e)
 	    {
 		new FailedAnnounceFrame(e.getLocalizedMessage());
 		return false;
@@ -240,7 +244,8 @@ public class ScriptingPanel extends JPanel implements CaretListener
 		saveFileString = s;
 		updateTitle();
 		return true;
-	    } catch (IOException e)
+	    }
+	    catch (IOException e)
 	    {
 		new FailedAnnounceFrame(e.getLocalizedMessage());
 		return false;
@@ -282,6 +287,7 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	// Autocompletion is done with the following item
 	if (scriptHandler != null)
 	{
+	    scriptHandler.removeScriptListener(this);
 	    textArea.removeKeyListener(scriptHandler);
 	    PluginRepositoryLoader.removeListener(scriptHandler);
 	}
@@ -309,15 +315,17 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	}
 
 	// set the syntax
-	if (language.contentEquals("javascript"))
+	if (language.contentEquals(ScriptLanguage.JAVASCRIPT.toString()))
 	{
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 	    ac = new JSAutoCompletion(provider);
-	} else if (language.contentEquals("python"))
+	}
+	else if (language.contentEquals("python"))
 	{
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 	    ac = new PythonAutoCompletion(provider);
-	} else
+	}
+	else
 	{
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_NONE);
 	    new AnnounceFrame("This language is not yet supported.");
@@ -325,7 +333,7 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	}
 
 	// install the default completion words: eg. "for", "while", etc.
-	provider.installDefaultCompletions(language);
+	// provider.installDefaultCompletions(language);
 
 	// install the text area with the completion system.
 	ac.install(textArea);
@@ -344,15 +352,18 @@ public class ScriptingPanel extends JPanel implements CaretListener
 		if (language.contentEquals("javascript"))
 		{
 		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter(), true);
-		} else if (language.contentEquals("python"))
+		}
+		else if (language.contentEquals("python"))
 		{
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
-		} else
+		}
+		else
 		{
 		    scriptHandler = null;
 		}
 		if (scriptHandler != null)
 		{
+		    scriptHandler.addScriptListener(ScriptingPanel.this);
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
 		    PluginRepositoryLoader.addListener(scriptHandler);
@@ -424,7 +435,9 @@ public class ScriptingPanel extends JPanel implements CaretListener
 	public PanelOptions()
 	{
 	    final JButton btnBuild = new JButton("Verify");
-	    final JButton btnRun = new JButton("Run");
+	    btnRun = new JButton("Run");
+	    btnStop = new JButton("Stop");
+	    btnStop.setEnabled(false);
 
 	    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 	    setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
@@ -483,13 +496,32 @@ public class ScriptingPanel extends JPanel implements CaretListener
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-		    if (scriptHandler != null)
-			scriptHandler.interpret(false, false, true);
-		    else
-			System.out.println("Script Handler null.");
+		    if (scriptHandler == null)
+			return;
+
+		    btnRun.setEnabled(false);
+		    btnStop.setEnabled(true);
+		    scriptHandler.interpret(false, false, true);
 		}
 	    });
 	    add(btnRun);
+
+	    btnStop.addActionListener(new ActionListener()
+	    {
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    if (scriptHandler == null)
+			return;
+		    if (scriptHandler.isRunning())
+		    {
+			scriptHandler.killScript();
+		    }
+		}
+	    });
+	    add(Box.createHorizontalStrut(5));
+	    add(btnStop);
 	    add(Box.createHorizontalGlue());
 	}
 
@@ -590,5 +622,17 @@ public class ScriptingPanel extends JPanel implements CaretListener
 		scriptHandler.autoDownloadPlugins();
 	    }
 	});
+    }
+
+    @Override
+    public void evaluationStarted()
+    {
+    }
+
+    @Override
+    public void evaluationOver()
+    {
+	btnRun.setEnabled(true);
+	btnStop.setEnabled(false);
     }
 }

@@ -39,6 +39,7 @@ import org.fife.ui.rtextarea.RTextArea;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
+import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
@@ -105,6 +106,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private boolean advanced;
 
     private boolean forceRun = false;
+
+    public EvalThread thread;
+
+    private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
 
     /** Turn to true if you need to display more information in the console. */
     protected static final boolean DEBUG = false;
@@ -186,7 +191,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	{
 	    installDefaultLanguageCompletions(engineType);
 
-	} catch (ScriptException e)
+	}
+	catch (ScriptException e)
 	{
 	    e.printStackTrace();
 	}
@@ -264,7 +270,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    frame.setVisible(false);
 		}
 	    });
-	} else
+	}
+	else
 	{
 	    // Old version
 	    // ThreadUtil.bgRun(new Runnable() {
@@ -346,7 +353,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : if true, runs the code.
      * @param b
      */
-    public void interpret(boolean forceRun, boolean autocompilation, boolean runAfterCompile)
+    public void interpret(boolean forceRun, boolean autocompilation, final boolean runAfterCompile)
     {
 	ignoredLines.clear();
 	String s = textArea.getSelectedText();
@@ -355,37 +362,50 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	else
 	    interpret(s, autocompilation, runAfterCompile);
 
-	String textResult = "";
-	for (Integer a : ignoredLines.keySet())
+	ThreadUtil.bgRun(new Runnable()
 	{
-	    try
-	    {
-		if (gutter != null)
-		{
-		    gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
-		    gutter.repaint();
-		}
-	    } catch (BadLocationException e)
-	    {
-	    }
-	    Exception ee = ignoredLines.get(a);
-	    String msg = ee.getLocalizedMessage();
 
-	    System.out.println(msg);
-	    textResult += msg + "\n";
-	}
-	if (textResult.contentEquals(""))
-	{
-	    if (runAfterCompile)
-		textResult = "Run with no issues.";
-	    else
-		textResult = "Compiled with no issues.";
-	}
-	if (errorOutput != null)
-	{
-	    errorOutput.setText(textResult);
-	    errorOutput.repaint();
-	}
+	    @Override
+	    public void run()
+	    {
+		if (thread != null)
+		{
+		    ThreadUtil.sleep(200);
+		}
+		String textResult = "";
+		for (Integer a : ignoredLines.keySet())
+		{
+		    try
+		    {
+			if (gutter != null)
+			{
+			    gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
+			    gutter.repaint();
+			}
+		    }
+		    catch (BadLocationException e)
+		    {
+		    }
+		    Exception ee = ignoredLines.get(a);
+		    String msg = ee.getLocalizedMessage();
+
+		    System.out.println(msg);
+		    textResult += msg + "\n";
+		}
+		if (textResult.contentEquals(""))
+		{
+		    if (runAfterCompile)
+			textResult = "Run with no issues.";
+		    else
+			textResult = "Compiled with no issues.";
+		}
+		if (errorOutput != null)
+		{
+		    errorOutput.setText(textResult);
+		    errorOutput.repaint();
+		}
+	    }
+	});
     }
 
     /**
@@ -399,7 +419,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	try
 	{
 	    engine.eval(s);
-	} catch (ScriptException e)
+	}
+	catch (ScriptException e)
 	{
 	    System.out.println(e.getLocalizedMessage());
 	}
@@ -437,7 +458,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (provider != null && !forceRun)
 		detectVariables(s, context);
 	    setCompilationOk(true);
-	} catch (EvaluatorException ee)
+	}
+	catch (EvaluatorException ee)
 	{
 	    int lineError = ee.lineNumber() - 1;
 	    int columnNumber = ee.columnNumber();
@@ -467,18 +489,21 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    // }
 		    s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 		    interpret(s, autocompilation, exec);
-		} else
+		}
+		else
 		{
 		    System.out.println("error at unknown line: " + lineError);
 		    ee.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(ee.getMessage());
 		}
-	    } catch (BadLocationException e1)
+	    }
+	    catch (BadLocationException e1)
 	    {
 		e1.printStackTrace();
 	    }
-	} catch (ScriptException se)
+	}
+	catch (ScriptException se)
 	{
 	    int lineError = lineNumber(se) - 1;
 	    Integer columnNumberI = columnNumber(se);
@@ -500,75 +525,72 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    }
 		    ignoredLines.put(lineError, se);
 		    interpret(s, autocompilation, exec);
-		} else
+		}
+		else
 		{
 		    System.out.println("error at unknown line: " + lineError);
 		    se.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(se.getMessage());
 		}
-	    } catch (BadLocationException e1)
+	    }
+	    catch (BadLocationException e1)
 	    {
 		e1.printStackTrace();
 	    }
-	} catch (Exception e)
+	}
+	catch (Exception e)
 	{
 	    e.printStackTrace();
-	} finally
+	}
+	finally
 	{
 	    if (exec && (isCompilationOk() || prefWin.isOverrideEnabled()))
 	    {
-		try
-		{
-		    if (PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled())
-		    {
-			ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
-			engine.eval(s);
-		    } else
-		    {
-			engine.eval(s);
-			ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
-			for (String key : localVariables.keySet())
-			    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
-			engineHandler.getEngineFunctions().putAll(localFunctions);
-			engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
-			engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
-		    }
-		} catch (ScriptException se)
+		if (PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled())
 		{
-		    int lineError = lineNumber(se) - 1;
-		    Integer columnNumberI = columnNumber(se);
-		    int columnNumber = columnNumberI != null ? columnNumberI : -1;
-		    if (columnNumber == -1)
-			columnNumber = 0;
-		    try
-		    {
-			if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-			{
-			    int lineOffset = textArea.getLineStartOffset(lineError);
-			    int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-			    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-			    if (ignoredLines.containsKey(lineError))
-			    {
-				System.out.println("An error occured with the error parsing.");
-				return;
-			    }
-			    ignoredLines.put(lineError, se);
-			    // interpret(s, autocompilation, exec);
-			} else
-			{
-			    System.out.println("error at unknown line: " + lineError);
-			    se.printStackTrace();
-			    if (errorOutput != null)
-				errorOutput.append(se.getMessage());
-			}
-		    } catch (BadLocationException e1)
-		    {
-			e1.printStackTrace();
-		    }
+		    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
+		    thread = new EvalThread(engine, s);
+		    thread.setPriority(Thread.MIN_PRIORITY);
+		    thread.start();
+		    // ThreadUtil.invokeLater(new Runnable()
+		    // {
+		    // @Override
+		    // public void run()
+		    // {
+		    // Timer t = new Timer(5000, new ActionListener()
+		    // {
+		    //
+		    // @Override
+		    // public void actionPerformed(ActionEvent e)
+		    // {
+		    // thread.stop();
+		    // System.out.println("interrupted");
+		    // }
+		    // });
+		    // t.setRepeats(false);
+		    // t.start();
+		    // }
+		    // });
+		    // thread.interrupt();
+		    // engine.eval(s);
 		}
+		else
+		{
+		    EvalThread thread = new EvalThread(engine, s);
+		    thread.start();
+		    thread.interrupt();
+
+		    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+
+		    for (String key : localVariables.keySet())
+			engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+		    engineHandler.getEngineFunctions().putAll(localFunctions);
+		    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
+		    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
+		}
+
 	    }
 	    Context.exit();
 	}
@@ -608,7 +630,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		interpret(false, false, false);
 		e.consume();
 		break;
-	    } else if (e.isShiftDown())
+	    }
+	    else if (e.isShiftDown())
 	    {
 		break;
 	    }
@@ -704,7 +727,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (object != null)
 		return object.getClass().getMethod(methodName);
 	    return null;
-	} catch (NoSuchMethodException e)
+	}
+	catch (NoSuchMethodException e)
 	{
 	    return null;
 	    /* gulp */
@@ -721,7 +745,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		Object result = m.invoke(object);
 		return cl.cast(result);
 	    }
-	} catch (Exception e)
+	}
+	catch (Exception e)
 	{
 	    e.printStackTrace();
 	}
@@ -754,10 +779,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		try
 		{
 		    return ClassUtil.findClass(s);
-		} catch (ClassNotFoundException e)
+		}
+		catch (ClassNotFoundException e)
 		{
 		    System.out.println(e.getLocalizedMessage());
-		} catch (NoClassDefFoundError e2)
+		}
+		catch (NoClassDefFoundError e2)
 		{
 		}
 	}
@@ -768,9 +795,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    try
 	    {
 		return ClassUtil.findClass(s + "." + type);
-	    } catch (ClassNotFoundException e)
+	    }
+	    catch (ClassNotFoundException e)
 	    {
-	    } catch (NoClassDefFoundError e2)
+	    }
+	    catch (NoClassDefFoundError e2)
 	    {
 	    }
 	}
@@ -787,9 +816,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    try
 		    {
 			return ClassUtil.findClass(s);
-		    } catch (ClassNotFoundException e)
+		    }
+		    catch (ClassNotFoundException e)
 		    {
-		    } catch (NoClassDefFoundError e2)
+		    }
+		    catch (NoClassDefFoundError e2)
 		    {
 		    }
 	    }
@@ -800,9 +831,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		try
 		{
 		    return ClassUtil.findClass(s + "." + type);
-		} catch (ClassNotFoundException e)
+		}
+		catch (ClassNotFoundException e)
 		{
-		} catch (NoClassDefFoundError e2)
+		}
+		catch (NoClassDefFoundError e2)
 		{
 		}
 	    }
@@ -828,7 +861,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	public AutoVerify()
 	{
-	    timer = new Timer(500, this);
+	    timer = new Timer(1000, this);
 	    timer.setRepeats(false);
 	}
 
@@ -850,7 +883,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    interpret(s, true, false);
 		}
-	    } catch (BadLocationException e1)
+	    }
+	    catch (BadLocationException e1)
 	    {
 		e1.printStackTrace();
 	    }
@@ -908,7 +942,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	try
 	{
 	    clazz = (Class<? extends Plugin>) ClassUtil.findClass(plugin.getClassAsString());
-	} catch (ClassNotFoundException e)
+	}
+	catch (ClassNotFoundException e)
 	{
 	    return;
 	}
@@ -919,7 +954,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	    HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 	    engineTypesMethod.remove(clazz);
-	} else
+	}
+	else
 	{
 	    // plugin installed
 	    if (provider instanceof IcyCompletionProvider)
@@ -929,5 +965,124 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    }
 	}
 
+    }
+
+    /**
+     * 
+     * @author Thomas Provoost
+     * 
+     */
+    public class EvalThread extends Thread
+    {
+
+	private String s;
+	private ScriptEngine engine;
+
+	public EvalThread(ScriptEngine engine, String script)
+	{
+	    this.engine = engine;
+	    this.s = script;
+	}
+
+	@Override
+	public void run()
+	{
+	    fireEvaluationStarted();
+	    try
+	    {
+		engine.eval(s);
+	    }
+	    catch (ThreadDeath td)
+	    {
+		System.out.println("shutdown");
+	    }
+	    catch (ScriptException se)
+	    {
+		int lineError = lineNumber(se) - 1;
+		Integer columnNumberI = columnNumber(se);
+		int columnNumber = columnNumberI != null ? columnNumberI : -1;
+		if (columnNumber == -1)
+		    columnNumber = 0;
+
+		if (!(textArea instanceof JTextArea))
+		{
+		    se.printStackTrace();
+		    if (errorOutput != null)
+			errorOutput.append(se.getMessage());
+		}
+		else
+		{
+		    try
+		    {
+			if (lineError >= 0 && lineError <= ((JTextArea) textArea).getLineOfOffset(s.length() - 1))
+			{
+			    int lineOffset = ((JTextArea) textArea).getLineStartOffset(lineError);
+			    int lineEndOffset = ((JTextArea) textArea).getLineEndOffset(lineError);
+
+			    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
+			    if (ignoredLines.containsKey(lineError))
+			    {
+				System.out.println("An error occured with the error parsing.");
+				return;
+			    }
+			    ignoredLines.put(lineError, se);
+			}
+			else
+			{
+			    System.out.println("error at unknown line: " + lineError);
+			    se.printStackTrace();
+			    if (errorOutput != null)
+				errorOutput.append(se.getMessage());
+			}
+		    }
+		    catch (BadLocationException e1)
+		    {
+			e1.printStackTrace();
+		    }
+		}
+	    }
+	    finally
+	    {
+		fireEvaluationOver();
+		thread = null;
+	    }
+	}
+    }
+
+    public void killScript()
+    {
+	// Something is Running !
+	if (thread != null)
+	{
+	    thread.stop();
+	    thread = null;
+	}
+    }
+
+    public void fireEvaluationStarted()
+    {
+	for (ScriptListener listener : new ArrayList<ScriptListener>(listeners))
+	    listener.evaluationStarted();
+    }
+
+    public void fireEvaluationOver()
+    {
+	for (ScriptListener listener : new ArrayList<ScriptListener>(listeners))
+	    listener.evaluationOver();
+    }
+
+    public boolean isRunning()
+    {
+	return thread != null;
+    }
+
+    public void addScriptListener(ScriptListener listener)
+    {
+	listeners.add(listener);
+    }
+
+    public void removeScriptListener(ScriptListener listener)
+    {
+	listeners.remove(listener);
     }
 }
