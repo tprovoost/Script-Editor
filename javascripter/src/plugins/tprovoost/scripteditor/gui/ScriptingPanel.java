@@ -19,6 +19,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -32,6 +33,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
@@ -52,6 +54,7 @@ import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
 {
@@ -94,12 +97,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Provider used for autocompletion. */
     private IcyCompletionProvider provider;
     private JScrollPane scrollpane;
-    private JTextArea console;
+    private JTextArea output;
+    private Scriptingconsole console;
 
     /** Autocompletion system. Uses provider item. */
     private IcyAutoCompletion ac;
     public JButton btnRun;
     public JButton btnStop;
+    private PrintStream consolePrintStream;
 
     /**
      * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
@@ -114,9 +119,33 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	this.name = name;
 	setLayout(new BorderLayout());
 
-	console = new JTextArea(5, 40);
-	scrollpane = new JScrollPane(console);
+	output = new JTextArea(5, 40);
+	output.setEditable(false);
+	scrollpane = new JScrollPane(output);
 	scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+
+	consolePrintStream = new PrintStream(System.out)
+	{
+	    @Override
+	    public void write(byte[] buf, int off, int len)
+	    {
+		try
+		{
+		    super.write(buf, off, len);
+
+		    final String text = new String(buf, off, len);
+		    output.setText(output.getText() + text);
+		}
+		catch (Throwable t)
+		{
+		    output.setText(output.getText() + t.getMessage());
+		}
+		output.repaint();
+	    }
+	};
+	
+	System.setOut(consolePrintStream);
+	console = new Scriptingconsole();
 
 	// creates the text area and set it up
 	textArea = new RSyntaxTextArea(20, 60);
@@ -367,7 +396,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
 		    PluginRepositoryLoader.addListener(scriptHandler);
-		    scriptHandler.setErrorOutput(console);
+		    // scriptHandler.setErrorOutput(console);
 		}
 		rebuildGUI();
 	    }
@@ -411,10 +440,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private void rebuildGUI()
     {
 	removeAll();
-	add(pane, BorderLayout.CENTER);
-	if (scriptHandler != null)
-	    add(scrollpane, BorderLayout.SOUTH);
+	JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, scrollpane);
+	split.setDividerLocation(0.8d);
+	split.setResizeWeight(0.5d);
+	split.setOneTouchExpandable(true);
+	add(split, BorderLayout.CENTER);
 	add(options, BorderLayout.NORTH);
+	add(console, BorderLayout.SOUTH);
 	revalidate();
     }
 
@@ -483,7 +515,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		public void actionPerformed(ActionEvent e)
 		{
 		    if (scriptHandler != null)
-			scriptHandler.interpret(false, false, false);
+			scriptHandler.interpret(false, false, false, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
 		    else
 			System.out.println("Script Handler null.");
 		}
@@ -501,7 +533,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 		    btnRun.setEnabled(false);
 		    btnStop.setEnabled(true);
-		    scriptHandler.interpret(false, false, true);
+		    scriptHandler.interpret(false, false, true, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
 		}
 	    });
 	    add(btnRun);
