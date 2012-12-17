@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.script.ScriptEngineFactory;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import org.fife.ui.autocomplete.Completion;
@@ -29,7 +30,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
     private ScriptingHandler scriptHandler;
     private ArrayList<String> history = new ArrayList<String>();
     private int posInHistory = 0;
-    private BindingsScriptFrame bindingsFrame;
+    private JTextArea output;
 
     public Scriptingconsole()
     {
@@ -44,12 +45,6 @@ public class Scriptingconsole extends JTextField implements KeyListener
 
 	setMinimumSize(new Dimension(0, 25));
 	setPreferredSize(new Dimension(0, 25));
-
-	bindingsFrame = BindingsScriptFrame.getInstance();
-	bindingsFrame.setEngine(scriptHandler.getEngine());
-	if (!bindingsFrame.isVisible())
-	    bindingsFrame.setVisible(true);
-	bindingsFrame.update();
     }
 
     public void setLanguage(String language)
@@ -60,22 +55,15 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	    provider = new IcyCompletionProvider();
 	    provider.installDefaultCompletions("javascript");
 	    scriptHandler = new JSScriptingHandler6(provider, this, null, false);
-	    bindingsFrame.setEngine(scriptHandler.getEngine());
-	    if (!bindingsFrame.isVisible())
-		bindingsFrame.setVisible(true);
 	}
 	else if (language.contentEquals("python"))
 	{
 	    provider.installDefaultCompletions("python");
 	    scriptHandler = new PythonScriptingHandler(provider, this, null, false);
-	    bindingsFrame.setEngine(scriptHandler.getEngine());
-	    if (!bindingsFrame.isVisible())
-		bindingsFrame.setVisible(true);
 	}
 	else
 	{
 	    scriptHandler = null;
-	    bindingsFrame.close();
 	}
 	if (scriptHandler != null)
 	{
@@ -122,12 +110,12 @@ public class Scriptingconsole extends JTextField implements KeyListener
 		System.out.println(s);
 	    }
 	    break;
-	case KeyEvent.VK_UP:
+	case KeyEvent.VK_DOWN:
 	    posInHistory = (posInHistory + 1) % history.size();
 	    setText(history.get(posInHistory));
 	    break;
 
-	case KeyEvent.VK_DOWN:
+	case KeyEvent.VK_UP:
 	    posInHistory = posInHistory == 0 ? history.size() - 1 : posInHistory - 1;
 	    setText(history.get(posInHistory));
 	    break;
@@ -136,13 +124,16 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	    if (!text.isEmpty())
 	    {
 		String time = DateUtil.now("HH:mm:ss");
-		System.out.println(time + ": " + text);
+		if (output != null)
+		    output.append("> "+ text + "\n");
+		else
+		    System.out.println(time + ": " + text);
 		scriptHandler.interpret(true);
 		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
 		    history.add(text);
 		setText("");
 		posInHistory = 0;
-		bindingsFrame.update();
+		BindingsScriptFrame.getInstance().update();
 	    }
 	    break;
 	}
@@ -169,6 +160,13 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	if (languageName.contentEquals("python"))
 	    return "python";
 	return languageName;
+    }
+
+    public void setOutput(JTextArea output)
+    {
+	this.output = output;
+	if (scriptHandler != null)
+	    scriptHandler.setOutput(output);
     }
 
 }

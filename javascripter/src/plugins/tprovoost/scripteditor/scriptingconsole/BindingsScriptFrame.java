@@ -17,12 +17,14 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.WindowConstants;
 import javax.swing.table.AbstractTableModel;
 
 import sun.org.mozilla.javascript.internal.IdScriptableObject;
 import sun.org.mozilla.javascript.internal.NativeArray;
 
-public class BindingsScriptFrame extends IcyFrame {
+public class BindingsScriptFrame extends IcyFrame
+{
 
     private ScriptEngine engine;
     private JButton btnFreeVar;
@@ -30,30 +32,40 @@ public class BindingsScriptFrame extends IcyFrame {
     private BindingsTableModel model;
     private static BindingsScriptFrame singleton = new BindingsScriptFrame();
 
-    protected BindingsScriptFrame() {
+    protected BindingsScriptFrame()
+    {
 	super("Engine Bindings", true, true, true);
 
 	JPanel mainPanel = new JPanel();
 
 	btnFreeVar = new JButton("Free Var");
-	btnFreeVar.addActionListener(new ActionListener() {
+	btnFreeVar.addActionListener(new ActionListener()
+	{
 
 	    @Override
-	    public void actionPerformed(ActionEvent arg0) {
+	    public void actionPerformed(ActionEvent arg0)
+	    {
 		Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
 		Object o = listVariables.getValueAt(listVariables.getSelectedRow(), 0);
 		Object val = listVariables.getValueAt(listVariables.getSelectedRow(), 1);
-		try {
-		    if (val instanceof NativeArray) {
-			for (int i = 0; i < ((NativeArray) val).getLength(); ++i) {
+		try
+		{
+		    if (val instanceof NativeArray)
+		    {
+			for (int i = 0; i < ((NativeArray) val).getLength(); ++i)
+			{
 			    ((NativeArray) val).delete(i);
 			}
-		    } else if (val instanceof IdScriptableObject) {
+		    }
+		    else if (val instanceof IdScriptableObject)
+		    {
 			// IdScriptableObject val2 = (IdScriptableObject) val;
 			// val2.delete(0);
 		    }
 		    engine.eval(o + " = null");
-		} catch (ScriptException e) {
+		}
+		catch (ScriptException e)
+		{
 		    e.printStackTrace();
 		}
 		bindings.remove(o);
@@ -62,7 +74,7 @@ public class BindingsScriptFrame extends IcyFrame {
 	JButton btnRefresh = new JButton("Refresh");
 	btnRefresh.addActionListener(new ActionListener()
 	{
-	    
+
 	    @Override
 	    public void actionPerformed(ActionEvent e)
 	    {
@@ -87,21 +99,25 @@ public class BindingsScriptFrame extends IcyFrame {
 	panelSouth.add(Box.createHorizontalGlue());
 	mainPanel.add(panelSouth, BorderLayout.SOUTH);
 
+	setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
 	setContentPane(mainPanel);
 	addToMainDesktopPane();
 	setSize(200, 700);
     }
 
-    public void setEngine(ScriptEngine engine) {
+    public void setEngine(ScriptEngine engine)
+    {
 	this.engine = engine;
     }
 
-    public void update() {
+    public void update()
+    {
 	model.fireTableDataChanged();
 	listVariables.repaint();
     }
 
-    private class BindingsTableModel extends AbstractTableModel {
+    private class BindingsTableModel extends AbstractTableModel
+    {
 
 	/**
 		 * 
@@ -109,35 +125,47 @@ public class BindingsScriptFrame extends IcyFrame {
 	private static final long serialVersionUID = 1L;
 
 	@Override
-	public String getColumnName(int column) {
-	    if (column == 0) {
+	public String getColumnName(int column)
+	{
+	    if (column == 0)
+	    {
 		return "Binding";
-	    } else if (column == 1) {
+	    }
+	    else if (column == 1)
+	    {
 		return "Value";
-	    } else {
+	    }
+	    else
+	    {
 		return "";
 	    }
 	}
 
 	@Override
-	public int getColumnCount() {
+	public int getColumnCount()
+	{
 	    return 2;
 	}
 
 	@Override
-	public int getRowCount() {
+	public int getRowCount()
+	{
 	    if (engine != null)
 		return engine.getBindings(ScriptContext.ENGINE_SCOPE).values().size();
 	    return 0;
 	}
 
 	@Override
-	public Object getValueAt(int rowIndex, int columnIndex) {
+	public Object getValueAt(int rowIndex, int columnIndex)
+	{
 	    if (engine == null)
 		return null;
-	    if (columnIndex == 0) {
+	    if (columnIndex == 0)
+	    {
 		return engine.getBindings(ScriptContext.ENGINE_SCOPE).keySet().toArray()[rowIndex];
-	    } else {
+	    }
+	    else
+	    {
 		Object o = engine.getBindings(ScriptContext.ENGINE_SCOPE).values().toArray()[rowIndex];
 		// Class<?> clazz = o.getClass();
 		return o;
@@ -145,8 +173,8 @@ public class BindingsScriptFrame extends IcyFrame {
 	}
     }
 
-    public static BindingsScriptFrame getInstance() {
+    public static BindingsScriptFrame getInstance()
+    {
 	return singleton;
     }
-
 }

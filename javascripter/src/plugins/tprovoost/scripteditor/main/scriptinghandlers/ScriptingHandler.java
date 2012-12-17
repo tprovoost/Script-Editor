@@ -14,6 +14,8 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +43,7 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
+import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
@@ -186,7 +189,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	this(provider, engineType, textArea, gutter, forceRun, null);
     }
 
-    public void setErrorOutput(JTextArea errorOutput)
+    public void setOutput(JTextArea errorOutput)
     {
 	this.errorOutput = errorOutput;
     }
@@ -295,15 +298,16 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	}
 	else
 	{
+	    // install functions from ScriptEngineHandler
 	    ScriptEngineHandler handler = ScriptEngineHandler.getEngineHandler(engine);
 	    ArrayList<Method> functions = handler.getFunctions();
 
 	    ((IcyCompletionProvider) provider).installMethods(functions);
-	    installMethods(functions);
+	    installMethods(engine, functions);
 	}
     }
 
-    public abstract void installMethods(ArrayList<Method> functions);
+    public abstract void installMethods(ScriptEngine engine, ArrayList<Method> functions);
 
     /**
      * Returns if should execute the code or not.
@@ -408,14 +412,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    System.out.println(msg);
 		    textResult += msg + "\n";
 		}
-		if (textResult.contentEquals(""))
-		{
-		    textResult = "Verified with no issues.";
-		}
 		if (errorOutput != null)
 		{
-		    errorOutput.setText(textResult);
-		    errorOutput.repaint();
+		    errorOutput.append(textResult);
 		}
 	    }
 	});
@@ -551,7 +550,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
 	if (isNewEngine())
 	{
+	    ArrayList<Method> functions = ScriptEngineHandler.getEngineHandler(engine).getFunctions();
 	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
+	    installMethods(engine, functions);
 	    thread = new EvalThread(engine, textArea.getText());
 	    thread.setPriority(Thread.MIN_PRIORITY);
 	    thread.start();
@@ -569,6 +570,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    engineHandler.getEngineFunctions().putAll(localFunctions);
 	    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
 	    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
+	    BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
+	    frame.update();
 	}
     }
 
@@ -952,11 +955,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
 
 	private String s;
-	private ScriptEngine tengine;
+	private ScriptEngine evalEngine;
 
 	public EvalThread(ScriptEngine engine, String script)
 	{
-	    this.tengine = engine;
+	    this.evalEngine = engine;
 	    this.s = script;
 	}
 
@@ -964,9 +967,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	public void run()
 	{
 	    fireEvaluationStarted();
+	    StringWriter sw = new StringWriter();
+	    PrintWriter pw = new PrintWriter(sw, true);
+	    evalEngine.getContext().setWriter(pw);
 	    try
 	    {
-		tengine.eval(s);
+		evalEngine.eval(s);
 	    }
 	    catch (ThreadDeath td)
 	    {
@@ -1021,6 +1027,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    }
 	    finally
 	    {
+		if (errorOutput != null)
+		    errorOutput.append(sw.getBuffer().toString());
 		fireEvaluationOver();
 		thread = null;
 	    }

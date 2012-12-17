@@ -139,7 +139,8 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     @Override
-    public void installMethods(ArrayList<Method> functions) {
+    public void installMethods(ScriptEngine engine, ArrayList<Method> functions) {
+	// do nothing
     }
 
 }

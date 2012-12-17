@@ -10,6 +10,8 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.BufferedReader;
@@ -19,7 +21,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -36,6 +37,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
@@ -54,6 +56,7 @@ import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
@@ -83,7 +86,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private IcyAutoCompletion ac;
     public JButton btnRun;
     public JButton btnStop;
-    private PrintStream consolePrintStream;
 
     /**
      * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
@@ -100,31 +102,24 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	output = new JTextArea(5, 40);
 	output.setEditable(false);
+
+	output.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 	scrollpane = new JScrollPane(output);
 	scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-
-	consolePrintStream = new PrintStream(System.out)
+	scrollpane.setAutoscrolls(true);
+	scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener()
 	{
-	    @Override
-	    public void write(byte[] buf, int off, int len)
-	    {
-		try
-		{
-		    super.write(buf, off, len);
 
-		    final String text = new String(buf, off, len);
-		    output.setText(output.getText() + text);
-		}
-		catch (Throwable t)
-		{
-		    output.setText(output.getText() + t.getMessage());
-		}
-		output.repaint();
+	    @Override
+	    public void adjustmentValueChanged(AdjustmentEvent e)
+	    {
+		if (!output.getText().isEmpty())
+		    output.setCaretPosition(output.getText().length() - 1);
 	    }
-	};
-	
-	System.setOut(consolePrintStream);
+	});
+
 	console = new Scriptingconsole();
+	console.setOutput(output);
 
 	// creates the text area and set it up
 	textArea = new RSyntaxTextArea(20, 60);
@@ -294,7 +289,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     {
 	// set the language for the console too.
 	console.setLanguage(language);
-	
+
+	// the ScriptHandler in the Console is independant, so it needs to have
+	// a reference to the output.
+	console.setOutput(output);
+
 	// Autocompletion is done with the following item
 	if (scriptHandler != null)
 	{
@@ -344,7 +343,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	}
 
 	// install the default completion words: eg. "for", "while", etc.
-	// provider.installDefaultCompletions(language);
+	provider.installDefaultCompletions(language);
 
 	// install the text area with the completion system.
 	ac.install(textArea);
@@ -354,7 +353,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	ac.setShowDescWindow(true);
 	ThreadUtil.invokeLater(new Runnable()
 	{
-
 	    @Override
 	    public void run()
 	    {
@@ -363,10 +361,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		if (language.contentEquals("javascript"))
 		{
 		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter(), true);
+		    scriptHandler.setOutput(output);
 		}
 		else if (language.contentEquals("python"))
 		{
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
+		    scriptHandler.setOutput(output);
 		}
 		else
 		{
@@ -378,8 +378,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
 		    PluginRepositoryLoader.addListener(scriptHandler);
+
+		    BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
+		    frame.setEngine(scriptHandler.getEngine());
 		}
 		rebuildGUI();
+		textArea.requestFocus();
 	    }
 	});
     }
@@ -422,8 +426,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     {
 	removeAll();
 	JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, scrollpane);
-	split.setDividerLocation(0.8d);
-	split.setResizeWeight(0.5d);
+	split.setDividerLocation(0.75d);
+	split.setResizeWeight(0.75d);
 	split.setOneTouchExpandable(true);
 	add(split, BorderLayout.CENTER);
 	add(options, BorderLayout.NORTH);
@@ -495,7 +499,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-		    if (scriptHandler != null) {
+		    if (scriptHandler != null)
+		    {
 			scriptHandler.interpret(false);
 		    }
 		    else

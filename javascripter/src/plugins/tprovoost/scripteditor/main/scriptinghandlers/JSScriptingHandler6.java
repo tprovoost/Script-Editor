@@ -94,21 +94,6 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    System.out.println(e.getMessage());
 	}
 
-	// try {
-	// engine.eval("function initArray(a,type,dim,len,curN) {\n" +
-	// "\tfor (i=;i < a.length; ++i) {\n"
-	// + "\t\ta[i]=java.lang.reflect.Array.newInstance(type,len);\n" +
-	// "\t\tif (curN < dim - 1)\n" +
-	// "\t\t\tgenerateArray(a[i],type,dim,curN + 1)"
-	// + "\t}\n" + "}");
-	// c = new FunctionCompletion(provider, "initArray", "");
-	// c.setShortDescription("Recursively initialize the array.");
-	// provider.addCompletion(c);
-	// engineFunctions.put("getImage", IcyBufferedImage.class);
-	// } catch (ScriptException e) {
-	// e.printStackTrace();
-	// }
-
 	// ADD JS FUNCTIONS
 	engineFunctions.put("importClass", void.class);
 	engineFunctions.put("importPackage", void.class);
@@ -802,7 +787,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     @Override
-    public void installMethods(ArrayList<Method> methods) {
+    public void installMethods(ScriptEngine engine, ArrayList<Method> methods) {
 	for (Method method : methods) {
 	    // is it an annotated with BindingFunction?
 	    BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
