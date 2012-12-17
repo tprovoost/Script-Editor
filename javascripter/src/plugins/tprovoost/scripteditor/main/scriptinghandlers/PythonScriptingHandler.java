@@ -24,11 +24,6 @@ import sun.org.mozilla.javascript.internal.Context;
 
 public class PythonScriptingHandler extends ScriptingHandler {
 
-    /**
-	 * 
-	 */
-    private static final long serialVersionUID = 1L;
-
     public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
 	super(provider, "python", textArea, gutter, autocompilation);
     }

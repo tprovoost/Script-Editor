@@ -21,7 +21,8 @@ import org.xeustechnologies.jcl.JarClassLoader;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
-public class ScriptEngineHandler extends Plugin {
+public class ScriptEngineHandler extends Plugin
+{
 
     /*---------------
      *	   static
@@ -39,7 +40,7 @@ public class ScriptEngineHandler extends Plugin {
     private static ArrayList<Method> bindingFunctions;
 
     /*
-     * classic
+     * ------------ non static ------------
      */
     private HashMap<String, Class<?>> engineVariables = new HashMap<String, Class<?>>();
     private HashMap<String, Class<?>> engineFunctions = new HashMap<String, Class<?>>();
@@ -47,58 +48,73 @@ public class ScriptEngineHandler extends Plugin {
     private ArrayList<String> engineDeclaredImportClasses = new ArrayList<String>();
     private HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();;
 
-    private ScriptEngineHandler() {
-	if (bindingFunctions == null) {
+    private ScriptEngineHandler()
+    {
+	if (bindingFunctions == null)
+	{
 	    bindingFunctions = new ArrayList<Method>();
 	    ProgressFrame frame = new ProgressFrame("Loading functions...");
 	    Chronometer chrono = new Chronometer("chrono");
-	    try {
-		if (getClass().getClassLoader() instanceof JarClassLoader) {
+	    try
+	    {
+		if (getClass().getClassLoader() instanceof JarClassLoader)
+		{
 		    Collection<Class> col = PluginLoader.getAllClasses().values();
 
 		    frame.setLength(col.size());
 		    int i = 0;
-		    for (Class<?> clazz : new ArrayList<Class>(col)) {
+		    for (Class<?> clazz : new ArrayList<Class>(col))
+		    {
 			if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
 			    continue;
 			findBindingsMethods(clazz);
 			++i;
 			frame.setPosition(i);
 		    }
-		} else {
+		}
+		else
+		{
 		    ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
 		    frame.setLength(list.size());
 		    int i = 0;
-		    for (PluginDescriptor pd : list) {
+		    for (PluginDescriptor pd : list)
+		    {
 			// System.out.println(pd);
 			findBindingsMethods(pd.getPluginClass());
 			++i;
 			frame.setPosition(i);
 		    }
 		}
-	    } finally {
+	    }
+	    finally
+	    {
 		chrono.displayInSeconds();
 		frame.close();
 	    }
 	}
     }
 
-    public static ScriptEngineHandler getLastEngineHandler() {
+    public static ScriptEngineHandler getLastEngineHandler()
+    {
 	return lastEngineHandler;
     }
 
-    public static ScriptEngine getEngine(String engineType) {
+    public static ScriptEngine getEngine(String engineType)
+    {
 	ScriptEngine engine = engines.get(engineType);
-	if (engine == null) {
+	if (engine == null)
+	{
 	    engine = factory.getEngineByName(engineType);
 	    engines.put(engineType, engine);
 	}
 	return engine;
     }
 
-    public static ScriptEngineHandler getEngineHandler(ScriptEngine engine) {
+    public static ScriptEngineHandler getEngineHandler(ScriptEngine engine)
+    {
 	ScriptEngineHandler engineHandler = engineHandlers.get(engine);
-	if (engineHandler == null) {
+	if (engineHandler == null)
+	{
 	    engineHandler = new ScriptEngineHandler();
 	    engineHandlers.put(engine, engineHandler);
 	}
@@ -106,38 +122,46 @@ public class ScriptEngineHandler extends Plugin {
 	return engineHandler;
     }
 
-    public ArrayList<String> getEngineDeclaredImportClasses() {
+    public ArrayList<String> getEngineDeclaredImportClasses()
+    {
 	return engineDeclaredImportClasses;
     }
 
-    public ArrayList<String> getEngineDeclaredImports() {
+    public ArrayList<String> getEngineDeclaredImports()
+    {
 	return engineDeclaredImports;
     }
 
-    public HashMap<String, Class<?>> getEngineFunctions() {
+    public HashMap<String, Class<?>> getEngineFunctions()
+    {
 	return engineFunctions;
     }
 
-    public HashMap<String, Class<?>> getEngineVariables() {
+    public HashMap<String, Class<?>> getEngineVariables()
+    {
 	return engineVariables;
     }
 
-    public HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> getEngineTypesMethod() {
+    public HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> getEngineTypesMethod()
+    {
 	return engineTypesMethod;
     }
-    
-    public static ScriptEngineManager getFactory() {
+
+    public static ScriptEngineManager getFactory()
+    {
 	return factory;
     }
 
-    public void findBindingsMethods(Class<?> clazz) {
+    public void findBindingsMethods(Class<?> clazz)
+    {
 	if (clazz == null)
 	    return;
 
 	// get the annotated methods
 	Method[] methods = clazz.getDeclaredMethods();
 
-	for (final Method method : methods) {
+	for (final Method method : methods)
+	{
 	    // make sure the method is public and annotated
 	    int modifiers = method.getModifiers();
 	    if (!Modifier.isPublic(modifiers))
@@ -157,7 +181,8 @@ public class ScriptEngineHandler extends Plugin {
 	    String params = "";
 	    String functionName = blockFunction.value();
 	    // get the parameters
-	    for (int i = 0; i < paramTypes.length; ++i) {
+	    for (int i = 0; i < paramTypes.length; ++i)
+	    {
 		fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
 		params += ",arg" + i;
 	    }
@@ -176,7 +201,8 @@ public class ScriptEngineHandler extends Plugin {
 
 	    if (engineFunctions != null)
 		engineFunctions.put(functionName, method.getReturnType());
-	    if (engineTypesMethod != null) {
+	    if (engineTypesMethod != null)
+	    {
 		ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
 		if (methodsExisting == null)
 		    methodsExisting = new ArrayList<ScriptFunctionCompletion>();
@@ -188,7 +214,8 @@ public class ScriptEngineHandler extends Plugin {
 	}
     }
 
-    public ArrayList<Method> getFunctions() {
+    public ArrayList<Method> getFunctions()
+    {
 	return bindingFunctions;
     }
 }

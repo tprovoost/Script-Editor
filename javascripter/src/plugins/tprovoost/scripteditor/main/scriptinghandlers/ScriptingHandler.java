@@ -112,19 +112,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     /** Filename of the script */
     protected String fileName = "Untitled";
 
+    /** for debug purposes: advance will be used to load or not all functions */
     private boolean advanced;
 
     private boolean forceRun = false;
+    private boolean newEngine = true;
+    private boolean strict = false;
+    private boolean varInterpretation = true;
 
+    /**
+     * Thread running the evaluation.
+     */
     public EvalThread thread;
 
     private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
-
-    /**
-     * Reference to the scripting panel containing this handler. If null, all
-     * preferences in {@link PreferencesWindow} will be overridden.
-     */
-    private ScriptingPanel scriptingPanel;
 
     /** Turn to true if you need to display more information in the console. */
     protected static final boolean DEBUG = false;
@@ -142,7 +143,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	this.textArea = textArea;
 	this.gutter = gutter;
 	this.forceRun = forceRun;
-	this.scriptingPanel = scriptingPanel;
 	setLanguage(engineType);
 
 	textArea.getDocument().addDocumentListener(new AutoVerify());
@@ -325,6 +325,36 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	this.compilationOk = compilationOk;
     }
 
+    public boolean isNewEngine()
+    {
+	return newEngine;
+    }
+
+    public void setNewEngine(boolean newEngine)
+    {
+	this.newEngine = newEngine;
+    }
+
+    public boolean isForceRun()
+    {
+	return forceRun;
+    }
+
+    public void setForceRun(boolean forceRun)
+    {
+	this.forceRun = forceRun;
+    }
+
+    public boolean isStrict()
+    {
+	return strict;
+    }
+
+    public void setStrict(boolean strict)
+    {
+	this.strict = strict;
+    }
+
     /**
      * Interpret the script. If <code>exec</code> is true, will try to run the
      * code if compile is successful. Be careful: a building code is not
@@ -334,17 +364,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : if true, runs the code.
      * @param b
      */
-    public void interpret(boolean forceRun, boolean autocompilation, final boolean runAfterCompile, boolean newEngine)
+    public void interpret(boolean exec)
     {
 	ignoredLines.clear();
-	
+
 	// use either selected text if any or all text
 	String s = textArea.getSelectedText();
 	if (s == null)
 	    s = textArea.getText();
-	
+
 	// interpret the code
-	interpret(s, autocompilation, runAfterCompile, newEngine);
+	interpret(s);
+	if (exec && (isCompilationOk() || forceRun))
+	    run();
 
 	ThreadUtil.bgRun(new Runnable()
 	{
@@ -378,10 +410,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		}
 		if (textResult.contentEquals(""))
 		{
-		    if (runAfterCompile)
-			textResult = "Run with no issues.";
-		    else
-			textResult = "Compiled with no issues.";
+		    textResult = "Verified with no issues.";
 		}
 		if (errorOutput != null)
 		{
@@ -390,24 +419,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		}
 	    }
 	});
-    }
-
-    /**
-     * Evaluate the script and register the imports
-     * 
-     * @param s
-     */
-    public void evalScript(String s)
-    {
-	registerImports();
-	try
-	{
-	    engine.eval(s);
-	}
-	catch (ScriptException e)
-	{
-	    System.out.println(e.getLocalizedMessage());
-	}
     }
 
     /**
@@ -423,9 +434,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param exec
      *            : run after compile or not.
      */
-    private void interpret(String s, boolean autocompilation, boolean exec, boolean newEngine)
+    private void interpret(String s)
     {
-	PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 	RTextArea textArea = new RTextArea();
 	textArea.setText(s);
 	try
@@ -439,7 +449,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    scriptDeclaredImportClasses.clear();
 	    blockFunctions.clear();
 	    registerImports();
-	    if (provider != null && !forceRun)
+	    if (provider != null && varInterpretation)
 		detectVariables(s, context);
 	    setCompilationOk(true);
 	}
@@ -468,9 +478,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    }
 		    ignoredLines.put(lineError, ee);
 		    s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
-		    
+
 		    // interpret again, without the faulty line.
-		    interpret(s, autocompilation, exec, newEngine);
+		    interpret(s);
 		}
 		else
 		{
@@ -509,9 +519,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			return;
 		    }
 		    ignoredLines.put(lineError, se);
-		    
+
 		    // interpret again, without the faulty line.
-		    interpret(s, autocompilation, exec, newEngine);
+		    interpret(s);
 		}
 		else
 		{
@@ -533,33 +543,32 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	}
 	finally
 	{
-	    if (exec && (isCompilationOk() || prefWin.isOverrideEnabled()))
-	    {
-
-		if (newEngine)
-		{
-		    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
-		    thread = new EvalThread(engine, s);
-		    thread.setPriority(Thread.MIN_PRIORITY);
-		    thread.start();
-		}
-		else
-		{
-		    EvalThread thread = new EvalThread(engine, s);
-		    thread.start();
-		    thread.interrupt();
-
-		    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
-
-		    for (String key : localVariables.keySet())
-			engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
-		    engineHandler.getEngineFunctions().putAll(localFunctions);
-		    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
-		    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
-		}
-
-	    }
 	    Context.exit();
+	}
+    }
+
+    public void run()
+    {
+	if (isNewEngine())
+	{
+	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
+	    thread = new EvalThread(engine, textArea.getText());
+	    thread.setPriority(Thread.MIN_PRIORITY);
+	    thread.start();
+	}
+	else
+	{
+	    EvalThread thread = new EvalThread(engine, textArea.getText());
+	    thread.start();
+	    thread.interrupt();
+
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+
+	    for (String key : localVariables.keySet())
+		engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+	    engineHandler.getEngineFunctions().putAll(localFunctions);
+	    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
+	    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
 	}
     }
 
@@ -594,7 +603,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	case KeyEvent.VK_ENTER:
 	    if (e.isControlDown())
 	    {
-		interpret(false, false, false, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+		interpret(false);
 		e.consume();
 		break;
 	    }
@@ -605,7 +614,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	case KeyEvent.VK_R:
 	    if (e.isControlDown())
-		interpret(false, false, true, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+		interpret(true);
 	    break;
 
 	case KeyEvent.VK_M:
@@ -737,7 +746,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param type
      * @return
      */
-    public Class<?> resolveClassDeclaration(String type, boolean strict)
+    public Class<?> resolveClassDeclaration(String type)
     {
 	// try with declared in the script importClass
 	for (String s : scriptDeclaredImportClasses)
@@ -771,7 +780,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    }
 	}
 
-	if (!strict)
+	if (strict)
 	{
 	    // declared in engine
 	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
@@ -848,7 +857,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    String s = fullTxt.substring(0, offset);
 		    s += fullTxt.substring(offset + len, doc.getLength());
 
-		    interpret(s, true, false, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+		    interpret(s);
 		}
 	    }
 	    catch (BadLocationException e1)
@@ -882,7 +891,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	public void actionPerformed(ActionEvent e)
 	{
 	    lastChange = false;
-	    interpret(false, true, false, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+	    interpret(textArea.getText());
 	}
 
 	@Override
@@ -976,6 +985,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    se.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(se.getMessage());
+		    else
+			System.out.println(se.getMessage());
 		}
 		else
 		{
@@ -1052,4 +1063,5 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
 	listeners.remove(listener);
     }
+
 }

@@ -33,14 +33,17 @@ public class Scriptingconsole extends JTextField implements KeyListener
 
     public Scriptingconsole()
     {
-
 	addKeyListener(this);
 
 	provider = new IcyCompletionProvider();
 	provider.installDefaultCompletions("javascript");
 	scriptHandler = new JSScriptingHandler6(provider, this, null, false);
+	scriptHandler.setNewEngine(false);
+	scriptHandler.setForceRun(false);
+	scriptHandler.setStrict(false);
 
 	setMinimumSize(new Dimension(0, 25));
+	setPreferredSize(new Dimension(0, 25));
 
 	bindingsFrame = BindingsScriptFrame.getInstance();
 	bindingsFrame.setEngine(scriptHandler.getEngine());
@@ -49,7 +52,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	bindingsFrame.update();
     }
 
-    public void setLanguages(String language)
+    public void setLanguage(String language)
     {
 	provider.clear();
 	if (language.contentEquals("javascript"))
@@ -73,6 +76,12 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	{
 	    scriptHandler = null;
 	    bindingsFrame.close();
+	}
+	if (scriptHandler != null)
+	{
+	    scriptHandler.setNewEngine(false);
+	    scriptHandler.setForceRun(false);
+	    scriptHandler.setStrict(false);
 	}
     }
 
@@ -128,7 +137,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	    {
 		String time = DateUtil.now("HH:mm:ss");
 		System.out.println(time + ": " + text);
-		scriptHandler.interpret(true, false, true, false);
+		scriptHandler.interpret(true);
 		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
 		    history.add(text);
 		setText("");

@@ -36,7 +36,6 @@ import org.fife.ui.autocomplete.Util;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.IcyFunctionBlock;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
@@ -537,7 +536,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 		    ArrayList<ScriptFunctionCompletion> methods = null;
 
 		    // is the command a classname ?
-		    Class<?> clazz = handler.resolveClassDeclaration(command, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
+		    Class<?> clazz = handler.resolveClassDeclaration(command);
 		    if (clazz != null)
 		    {
 			// test if this is a static call

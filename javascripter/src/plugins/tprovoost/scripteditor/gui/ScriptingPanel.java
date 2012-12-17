@@ -58,27 +58,6 @@ import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
 {
-
-    public enum ScriptLanguage
-    {
-	JAVASCRIPT
-	{
-	    @Override
-	    public String toString()
-	    {
-		return "javascript";
-	    }
-	},
-	PYTHON
-	{
-	    @Override
-	    public String toString()
-	    {
-		return "python";
-	    }
-	}
-    };
-
     /** */
     private static final long serialVersionUID = 1L;
     private ScriptingHandler scriptHandler;
@@ -173,7 +152,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	if (ext.contentEquals("py"))
 	{
-	    options.combo.setSelectedItem(ScriptLanguage.PYTHON.toString());
+	    options.combo.setSelectedItem("python");
 	}
 
 	// set the default theme: eclipse.
@@ -313,6 +292,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public synchronized void installLanguage(final String language)
     {
+	// set the language for the console too.
+	console.setLanguage(language);
+	
 	// Autocompletion is done with the following item
 	if (scriptHandler != null)
 	{
@@ -344,7 +326,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	}
 
 	// set the syntax
-	if (language.contentEquals(ScriptLanguage.JAVASCRIPT.toString()))
+	if (language.contentEquals("javascript"))
 	{
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 	    ac = new JSAutoCompletion(provider);
@@ -396,7 +378,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
 		    PluginRepositoryLoader.addListener(scriptHandler);
-		    // scriptHandler.setErrorOutput(console);
 		}
 		rebuildGUI();
 	    }
@@ -514,8 +495,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-		    if (scriptHandler != null)
-			scriptHandler.interpret(false, false, false, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+		    if (scriptHandler != null) {
+			scriptHandler.interpret(false);
+		    }
 		    else
 			System.out.println("Script Handler null.");
 		}
@@ -530,10 +512,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		{
 		    if (scriptHandler == null)
 			return;
-
+		    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
 		    btnRun.setEnabled(false);
 		    btnStop.setEnabled(true);
-		    scriptHandler.interpret(false, false, true, PreferencesWindow.getPreferencesWindow().isRunNewEngineEnabled());
+		    scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
+		    scriptHandler.setForceRun(prefs.isOverrideEnabled());
+		    scriptHandler.setStrict(prefs.isStrictModeEnabled());
+		    scriptHandler.setForceRun(prefs.isVarInterpretationEnabled());
+		    scriptHandler.interpret(true);
 		}
 	    });
 	    add(btnRun);

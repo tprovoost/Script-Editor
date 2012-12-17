@@ -32,7 +32,6 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
@@ -548,14 +547,14 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      */
     private Class<?> resolveNewType(Node n, String text) throws ScriptException {
 	String type = buildNew(n, commandStartOffset, commandEndOffset);
-	Class<?> clazz = resolveClassDeclaration(type, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
+	Class<?> clazz = resolveClassDeclaration(type);
 	if (clazz == null)
 	    throw new ScriptException("Type: " + type + " is undefined. Please check imports.", null, findLineContaining(text));
 	return clazz;
     }
 
     @Override
-    public Class<?> resolveClassDeclaration(String type, boolean strict) {
+    public Class<?> resolveClassDeclaration(String type) {
 	Class<?> toReturn = null;
 	int arraySize = 0;
 	while (type.endsWith("[]")) {
@@ -576,7 +575,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	} catch (ClassNotFoundException e) {
 	}
 	if (toReturn == null)
-	    toReturn = super.resolveClassDeclaration(type, strict);
+	    toReturn = super.resolveClassDeclaration(type);
 	while (toReturn != null && arraySize > 0) {
 	    toReturn = Array.newInstance(toReturn, 1).getClass();
 	    arraySize--;
@@ -671,7 +670,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			clazz = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
 		    if (clazz == null)
 			// class
-			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable, PreferencesWindow.getPreferencesWindow().isStrictModeEnabled());
+			clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
 		    if (clazz == null)
 			throw new ScriptException("Unknown class: " + classNameOrFunctionNameOrVariable, null, findLineContaining(text));
 
