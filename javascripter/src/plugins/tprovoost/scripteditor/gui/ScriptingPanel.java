@@ -139,16 +139,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	pane.setIconRowHeaderEnabled(true);
 
 	// creates the options panel
-	options = new PanelOptions();
-
 	String ext = FileUtil.getFileExtension(name, false);
+	if (ext.contentEquals("py"))
+	    options = new PanelOptions("python");
+	else
+	    options = new PanelOptions();
 	installLanguage(options.combo.getSelectedItem().toString());
 	rebuildGUI();
-
-	if (ext.contentEquals("py"))
-	{
-	    options.combo.setSelectedItem("python");
-	}
 
 	// set the default theme: eclipse.
 	setTheme("eclipse");
@@ -451,6 +448,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	public PanelOptions()
 	{
+	    this("javascript");
+	}
+
+	public PanelOptions(String string)
+	{
 	    final JButton btnBuild = new JButton("Verify");
 	    btnRun = new JButton("Run");
 	    btnStop = new JButton("Stop");
@@ -467,7 +469,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		values.add(getLanguageName(factory));
 	    }
 	    combo = new JComboBox(values.toArray());
-	    combo.setSelectedItem("javascript");
+	    combo.setSelectedItem(string);
 	    combo.addItemListener(new ItemListener()
 	    {
 
