@@ -4,6 +4,8 @@ import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.network.NetworkUtil;
+import icy.preferences.IcyPreferences;
+import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
@@ -46,10 +48,20 @@ public class ScriptingEditor extends IcyFrame
     private String currentDirectoryPath;
     private ArrayList<String> previousFiles = new ArrayList<String>();
     private static final int ctrlMask = SystemUtil.getCtrlMask();
+    private static final int MAX_RECENT_FILES = 5;
+    private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
+    private JMenu menuOpenRecent;
 
     public ScriptingEditor()
     {
 	super("Script Editor", true, true, true);
+
+	// load preferences
+	XMLPreferences openedFiles = prefs.node("openedFiles");
+	for (XMLPreferences key : openedFiles.getChildren())
+	{
+	    previousFiles.add(key.get("name", ""));
+	}
 
 	setJMenuBar(createJMenuBar());
 
@@ -153,9 +165,85 @@ public class ScriptingEditor extends IcyFrame
      */
     public void openFile(File f) throws IOException
     {
-	ScriptingPanel panel = createNewPane(f.getName());
+	String filename = f.getName();
+	boolean exists = false;
+	for (int i = 0; i < tabbedPane.getTabCount(); ++i)
+	    if (tabbedPane.getTitleAt(i).contentEquals(filename))
+	    {
+		tabbedPane.setSelectedIndex(i);
+		exists = true;
+	    }
+	if (exists)
+	{
+	    return;
+	}
+	ScriptingPanel panel = createNewPane(filename);
 	panel.openFile(f);
-	previousFiles.add(f.getPath());
+	String path = f.getPath();
+	XMLPreferences openedFiles = prefs.node("openedFiles");
+	if (!previousFiles.contains(path))
+	{
+	    previousFiles.add(path);
+	    XMLPreferences key = openedFiles.node(path);
+	    key.put("name", path);
+	}
+	if (previousFiles.size() > MAX_RECENT_FILES)
+	{
+	    filename = previousFiles.get(0);
+	    XMLPreferences key = openedFiles.node(filename);
+	    if (key.exists())
+	    {
+		openedFiles.remove(filename);
+	    }
+	    previousFiles.remove(0);
+	}
+	updateRecentFiles();
+    }
+
+    private void updateRecentFiles()
+    {
+	menuOpenRecent.removeAll();
+	ArrayList<String> copy = new ArrayList<String>(previousFiles);
+	for (int i = 0; i < copy.size(); ++i)
+	{
+	    String path = previousFiles.get(i);
+	    JMenuItem item = createRecentFileItem(path);
+	    if (item == null)
+	    {
+		previousFiles.remove(path);
+	    }
+	    else
+	    {
+		menuOpenRecent.add(item);
+	    }
+	}
+    }
+
+    private JMenuItem createRecentFileItem(String filename)
+    {
+	final File f = new File(filename);
+	JMenuItem toReturn = null;
+	if (f.exists())
+	{
+	    toReturn = new JMenuItem(f.getName());
+	    toReturn.addActionListener(new ActionListener()
+	    {
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    try
+		    {
+			openFile(f);
+		    }
+		    catch (IOException e1)
+		    {
+			e1.printStackTrace();
+		    }
+		}
+	    });
+	}
+	return toReturn;
     }
 
     /**
@@ -258,6 +346,7 @@ public class ScriptingEditor extends IcyFrame
 	    }
 	});
 	menuFile.add(menuNew);
+	menuFile.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlMask));
 
 	JMenuItem menuOpen = new JMenuItem("Open...");
 	menuOpen.addActionListener(new ActionListener()
@@ -273,7 +362,7 @@ public class ScriptingEditor extends IcyFrame
 	menuOpen.setDisplayedMnemonicIndex(0);
 	menuFile.add(menuOpen);
 
-	JMenuItem menuOpenRecent = new JMenuItem("Open Recent");
+	menuOpenRecent = new JMenu("Open Recent");
 	menuFile.add(menuOpenRecent);
 
 	JMenuItem menuSave = new JMenuItem("Save");
@@ -373,7 +462,7 @@ public class ScriptingEditor extends IcyFrame
 	// ctrlMask));
 	menuEdit.add(menuRedo);
 
-	// MENU RUN
+	// MENU TEMPLATES
 	JMenu menuTemplate = new JMenu("Templates");
 	JMenu menuTemplateJS = new JMenu("Javascript");
 	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
@@ -466,14 +555,12 @@ public class ScriptingEditor extends IcyFrame
 	});
 	menuOptions.add(menuHelp);
 
-	// MENU TEMPLATES
-	// JMenu menuRun = new JMenu("Run");
-
 	toReturn.add(menuFile);
 	toReturn.add(menuEdit);
-	// toReturn.add(menuRun);
 	toReturn.add(menuTemplate);
 	toReturn.add(menuOptions);
+
+	updateRecentFiles();
 
 	return toReturn;
     }
