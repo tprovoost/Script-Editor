@@ -346,7 +346,7 @@ public class ScriptingEditor extends IcyFrame
 	    }
 	});
 	menuFile.add(menuNew);
-	menuFile.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlMask));
+	menuNew.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlMask));
 
 	JMenuItem menuOpen = new JMenuItem("Open...");
 	menuOpen.addActionListener(new ActionListener()

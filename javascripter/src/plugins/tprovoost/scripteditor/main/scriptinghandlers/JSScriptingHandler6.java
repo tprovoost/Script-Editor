@@ -46,31 +46,38 @@ import sun.org.mozilla.javascript.internal.Token;
 
 import com.sun.script.javascript.RhinoScriptEngine;
 
-public class JSScriptingHandler6 extends ScriptingHandler {
+public class JSScriptingHandler6 extends ScriptingHandler
+{
 
     private int commandStartOffset;
     private int commandEndOffset;
 
-    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
+    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation)
+    {
 	super(provider, "javascript", textArea, gutter, autocompilation);
     }
 
     @Override
-    public void installDefaultLanguageCompletions(String language) {
+    public void installDefaultLanguageCompletions(String language)
+    {
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
 	// IMPORT PACKAGES
-	try {
+	try
+	{
 	    importJavaScriptPackages(engine);
-	} catch (ScriptException e1) {
+	}
+	catch (ScriptException e1)
+	{
 	}
 
 	// IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
 	FunctionCompletion c;
 	// ArrayList<Parameter> params = new ArrayList<Parameter>();
-	try {
+	try
+	{
 	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
 	    c = new FunctionCompletion(provider, "getSequence", "Sequence");
 	    c.setDefinedIn("MainInterface");
@@ -78,11 +85,14 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
 	    provider.addCompletion(c);
 	    engineFunctions.put("getSequence", Sequence.class);
-	} catch (ScriptException e) {
+	}
+	catch (ScriptException e)
+	{
 	    System.out.println(e.getMessage());
 	}
 
-	try {
+	try
+	{
 	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
 	    c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
 	    c.setDefinedIn("MainInterface");
@@ -90,7 +100,9 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
 	    provider.addCompletion(c);
 	    engineFunctions.put("getImage", IcyBufferedImage.class);
-	} catch (ScriptException e) {
+	}
+	catch (ScriptException e)
+	{
 	    System.out.println(e.getMessage());
 	}
 
@@ -99,14 +111,18 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	engineFunctions.put("importPackage", void.class);
 
 	// IMPORT PLUGINS FUNCTIONS
-	try {
+	try
+	{
 	    importFunctions();
-	} catch (ScriptException e) {
+	}
+	catch (ScriptException e)
+	{
 	    e.printStackTrace();
 	}
     }
 
-    public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException {
+    public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException
+    {
 	// icy important packages
 	engine.eval("importPackage(Packages.icy.main);");
 	engine.eval("importPackage(Packages.icy.plugin);");
@@ -131,12 +147,67 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     @Override
-    public void registerImports() {
+    public void installMethods(ScriptEngine engine, ArrayList<Method> methods)
+    {
+	for (Method method : methods)
+	{
+	    // is it an annotated with BindingFunction?
+	    BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
+	    if (blockFunction == null)
+		continue;
+	    // Generate the function for the provider
+	    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
+	    Class<?>[] paramTypes = method.getParameterTypes();
+
+	    // get the parameters
+	    String params = "";
+	    String functionName = blockFunction.value();
+	    // get the parameters
+	    for (int i = 0; i < paramTypes.length; ++i)
+	    {
+		fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
+		params += ",arg" + i;
+	    }
+	    if (params.length() > 0)
+		params = params.substring(1);
+
+	    // the object for the provider
+	    ScriptFunctionCompletion sfc;
+	    if (Modifier.isStatic(method.getModifiers()))
+		sfc = new ScriptFunctionCompletion(null, functionName, method);
+	    else
+		sfc = new ScriptFunctionCompletion(null, method.getName(), method);
+
+	    try
+	    {
+		if (engine instanceof RhinoScriptEngine)
+		{
+		    if (method.getReturnType() == void.class)
+		    {
+			engine.eval("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+		    }
+		    else
+		    {
+			engine.eval("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+		    }
+		}
+	    }
+	    catch (ScriptException e)
+	    {
+		e.printStackTrace();
+	    }
+	}
+    }
+
+    @Override
+    public void registerImports()
+    {
 	String s = textArea.getText();
 	Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.)+)\\)");
 	Matcher m = patternClasses.matcher(s);
 	int offset = 0;
-	while (m.find(offset)) {
+	while (m.find(offset))
+	{
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
 	    scriptDeclaredImportClasses.add(imported);
@@ -149,7 +220,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	Pattern patternPackages = Pattern.compile("importPackage\\((Packages\\.|)((\\w|\\.)+)\\)");
 	m = patternPackages.matcher(s);
 	offset = 0;
-	while (m.find(offset)) {
+	while (m.find(offset))
+	{
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
 	    scriptDeclaredImports.add(imported);
@@ -161,23 +233,114 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     @Override
-    public void autoDownloadPlugins() {
+    protected void organizeImports(JTextComponent tc)
+    {
+	organizeImportsStatic(tc);
+    }
+
+    /**
+     * Static because of the call in the autocomplete.
+     * 
+     * @param tc
+     */
+    public static void organizeImportsStatic(JTextComponent tc)
+    {
+	ArrayList<String> listImportsClass = new ArrayList<String>();
+	ArrayList<String> listImportsPackages = new ArrayList<String>();
+	boolean errorHappened = false;
+
+	String originalText = tc.getText();
+	String text = "";
+	while ((text = tc.getText()).contains("importClass(") && !errorHappened)
+	{
+	    int idxStart = text.indexOf("importClass(");
+	    if (idxStart == -1) // should never happen because of the contains
+		continue;
+	    int idxStop = text.indexOf(')', idxStart);
+	    if (idxStop == -1)
+	    { // something weird happened in the code, stop.
+		errorHappened = true;
+		break;
+	    }
+	    Caret c = tc.getCaret();
+	    c.setDot(idxStart);
+	    c.moveDot(idxStop + 1);
+	    listImportsClass.add(tc.getSelectedText());
+	    tc.replaceSelection("");
+	}
+	while ((text = tc.getText()).contains("importPackage(") && !errorHappened)
+	{
+	    int idxStart = text.indexOf("importPackage(");
+	    if (idxStart == -1) // should never happen because of the contains
+		continue;
+	    int idxStop = text.indexOf(')', idxStart);
+	    if (idxStop == -1)
+	    { // something weird happened in the code, stop.
+		errorHappened = true;
+		break;
+	    }
+	    Caret c = tc.getCaret();
+	    c.setDot(idxStart);
+	    c.moveDot(idxStop + 1);
+	    listImportsPackages.add(tc.getSelectedText());
+	    tc.replaceSelection("");
+	}
+	if (errorHappened)
+	{
+	    tc.setText(originalText);
+	}
+	else
+	{
+	    String result = "";
+	    Collections.sort(listImportsClass);
+	    Collections.sort(listImportsPackages);
+
+	    for (int i = 0; i < listImportsClass.size(); ++i)
+	    {
+		if (i == 0)
+		    result += listImportsClass.get(i);
+		else
+		    result += "\n" + listImportsClass.get(i);
+	    }
+	    for (int i = 0; i < listImportsPackages.size(); ++i)
+	    {
+		if (i == 0)
+		    result += "\n\n" + listImportsPackages.get(i);
+		else
+		    result += "\n" + listImportsPackages.get(i);
+	    }
+	    String leftText = tc.getText();
+	    char c;
+	    while (leftText.length() > 0 && ((c = leftText.charAt(0)) == ' ' || c == '\n' || c == '\t'))
+		leftText = leftText.substring(1);
+	    tc.setText(result + "\n\n" + leftText);
+	}
+    }
+
+    @Override
+    public void autoDownloadPlugins()
+    {
 	String s = textArea.getText();
 	Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.)+)\\)");
 	Matcher m = patternClasses.matcher(s);
 	int offset = 0;
-	while (m.find(offset)) {
+	while (m.find(offset))
+	{
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
 
 	    PluginDescriptor plugindesc = PluginRepositoryLoader.getPlugin(imported);
-	    if (plugindesc != null) {
+	    if (plugindesc != null)
+	    {
 		// method is in the exact plugin
 		if (!plugindesc.isInstalled())
 		    PluginInstaller.install(plugindesc, false);
-	    } else {
+	    }
+	    else
+	    {
 		// class around plugin
-		for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins()) {
+		for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins())
+		{
 		    if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
 			PluginInstaller.install(pd, false);
 		}
@@ -192,11 +355,13 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	Pattern patternPackages = Pattern.compile("importPackage\\((Packages\\.|)((\\w|\\.)+)\\)");
 	m = patternPackages.matcher(s);
 	offset = 0;
-	while (m.find(offset)) {
+	while (m.find(offset))
+	{
 	    String foundString = m.group(0);
 	    String imported = m.group(2);
 
-	    for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins()) {
+	    for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins())
+	    {
 		if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
 		    PluginInstaller.install(pd, false);
 	    }
@@ -208,8 +373,14 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	}
     }
 
+    // --------------------------------------------------------------------
+    // --------------------------------------------------------------------
+    // JAVASCRIPT DETECTION FEATURES AND ASSISTANCE
+    // --------------------------------------------------------------------
+    // --------------------------------------------------------------------
     @Override
-    protected void detectVariables(String s, Context context) throws ScriptException {
+    protected void detectVariables(String s, Context context) throws ScriptException
+    {
 	final CompilerEnvirons comp = new CompilerEnvirons();
 	comp.initFromContext(context);
 	final Parser parser = new Parser(comp, comp.getErrorReporter());
@@ -259,77 +430,25 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     /**
-     * Dump the whole tree in the cconsole.
-     * 
-     * @param n
-     * @param root
-     * @param commandIdx
-     * @param decal
-     */
-    private void dumpTree(Node n, ScriptOrFnNode root, int commandIdx, String decal) {
-	System.out.print(commandIdx + ": " + decal + typeToName(n.getType()));
-	switch (n.getType()) {
-	case Token.BINDNAME:
-	    // System.out.println("bindname");
-	case Token.STRING:
-	case Token.NAME:
-	    System.out.println(": " + n.getString());
-	    break;
-	case Token.NUMBER:
-	    System.out.println(": " + n.getDouble());
-	    break;
-	// case Token.CALL:
-	// System.out.println("call");
-	// break;
-	case Token.FUNCTION:
-	    int fnIndex = n.getExistingIntProp(Node.FUNCTION_PROP);
-	    FunctionNode fn = root.getFunctionNode(fnIndex);
-	    if (fn.getFunctionType() != FunctionNode.FUNCTION_EXPRESSION) {
-		System.out.println("not an expression.");
-	    }
-	    String funcName = fn.getFunctionName();
-	    System.out.print(": " + funcName + " ");
-	    for (int i = 0; i < fn.getParamCount(); ++i) {
-		String s = fn.getParamOrVarName(i);
-		if (s == null || s == "" || s.contentEquals(funcName))
-		    continue;
-		System.out.print(s + " ");
-	    }
-	    n = fn;
-	    System.out.println();
-	    break;
-	default:
-	    System.out.println();
-	}
-	if (n.hasChildren()) {
-	    Node child = n.getFirstChild();
-	    while (child != null) {
-		dumpTree(child, root, commandIdx, "-" + decal);
-		child = child.getNext();
-		if (n == root) {
-		    ++commandIdx;
-		    System.out.println();
-		}
-	    }
-	}
-    }
-
-    /**
      * Register all variables in the successfully compiled script.
      * 
      * @param n
      * @param root
      * @throws ScriptException
      */
-    private void registerVariables(String text, Node n, ScriptOrFnNode root) throws ScriptException {
+    private void registerVariables(String text, Node n, ScriptOrFnNode root) throws ScriptException
+    {
 	if (DEBUG)
 	    System.out.println(typeToName(n.getType()) + " " + commandStartOffset + "/" + commandEndOffset);
 	// register current
 	Completion c = generateCompletion(n, root, text);
-	if (c != null) {
+	if (c != null)
+	{
 	    boolean alreadyExists = false;
-	    for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i) {
-		if (variableCompletions.get(i).compareTo(c) == 0) {
+	    for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
+	    {
+		if (variableCompletions.get(i).compareTo(c) == 0)
+		{
 		    if (textArea.getCaret().getDot() > commandStartOffset)
 			variableCompletions.remove(i);
 		    else
@@ -340,13 +459,15 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		variableCompletions.add(c);
 	}
 	// recursive call on children (if any)
-	if (n.hasChildren()) {
+	if (n.hasChildren())
+	{
 	    Node child = n.getFirstChild();
-	    while (child != null) {
+	    while (child != null)
+	    {
 		registerVariables(text, child, root);
 		child = child.getNext();
-		if (n == root) {
-		    // TODO move from the if...
+		if (n == root)
+		{
 		    commandStartOffset = commandEndOffset;
 		    char ch;
 		    // while(Pattern.matches("\\s+.*",
@@ -383,10 +504,13 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @return
      * @throws ScriptException
      */
-    private Completion generateCompletion(Node n, ScriptOrFnNode root, String text) throws ScriptException {
-	switch (n.getType()) {
+    private Completion generateCompletion(Node n, ScriptOrFnNode root, String text) throws ScriptException
+    {
+	switch (n.getType())
+	{
 	case Token.VAR:
-	    if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME) {
+	    if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME)
+	    {
 		commandStartOffset += "var".length();
 		Node resNode = n.getFirstChild().getFirstChild();
 		Class<?> type = getVariableType(resNode, text);
@@ -410,7 +534,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		return c;
 	    }
 	    break;
-	case Token.SETNAME: {
+	case Token.SETNAME:
+	{
 	    Node resNode = n.getFirstChild().getNext();
 	    Class<?> type = getVariableType(resNode, text);
 	    String typeStr = type == null ? "" : type.getName();
@@ -421,14 +546,16 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    addVariableDeclaration(c.getName(), type, commandStartOffset);
 	    return c;
 	}
-	case Token.FUNCTION: {
+	case Token.FUNCTION:
+	{
 	    // String type = getVariableTypeAsString(n, text,
 	    // commandStartOffset, commandEndOffset);
 	    int fnIndex = n.getExistingIntProp(Node.FUNCTION_PROP);
 	    FunctionNode fn = root.getFunctionNode(fnIndex);
 	    String funcName = fn.getFunctionName();
 	    ArrayList<Parameter> params = new ArrayList<Parameter>();
-	    for (int i = 0; i < fn.getParamAndVarCount(); ++i) {
+	    for (int i = 0; i < fn.getParamAndVarCount(); ++i)
+	    {
 		String s = fn.getParamOrVarName(i);
 		if (s == null || s == "" || s.contentEquals(funcName))
 		    continue;
@@ -450,7 +577,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	case Token.ELSE:
 	case Token.DO:
 	case Token.FINALLY:
-	case Token.WHILE: {
+	case Token.WHILE:
+	{
 	    commandStartOffset = commandEndOffset;
 	    char ch;
 	    // while(Pattern.matches("\\s+.*",
@@ -485,7 +613,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	return null;
     }
 
-    protected void addVariableDeclaration(String name, Class<?> type, int offset) {
+    protected void addVariableDeclaration(String name, Class<?> type, int offset)
+    {
 	TreeMap<Integer, Class<?>> list = localVariables.get(name);
 	if (list == null)
 	    list = new TreeMap<Integer, Class<?>>();
@@ -493,10 +622,12 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	localVariables.put(name, list);
     }
 
-    private Class<?> getVariableType(Node n, String text) throws ScriptException {
+    private Class<?> getVariableType(Node n, String text) throws ScriptException
+    {
 	if (n == null)
 	    return null;
-	switch (n.getType()) {
+	switch (n.getType())
+	{
 	case Token.NUMBER:
 	    return Number.class;
 	case Token.STRING:
@@ -504,13 +635,16 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	case Token.TRUE:
 	case Token.FALSE:
 	    return boolean.class;
-	case Token.CALL: {
+	case Token.CALL:
+	{
 	    return resolveCallType(n, text, false);
 	}
-	case Token.FUNCTION: {
+	case Token.FUNCTION:
+	{
 	    return void.class;
 	}
-	case Token.NEW: {
+	case Token.NEW:
+	{
 	    return resolveNewType(n.getFirstChild(), text);
 	}
 	case Token.GETPROP:
@@ -530,7 +664,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @param commandStartOffset
      * @return
      */
-    private Class<?> resolveNewType(Node n, String text) throws ScriptException {
+    private Class<?> resolveNewType(Node n, String text) throws ScriptException
+    {
 	String type = buildNew(n, commandStartOffset, commandEndOffset);
 	Class<?> clazz = resolveClassDeclaration(type);
 	if (clazz == null)
@@ -539,36 +674,46 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     }
 
     @Override
-    public Class<?> resolveClassDeclaration(String type) {
+    public Class<?> resolveClassDeclaration(String type)
+    {
 	Class<?> toReturn = null;
 	int arraySize = 0;
-	while (type.endsWith("[]")) {
+	while (type.endsWith("[]"))
+	{
 	    type = type.substring(0, type.length() - 2);
 	    arraySize++;
 	}
 
 	// try absolute
-	if (type.contentEquals("Array")) {
+	if (type.contentEquals("Array"))
+	{
 	    return NativeArray.class;
-	} else if (type.contentEquals("String")) {
+	}
+	else if (type.contentEquals("String"))
+	{
 	    return String.class;
 	}
-	try {
+	try
+	{
 	    if (type.startsWith("Packages."))
 		type = type.substring("Packages.".length());
 	    toReturn = ClassUtil.findClass(type);
-	} catch (ClassNotFoundException e) {
+	}
+	catch (ClassNotFoundException e)
+	{
 	}
 	if (toReturn == null)
 	    toReturn = super.resolveClassDeclaration(type);
-	while (toReturn != null && arraySize > 0) {
+	while (toReturn != null && arraySize > 0)
+	{
 	    toReturn = Array.newInstance(toReturn, 1).getClass();
 	    arraySize--;
 	}
 	return toReturn;
     }
 
-    private String buildNew(Node n, int commandStartOffset, int commandEndOffset) {
+    private String buildNew(Node n, int commandStartOffset, int commandEndOffset)
+    {
 	String newCall = "";
 	newCall = buildRecursiveNew(n);
 
@@ -581,9 +726,11 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	return newCall;
     }
 
-    private String buildRecursiveNew(Node n) {
+    private String buildRecursiveNew(Node n)
+    {
 	Node currentChild = n;
-	switch (currentChild.getType()) {
+	switch (currentChild.getType())
+	{
 	case Token.GETPROP:
 	    return buildRecursiveNew(currentChild.getFirstChild()) + "." + buildRecursiveNew(currentChild.getLastChild());
 	case Token.STRING:
@@ -605,12 +752,15 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @return
      * @throws ScriptException
      */
-    private Class<?> resolveCallType(Node n, String text, boolean noerror) throws ScriptException {
-	if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.GETPROP) {
+    private Class<?> resolveCallType(Node n, String text, boolean noerror) throws ScriptException
+    {
+	if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.GETPROP)
+	{
 
 	    String s = buildFunction(n, text);
 	    boolean containsNew = s.contains("new ");
-	    if (containsNew) {
+	    if (containsNew)
+	    {
 		s = s.substring("new ".length());
 	    }
 
@@ -621,9 +771,11 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    int idxP1 = 0;
 	    int idxP2;
 	    int decal = 0;
-	    if (match.find(0)) {
+	    if (match.find(0))
+	    {
 		String firstCall = match.group(0);
-		try {
+		try
+		{
 		    int idx = text.indexOf(firstCall.substring(0, idxP1), commandStartOffset);
 		    if (idx != -1)
 			commandStartOffset = idx;
@@ -631,7 +783,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		    idxP2 = firstCall.indexOf(')');
 		    decal += idxP2 + 1;
 		    int lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
-		    if (lastDot < 0) {
+		    if (lastDot < 0)
+		    {
 			lastDot = idxP1; // in case of new for instance.
 		    }
 		    Class<?> clazz = null;
@@ -661,9 +814,12 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
 		    // generate the Class<?> arguments
 		    Class<?> clazzes[];
-		    if (argsString.isEmpty()) {
+		    if (argsString.isEmpty())
+		    {
 			clazzes = new Class<?>[0];
-		    } else {
+		    }
+		    else
+		    {
 			clazzes = new Class<?>[args.length];
 			for (int i = 0; i < clazzes.length; ++i)
 			    clazzes[i] = ClassUtil.findClass(args[i]);
@@ -672,13 +828,19 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
 		    // the first type !
 		    Class<?> returnType;
-		    if (containsNew) {
+		    if (containsNew)
+		    {
 			returnType = clazz;
-		    } else {
+		    }
+		    else
+		    {
 			String call = firstCall.substring(lastDot + 1, idxP1);
-			if (call.contentEquals("newInstance")) {
+			if (call.contentEquals("newInstance"))
+			{
 			    returnType = clazz;
-			} else {
+			}
+			else
+			{
 			    Method m = clazz.getMethod(call, clazzes);
 			    returnType = m.getReturnType();
 			}
@@ -690,7 +852,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		    blockFunctions.put(commandStartOffset, fb);
 
 		    // iterate over the next functions, based on the returnType
-		    while (match.find(decal) && !(firstCall = match.group()).isEmpty()) {
+		    while (match.find(decal) && !(firstCall = match.group()).isEmpty())
+		    {
 			if (returnType == void.class)
 			    throw new ScriptException("Void return, impossible to call something else on it.", null, findLineContaining(text));
 			idxP1 = firstCall.indexOf('(');
@@ -698,23 +861,30 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			decal += idxP2 + 2; // account for ) and .
 			argsString = firstCall.substring(idxP1 + 1, idxP2);
 			args = argsString.split(",");
-			if (argsString.isEmpty()) {
+			if (argsString.isEmpty())
+			{
 			    clazzes = new Class<?>[0];
-			} else {
+			}
+			else
+			{
 			    clazzes = new Class<?>[args.length];
 			    for (int i = 0; i < clazzes.length; ++i)
 				clazzes[i] = ClassUtil.findClass(args[i]);
 			    lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
-			    if (lastDot < 0) {
+			    if (lastDot < 0)
+			    {
 				lastDot = -1; // in case of new for instance.
 			    }
 			    clazzes = getGenericNumberTypes(text, returnType, firstCall.substring(lastDot + 1, idxP1), clazzes);
 			}
 			String call = firstCall.substring(lastDot + 1, idxP1);
-			if (call.contentEquals("newInstance")) {
+			if (call.contentEquals("newInstance"))
+			{
 			    clazz.getConstructor(clazzes);
 			    returnType = clazz;
-			} else {
+			}
+			else
+			{
 			    // a =
 			    // java.lang.reflect.Array.newInstance(java.lang.Double,5)
 
@@ -727,15 +897,23 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			blockFunctions.put(commandStartOffset, fb);
 		    }
 		    return returnType;
-		} catch (ClassNotFoundException e) {
+		}
+		catch (ClassNotFoundException e)
+		{
 		    throw new ScriptException("Class Not Found: " + e.getLocalizedMessage(), null, findLineContaining(text));
-		} catch (SecurityException e) {
-		} catch (NoSuchMethodException e) {
+		}
+		catch (SecurityException e)
+		{
+		}
+		catch (NoSuchMethodException e)
+		{
 		    throw new ScriptException("No such method: " + e.getLocalizedMessage(), null, findLineContaining(text));
 		}
 	    }
 	    return null;
-	} else {
+	}
+	else
+	{
 	    // direct call: binding
 	    Node firstChild = n.getFirstChild();
 
@@ -743,7 +921,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    String args = "(";
 	    Node nextChild = firstChild.getNext();
 	    int cptAdded = 0;
-	    while (nextChild != null) {
+	    while (nextChild != null)
+	    {
 		if (cptAdded > 0)
 		    args += ',';
 		Class<?> type = getRealType(nextChild, text);
@@ -772,62 +951,25 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @param string
      * @return
      */
-    private int findLineContaining(String text) {
-	if (textArea instanceof JTextArea) {
-	    if (text != null) {
+    private int findLineContaining(String text)
+    {
+	if (textArea instanceof JTextArea)
+	{
+	    if (text != null)
+	    {
 		JTextArea tx = new JTextArea(text);
-		try {
+		try
+		{
 		    return tx.getLineOfOffset(commandStartOffset) + 1;
-		} catch (BadLocationException e) {
+		}
+		catch (BadLocationException e)
+		{
 		}
 	    }
 	    return -1;
-	} else
-	    return 1;
-    }
-
-    @Override
-    public void installMethods(ScriptEngine engine, ArrayList<Method> methods) {
-	for (Method method : methods) {
-	    // is it an annotated with BindingFunction?
-	    BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
-	    if (blockFunction == null)
-		continue;
-	    // Generate the function for the provider
-	    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
-	    Class<?>[] paramTypes = method.getParameterTypes();
-
-	    // get the parameters
-	    String params = "";
-	    String functionName = blockFunction.value();
-	    // get the parameters
-	    for (int i = 0; i < paramTypes.length; ++i) {
-		fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
-		params += ",arg" + i;
-	    }
-	    if (params.length() > 0)
-		params = params.substring(1);
-
-	    // the object for the provider
-	    ScriptFunctionCompletion sfc;
-	    if (Modifier.isStatic(method.getModifiers()))
-		sfc = new ScriptFunctionCompletion(null, functionName, method);
-	    else
-		sfc = new ScriptFunctionCompletion(null, method.getName(), method);
-
-	    try {
-		if (engine instanceof RhinoScriptEngine) {
-		    if (method.getReturnType() == void.class) {
-			engine.eval("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
-		    } else {
-			engine.eval("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
-		    }
-		}
-	    } catch (ScriptException e) {
-		e.printStackTrace();
-	    }
 	}
-
+	else
+	    return 1;
     }
 
     /**
@@ -841,7 +983,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @param commandEndOffset
      * @return
      */
-    private Class<?>[] getGenericNumberTypes(String s, Class<?> clazz, String function, Class<?>[] argsClazzes) {
+    private Class<?>[] getGenericNumberTypes(String s, Class<?> clazz, String function, Class<?>[] argsClazzes)
+    {
 	Class<?>[] toReturn = new Class<?>[argsClazzes.length];
 	String fullCommand;
 	if (commandStartOffset >= 0 && commandStartOffset < s.length() && commandEndOffset >= 0 && commandEndOffset <= s.length())
@@ -867,51 +1010,65 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
 	// FIXME
 	boolean hasNumber = false;
-	for (int i = 0; i < argsClazzes.length; ++i) {
+	for (int i = 0; i < argsClazzes.length; ++i)
+	{
 	    if (argsClazzes[i] == Number.class)
 		hasNumber = true;
 	    toReturn[i] = argsClazzes[i];
 	}
-	if (hasNumber) {
-	    for (Method m : clazz.getMethods()) {
-		if (m.getName().contentEquals(function)) {
+	if (hasNumber)
+	{
+	    for (Method m : clazz.getMethods())
+	    {
+		if (m.getName().contentEquals(function))
+		{
 		    Class<?> params[] = m.getParameterTypes();
 		    boolean ok = true;
-		    if (params.length == argsClazzes.length) {
-			for (int i = 0; i < params.length && ok; ++i) {
+		    if (params.length == argsClazzes.length)
+		    {
+			for (int i = 0; i < params.length && ok; ++i)
+			{
 			    if (params[i].isAssignableFrom(argsClazzes[i]))
 				toReturn[i] = params[i];
-			    else if (params[i].isPrimitive()) {
+			    else if (params[i].isPrimitive())
+			    {
 				if ((params[i] == float.class || params[i] == double.class) && args[i].contains("."))
 				    toReturn[i] = params[i];
 				else if (!(params[i] == float.class || params[i] == double.class) && !args[i].contains("."))
 				    toReturn[i] = params[i];
 				else
 				    break;
-			    } else
+			    }
+			    else
 				break;
 			}
 		    }
 		}
 	    }
 	    return toReturn;
-	} else
+	}
+	else
 	    return toReturn;
     }
 
-    private String buildFunction(Node n, String text) throws ScriptException {
+    private String buildFunction(Node n, String text) throws ScriptException
+    {
 	String callName = "";
 	String newType = "";
 	boolean functionNext = true;
 	Node currentChild = n;
-	while (currentChild != null) {
-	    if (currentChild.getType() == Token.GETPROP) {
+	while (currentChild != null)
+	{
+	    if (currentChild.getType() == Token.GETPROP)
+	    {
 		String s = currentChild.getLastChild().getString();
-		if (functionNext) {
+		if (functionNext)
+		{
 		    s += '(';
 		    Node nextChild = currentChild.getNext();
 		    int cptAdded = 0;
-		    while (nextChild != null) {
+		    while (nextChild != null)
+		    {
 			if (cptAdded > 0)
 			    s += ',';
 			Class<?> result = getRealType(nextChild, text);
@@ -926,15 +1083,20 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		}
 		callName = "." + s + callName;
 		currentChild = currentChild.getFirstChild();
-	    } else if (currentChild.getType() == Token.CALL) {
+	    }
+	    else if (currentChild.getType() == Token.CALL)
+	    {
 		functionNext = true;
 		currentChild = currentChild.getFirstChild();
-	    } else if (currentChild.getType() == Token.NEW) {
+	    }
+	    else if (currentChild.getType() == Token.NEW)
+	    {
 		newType = currentChild.getFirstChild().getString() + "(";
 		// arguments iteration:
 		Node nextChild = currentChild.getNext();
 		int cptAdded = 0;
-		while (nextChild != null) {
+		while (nextChild != null)
+		{
 		    if (cptAdded > 0)
 			newType += ',';
 		    Class<?> result = getRealType(nextChild, text);
@@ -946,7 +1108,9 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		}
 		newType += ")";
 		currentChild = null;
-	    } else {
+	    }
+	    else
+	    {
 		if (functionNext)
 		    callName = "." + currentChild.getString() + "()" + callName;
 		else
@@ -976,8 +1140,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      * @return
      * @throws ScriptException
      */
-    public Class<?> getRealType(Node n, String text) throws ScriptException {
-	switch (n.getType()) {
+    public Class<?> getRealType(Node n, String text) throws ScriptException
+    {
+	switch (n.getType())
+	{
 	case Token.NUMBER:
 	    return Number.class;
 	case Token.STRING:
@@ -994,9 +1160,12 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    // class wanted
 	    String className = generateClassName(n, "");
 	    Class<?> toReturn = null;
-	    try {
+	    try
+	    {
 		toReturn = ClassUtil.findClass(className);
-	    } catch (ClassNotFoundException e) {
+	    }
+	    catch (ClassNotFoundException e)
+	    {
 	    }
 	    return toReturn;
 	}
@@ -1004,87 +1173,17 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	return null;
     }
 
-    private String generateClassName(Node n, String toReturn) {
-	if (n.getType() == Token.GETPROP) {
+    private String generateClassName(Node n, String toReturn)
+    {
+	if (n.getType() == Token.GETPROP)
+	{
 	    toReturn += generateClassName(n.getFirstChild(), toReturn) + "." + generateClassName(n.getLastChild(), toReturn);
-	} else if (n.getType() == Token.STRING || n.getType() == Token.NAME) {
+	}
+	else if (n.getType() == Token.STRING || n.getType() == Token.NAME)
+	{
 	    return n.getString();
 	}
 	return toReturn;
-    }
-
-    @Override
-    protected void organizeImports(JTextComponent tc) {
-	organizeImportsStatic(tc);
-    }
-
-    /**
-     * Static because of the call in the autocomplete.
-     * 
-     * @param tc
-     */
-    public static void organizeImportsStatic(JTextComponent tc) {
-	ArrayList<String> listImportsClass = new ArrayList<String>();
-	ArrayList<String> listImportsPackages = new ArrayList<String>();
-	boolean errorHappened = false;
-
-	String originalText = tc.getText();
-	String text = "";
-	while ((text = tc.getText()).contains("importClass(") && !errorHappened) {
-	    int idxStart = text.indexOf("importClass(");
-	    if (idxStart == -1) // should never happen because of the contains
-		continue;
-	    int idxStop = text.indexOf(')', idxStart);
-	    if (idxStop == -1) { // something weird happened in the code, stop.
-		errorHappened = true;
-		break;
-	    }
-	    Caret c = tc.getCaret();
-	    c.setDot(idxStart);
-	    c.moveDot(idxStop + 1);
-	    listImportsClass.add(tc.getSelectedText());
-	    tc.replaceSelection("");
-	}
-	while ((text = tc.getText()).contains("importPackage(") && !errorHappened) {
-	    int idxStart = text.indexOf("importPackage(");
-	    if (idxStart == -1) // should never happen because of the contains
-		continue;
-	    int idxStop = text.indexOf(')', idxStart);
-	    if (idxStop == -1) { // something weird happened in the code, stop.
-		errorHappened = true;
-		break;
-	    }
-	    Caret c = tc.getCaret();
-	    c.setDot(idxStart);
-	    c.moveDot(idxStop + 1);
-	    listImportsPackages.add(tc.getSelectedText());
-	    tc.replaceSelection("");
-	}
-	if (errorHappened) {
-	    tc.setText(originalText);
-	} else {
-	    String result = "";
-	    Collections.sort(listImportsClass);
-	    Collections.sort(listImportsPackages);
-
-	    for (int i = 0; i < listImportsClass.size(); ++i) {
-		if (i == 0)
-		    result += listImportsClass.get(i);
-		else
-		    result += "\n" + listImportsClass.get(i);
-	    }
-	    for (int i = 0; i < listImportsPackages.size(); ++i) {
-		if (i == 0)
-		    result += "\n\n" + listImportsPackages.get(i);
-		else
-		    result += "\n" + listImportsPackages.get(i);
-	    }
-	    String leftText = tc.getText();
-	    char c;
-	    while (leftText.length() > 0 && ((c = leftText.charAt(0)) == ' ' || c == '\n' || c == '\t'))
-		leftText = leftText.substring(1);
-	    tc.setText(result + "\n\n" + leftText);
-	}
     }
 
     /**
@@ -1102,14 +1201,80 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      *             : An exception is raised of the offset does not exist in the
      *             original text, which should never happen.
      */
-    public int getTextAreaOffset(String text, int offset) throws BadLocationException {
-	if (textArea instanceof JTextArea) {
+    public int getTextAreaOffset(String text, int offset) throws BadLocationException
+    {
+	if (textArea instanceof JTextArea)
+	{
 	    JTextArea txtTmp = new JTextArea(text);
 	    int line = txtTmp.getLineOfOffset(offset);
 	    int offsetFromLine = offset - txtTmp.getLineStartOffset(line);
 	    return ((JTextArea) textArea).getLineStartOffset(line) + offsetFromLine;
-	} else
+	}
+	else
 	    return offset;
+    }
+
+    /**
+     * Dump the whole tree in the cconsole.
+     * 
+     * @param n
+     * @param root
+     * @param commandIdx
+     * @param decal
+     */
+    private void dumpTree(Node n, ScriptOrFnNode root, int commandIdx, String decal)
+    {
+	System.out.print(commandIdx + ": " + decal + typeToName(n.getType()));
+	switch (n.getType())
+	{
+	case Token.BINDNAME:
+	    // System.out.println("bindname");
+	case Token.STRING:
+	case Token.NAME:
+	    System.out.println(": " + n.getString());
+	    break;
+	case Token.NUMBER:
+	    System.out.println(": " + n.getDouble());
+	    break;
+	// case Token.CALL:
+	// System.out.println("call");
+	// break;
+	case Token.FUNCTION:
+	    int fnIndex = n.getExistingIntProp(Node.FUNCTION_PROP);
+	    FunctionNode fn = root.getFunctionNode(fnIndex);
+	    if (fn.getFunctionType() != FunctionNode.FUNCTION_EXPRESSION)
+	    {
+		System.out.println("not an expression.");
+	    }
+	    String funcName = fn.getFunctionName();
+	    System.out.print(": " + funcName + " ");
+	    for (int i = 0; i < fn.getParamCount(); ++i)
+	    {
+		String s = fn.getParamOrVarName(i);
+		if (s == null || s == "" || s.contentEquals(funcName))
+		    continue;
+		System.out.print(s + " ");
+	    }
+	    n = fn;
+	    System.out.println();
+	    break;
+	default:
+	    System.out.println();
+	}
+	if (n.hasChildren())
+	{
+	    Node child = n.getFirstChild();
+	    while (child != null)
+	    {
+		dumpTree(child, root, commandIdx, "-" + decal);
+		child = child.getNext();
+		if (n == root)
+		{
+		    ++commandIdx;
+		    System.out.println();
+		}
+	    }
+	}
     }
 
     /**
@@ -1121,8 +1286,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      *            the token code
      * @return the actual name for the token code
      */
-    public String typeToName(int token) {
-	switch (token) {
+    public String typeToName(int token)
+    {
+	switch (token)
+	{
 	case Token.EOF:
 	    return "EOF";
 	case Token.EOL:
@@ -1432,8 +1599,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
      *            A token
      * @return the corresponding name string
      */
-    public static String keywordToName(int token) {
-	switch (token) {
+    public static String keywordToName(int token)
+    {
+	switch (token)
+	{
 	case Token.BREAK:
 	    return "break";
 	case Token.CASE:

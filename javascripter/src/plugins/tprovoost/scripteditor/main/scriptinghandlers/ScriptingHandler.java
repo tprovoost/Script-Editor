@@ -19,6 +19,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.TreeMap;
 
 import javax.script.Bindings;
@@ -35,6 +36,7 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
+import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
@@ -562,16 +564,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    EvalThread thread = new EvalThread(engine, textArea.getText());
 	    thread.start();
 	    thread.interrupt();
-
-	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
-
-	    for (String key : localVariables.keySet())
-		engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
-	    engineHandler.getEngineFunctions().putAll(localFunctions);
-	    engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
-	    engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
-	    BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
-	    frame.update();
 	}
     }
 
@@ -973,6 +965,34 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    try
 	    {
 		evalEngine.eval(s);
+
+		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+
+		Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+		for (String s : bn.keySet())
+		{
+		    List<Completion> completions = provider.getCompletionByInputText(s);
+		    boolean found = false;
+		    if (completions != null)
+		    {
+			for (Completion c : completions)
+			{
+			    if (c.getReplacementText().contentEquals(s))
+				found = true;
+			}
+		    }
+		    if (completions == null || !found)
+		    {
+			provider.addCompletion(new VariableCompletion(provider, s, bn.get(s).toString()));
+		    }
+		}
+		for (String key : localVariables.keySet())
+		    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+		engineHandler.getEngineFunctions().putAll(localFunctions);
+		engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
+		engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
+		BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
+		frame.update();
 	    }
 	    catch (ThreadDeath td)
 	    {

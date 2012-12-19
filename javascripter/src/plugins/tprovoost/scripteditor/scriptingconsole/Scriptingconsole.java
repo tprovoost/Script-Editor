@@ -26,6 +26,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
      * 
      */
     private static final long serialVersionUID = 1L;
+    private static final int MAX_PER_LINE = 5;
     private IcyCompletionProvider provider;
     private ScriptingHandler scriptHandler;
     private ArrayList<String> history = new ArrayList<String>();
@@ -101,12 +102,14 @@ public class Scriptingconsole extends JTextField implements KeyListener
 		String s = "";
 		for (Completion c : completions)
 		{
-		    s += c.getReplacementText() + " ";
-		    if (i != 0 && i % 10 == 0)
+		    s += c.getReplacementText() + "\t";
+		    if (i != 0 && i % MAX_PER_LINE == 0)
 			s += "\n";
+		    ++i;
 		}
 		if (!s.endsWith("\n"))
 		    s += "\n";
+		output.append(s);
 		System.out.println(s);
 	    }
 	    break;
