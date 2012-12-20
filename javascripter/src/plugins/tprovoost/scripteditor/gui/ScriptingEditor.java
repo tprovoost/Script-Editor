@@ -13,8 +13,6 @@ import icy.system.thread.ThreadUtil;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -40,6 +38,11 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 
+/**
+ * Main GUI of the class
+ * @author tprovoost
+ *
+ */
 public class ScriptingEditor extends IcyFrame
 {
 
@@ -464,52 +467,7 @@ public class ScriptingEditor extends IcyFrame
 
 	// MENU TEMPLATES
 	JMenu menuTemplate = new JMenu("Templates");
-	JMenu menuTemplateJS = new JMenu("Javascript");
-	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
-
-	itemJSDuplicateSequence.addActionListener(new ActionListener()
-	{
-
-	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
-		String current = new File(".").getAbsolutePath();
-		current = current.substring(0, current.length() - 1);
-		try
-		{
-		    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/js/duplicateSequence.js");
-		    openStream("duplicateSequence.js", is);
-		}
-		catch (IOException e1)
-		{
-		}
-	    }
-	});
-	menuTemplateJS.add(itemJSDuplicateSequence);
-
-	JMenuItem itemJSThreshold = new JMenuItem("Threshold");
-	itemJSThreshold.addActionListener(new ActionListener()
-	{
-
-	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
-		String current = new File(".").getAbsolutePath();
-		current = current.substring(0, current.length() - 1);
-		try
-		{
-		    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/js/tresholder.js");
-		    openStream("thresholder.py", is);
-		}
-		catch (IOException e1)
-		{
-		}
-	    }
-	});
-	// menuTemplateJS.add(itemJSThreshold);
-
-	// add JS templates.
-	menuTemplate.add(menuTemplateJS);
+	populateMenuTemplate(menuTemplate);
 
 	JMenu menuOptions = new JMenu("Options");
 	JMenuItem menuPreferences = new JMenuItem("Preferences");
@@ -565,45 +523,75 @@ public class ScriptingEditor extends IcyFrame
 	return toReturn;
     }
 
-    public void generateButtons(String title)
+    /**
+     * Hard coded function populating the templates. May change to an automatic
+     * parsing of files.
+     * 
+     * @param menuTemplate
+     */
+    private void populateMenuTemplate(JMenu menuTemplate)
     {
-	int index = tabbedPane.indexOfTab(title);
-	JPanel pnlTab = new JPanel(new GridBagLayout());
-	pnlTab.setOpaque(false);
-	JLabel lblTitle = new JLabel(title);
-	JButton btnClose = new JButton("x");
+	JMenu menuTemplateJS = new JMenu("Javascript");
+	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
 
-	GridBagConstraints gbc = new GridBagConstraints();
-	gbc.gridx = 0;
-	gbc.gridy = 0;
-	gbc.weightx = 1;
-
-	pnlTab.add(lblTitle, gbc);
-
-	gbc.gridx++;
-	gbc.weightx = 0;
-	pnlTab.add(btnClose, gbc);
-
-	tabbedPane.setTabComponentAt(index, pnlTab);
-
-	btnClose.addActionListener(new ActionListener()
+	itemJSDuplicateSequence.addActionListener(new ActionListener()
 	{
 
 	    @Override
 	    public void actionPerformed(ActionEvent e)
 	    {
-		Component selected = tabbedPane.getSelectedComponent();
-		if (selected != null)
-		{
-		    // remove the listener before the "remove"
-		    if (selected instanceof JButton)
-		    {
-			((JButton) selected).removeActionListener(this);
-		    }
-		    tabbedPane.remove(selected);
-		}
+		openJSTemplate("duplicateSequence.js");
 	    }
 	});
-	tabbedPane.addTab("+", addPaneButton);
+	menuTemplateJS.add(itemJSDuplicateSequence);
+
+	JMenu menuTemplatePython = new JMenu("Python");
+	JMenuItem itemPythonDuplicateSequence = new JMenuItem("Duplicate Sequence");
+
+	itemPythonDuplicateSequence.addActionListener(new ActionListener()
+	{
+
+	    @Override
+	    public void actionPerformed(ActionEvent e)
+	    {
+		openPythonTemplate("duplicateSequence.py");
+	    }
+	});
+	menuTemplatePython.add(itemPythonDuplicateSequence);
+
+	// add JS templates.
+	menuTemplate.add(menuTemplateJS);
+	menuTemplate.add(menuTemplatePython);
+    }
+
+    private void openJSTemplate(String templateName)
+    {
+	openTemplate("js", templateName);
+    }
+
+    private void openPythonTemplate(String templateName)
+    {
+	openTemplate("python", templateName);
+    }
+
+    /**
+     * Open a template file contained in
+     * plugins/tprovoost/scripteditor/templates/" + type + "/" + templateName
+     * 
+     * @param type
+     * @param templateName
+     */
+    private void openTemplate(String type, String templateName)
+    {
+	String current = new File(".").getAbsolutePath();
+	current = current.substring(0, current.length() - 1);
+	try
+	{
+	    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/" + type + "/" + templateName);
+	    openStream(templateName, is);
+	}
+	catch (IOException e1)
+	{
+	}
     }
 }

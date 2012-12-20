@@ -57,6 +57,7 @@ import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
+import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
@@ -117,9 +118,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    output.setCaretPosition(output.getText().length() - 1);
 	    }
 	});
-
-	console = new Scriptingconsole();
-	console.setOutput(output);
 
 	// creates the text area and set it up
 	textArea = new RSyntaxTextArea(20, 60);
@@ -284,12 +282,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public synchronized void installLanguage(final String language)
     {
-	// set the language for the console too.
-	console.setLanguage(language);
-
-	// the ScriptHandler in the Console is independant, so it needs to have
-	// a reference to the output.
-	console.setOutput(output);
+	output.setText("");
 
 	// Autocompletion is done with the following item
 	if (scriptHandler != null)
@@ -353,6 +346,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    @Override
 	    public void run()
 	    {
+		// the ScriptHandler in the Console is independant, so it needs
+		// to have
+		// if (language.contentEquals("python")) {
+		// console = new PythonScriptingconsole();
+		// } else {
+		console = new Scriptingconsole();
+		// }
+
+		// set the language for the console too.
+		console.setLanguage(language);
+
+		// a reference to the output.
+		console.setOutput(output);
+
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript"))

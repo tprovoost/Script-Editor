@@ -58,9 +58,14 @@ public class JSScriptingHandler6 extends ScriptingHandler
     }
 
     @Override
+    public void eval(ScriptEngine engine, String s) throws ScriptException
+    {
+	engine.eval(s);
+    }
+
+    @Override
     public void installDefaultLanguageCompletions(String language)
     {
-
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
@@ -149,6 +154,22 @@ public class JSScriptingHandler6 extends ScriptingHandler
     @Override
     public void installMethods(ScriptEngine engine, ArrayList<Method> methods)
     {
+	// hardcoded functions, to remove in the future
+	try
+	{
+	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+	}
+	catch (ScriptException e1)
+	{
+	}
+	try
+	{
+	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+	}
+	catch (ScriptException e1)
+	{
+	}
+
 	for (Method method : methods)
 	{
 	    // is it an annotated with BindingFunction?

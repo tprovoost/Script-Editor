@@ -251,6 +251,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	return getVariableDeclaration(name, textArea.getCaretPosition());
     }
 
+    public abstract void eval(ScriptEngine engine, String s) throws ScriptException;
+
     /**
      * Get a variable declaration according to a specific offset
      * 
@@ -554,6 +556,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	{
 	    ArrayList<Method> functions = ScriptEngineHandler.getEngineHandler(engine).getFunctions();
 	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
+	    engine.createBindings();
 	    installMethods(engine, functions);
 	    thread = new EvalThread(engine, textArea.getText());
 	    thread.setPriority(Thread.MIN_PRIORITY);
@@ -962,9 +965,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw, true);
 	    evalEngine.getContext().setWriter(pw);
+	    evalEngine.getContext().setErrorWriter(pw);
 	    try
 	    {
-		evalEngine.eval(s);
+		eval(evalEngine, s);
 
 		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
@@ -983,7 +987,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    }
 		    if (completions == null || !found)
 		    {
-			provider.addCompletion(new VariableCompletion(provider, s, bn.get(s).toString()));
+			Object value = bn.get(s);
+			String type = "";
+			if (value != null)
+			    type = value.toString();
+			provider.addCompletion(new VariableCompletion(provider, s, type));
 		    }
 		}
 		for (String key : localVariables.keySet())
@@ -1026,7 +1034,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
 			    if (ignoredLines.containsKey(lineError))
 			    {
-				System.out.println("An error occured with the error parsing.");
+				// System.out.println("An error occured with the error parsing.");
 				return;
 			    }
 			    ignoredLines.put(lineError, se);
