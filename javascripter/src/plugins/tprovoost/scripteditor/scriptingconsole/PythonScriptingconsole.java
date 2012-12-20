@@ -59,8 +59,7 @@ public class PythonScriptingconsole extends Scriptingconsole {
 
 	case KeyEvent.VK_UP:
 	    if (posInHistory > 0) {
-		posInHistory = posInHistory == 0 ? history.size() - 1
-			: posInHistory - 1;
+		posInHistory = posInHistory == 0 ? history.size() - 1 : posInHistory - 1;
 		setText(history.get(posInHistory));
 	    }
 	    break;
@@ -73,21 +72,16 @@ public class PythonScriptingconsole extends Scriptingconsole {
 		else
 		    System.out.println(time + ": " + text);
 		try {
-		    console.setOut(scriptHandler.getEngine().getContext()
-			    .getWriter());
-		    console.setErr(scriptHandler.getEngine().getContext()
-			    .getWriter());
-		    // console.interact();
+		    console.setOut(scriptHandler.getEngine().getContext().getWriter());
+		    console.setErr(scriptHandler.getEngine().getContext().getWriter());
 		    console.push(text);
 		} catch (PyException pe) {
 		    try {
-			scriptHandler.getEngine().getContext().getWriter()
-				.write(pe.toString());
+			scriptHandler.getEngine().getContext().getWriter().write(pe.toString());
 		    } catch (IOException e1) {
 		    }
 		}
-		if (history.isEmpty()
-			|| !history.get(posInHistory).contentEquals(text))
+		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
 		    history.add(0, text);
 		setText("");
 		posInHistory = 0;
