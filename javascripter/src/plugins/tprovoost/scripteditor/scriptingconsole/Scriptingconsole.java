@@ -27,8 +27,8 @@ public class Scriptingconsole extends JTextField implements KeyListener
      */
     private static final long serialVersionUID = 1L;
     private static final int MAX_PER_LINE = 5;
-    private IcyCompletionProvider provider;
-    private ScriptingHandler scriptHandler;
+    protected IcyCompletionProvider provider;
+    protected ScriptingHandler scriptHandler;
     private ArrayList<String> history = new ArrayList<String>();
     private int posInHistory = 0;
     private JTextArea output;
@@ -128,7 +128,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	    {
 		String time = DateUtil.now("HH:mm:ss");
 		if (output != null)
-		    output.append("> "+ text + "\n");
+		    output.append("> " + text + "\n");
 		else
 		    System.out.println(time + ": " + text);
 		scriptHandler.interpret(true);

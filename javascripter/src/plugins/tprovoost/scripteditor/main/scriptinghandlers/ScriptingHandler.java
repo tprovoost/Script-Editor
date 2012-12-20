@@ -60,8 +60,7 @@ import sun.org.mozilla.javascript.internal.EvaluatorException;
  * @author Thomas Provoost
  * 
  */
-public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener
-{
+public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener {
 
     /**
      * {@link HashMap} containing all ignored Lines if they contains errors.
@@ -141,9 +140,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     public static final int RELEVANCE_LOW = 2;
     public static final int RELEVANCE_HIGH = 10;
 
-    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter, boolean forceRun,
-	    ScriptingPanel scriptingPanel)
-    {
+    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter,
+	    boolean forceRun, ScriptingPanel scriptingPanel) {
 	this.provider = provider;
 	this.textArea = textArea;
 	this.gutter = gutter;
@@ -168,8 +166,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            textArea.
      * @param autocompilation2
      */
-    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter)
-    {
+    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter) {
 	this(provider, engineType, textArea, gutter, false);
     }
 
@@ -186,13 +183,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            textArea.
      * @param autocompilation2
      */
-    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter, boolean forceRun)
-    {
+    public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea, Gutter gutter, boolean forceRun) {
 	this(provider, engineType, textArea, gutter, forceRun, null);
     }
 
-    public void setOutput(JTextArea errorOutput)
-    {
+    public void setOutput(JTextArea errorOutput) {
 	this.errorOutput = errorOutput;
     }
 
@@ -201,8 +196,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @param fileName
      */
-    public void setFileName(String fileName)
-    {
+    public void setFileName(String fileName) {
 	this.fileName = fileName;
     }
 
@@ -211,32 +205,25 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @param engineType
      */
-    private void setLanguage(String engineType)
-    {
+    private void setLanguage(String engineType) {
 	engine = ScriptEngineHandler.getEngine(engineType);
-	try
-	{
+	try {
 	    installDefaultLanguageCompletions(engineType);
 
-	}
-	catch (ScriptException e)
-	{
+	} catch (ScriptException e) {
 	    e.printStackTrace();
 	}
     }
 
-    public HashMap<String, Class<?>> getLocalFunctions()
-    {
+    public HashMap<String, Class<?>> getLocalFunctions() {
 	return localFunctions;
     }
 
-    public HashMap<String, TreeMap<Integer, Class<?>>> getLocalVariables()
-    {
+    public HashMap<String, TreeMap<Integer, Class<?>>> getLocalVariables() {
 	return localVariables;
     }
 
-    public HashMap<Integer, IcyFunctionBlock> getBlockFunctions()
-    {
+    public HashMap<Integer, IcyFunctionBlock> getBlockFunctions() {
 	return blockFunctions;
     }
 
@@ -246,8 +233,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name)
-    {
+    public Class<?> getVariableDeclaration(String name) {
 	return getVariableDeclaration(name, textArea.getCaretPosition());
     }
 
@@ -259,14 +245,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name, int offset)
-    {
+    public Class<?> getVariableDeclaration(String name, int offset) {
 	TreeMap<Integer, Class<?>> list = localVariables.get(name);
 	if (list == null)
 	    return null;
 	Class<?> type = null;
-	for (Integer i : list.keySet())
-	{
+	for (Integer i : list.keySet()) {
 	    if (offset > i)
 		type = list.get(i);
 	}
@@ -281,27 +265,21 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @throws ScriptException
      */
-    public void importFunctions() throws ScriptException
-    {
+    public void importFunctions() throws ScriptException {
 	if (!(provider instanceof IcyCompletionProvider))
 	    return;
 	advanced = false;
-	if (advanced)
-	{
-	    ThreadUtil.bgRun(new Runnable()
-	    {
+	if (advanced) {
+	    ThreadUtil.bgRun(new Runnable() {
 
 		@Override
-		public void run()
-		{
+		public void run() {
 		    ProgressFrame frame = new ProgressFrame("Loading functions...");
 		    ((IcyCompletionProvider) provider).findAllMethods(engine, frame);
 		    frame.setVisible(false);
 		}
 	    });
-	}
-	else
-	{
+	} else {
 	    // install functions from ScriptEngineHandler
 	    ScriptEngineHandler handler = ScriptEngineHandler.getEngineHandler(engine);
 	    ArrayList<Method> functions = handler.getFunctions();
@@ -318,8 +296,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @return
      */
-    public boolean isCompilationOk()
-    {
+    public boolean isCompilationOk() {
 	return compilationOk;
     }
 
@@ -328,38 +305,31 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @param compilationOk
      */
-    public void setCompilationOk(boolean compilationOk)
-    {
+    public void setCompilationOk(boolean compilationOk) {
 	this.compilationOk = compilationOk;
     }
 
-    public boolean isNewEngine()
-    {
+    public boolean isNewEngine() {
 	return newEngine;
     }
 
-    public void setNewEngine(boolean newEngine)
-    {
+    public void setNewEngine(boolean newEngine) {
 	this.newEngine = newEngine;
     }
 
-    public boolean isForceRun()
-    {
+    public boolean isForceRun() {
 	return forceRun;
     }
 
-    public void setForceRun(boolean forceRun)
-    {
+    public void setForceRun(boolean forceRun) {
 	this.forceRun = forceRun;
     }
 
-    public boolean isStrict()
-    {
+    public boolean isStrict() {
 	return strict;
     }
 
-    public void setStrict(boolean strict)
-    {
+    public void setStrict(boolean strict) {
 	this.strict = strict;
     }
 
@@ -372,8 +342,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : if true, runs the code.
      * @param b
      */
-    public void interpret(boolean exec)
-    {
+    public void interpret(boolean exec) {
 	ignoredLines.clear();
 
 	// use either selected text if any or all text
@@ -386,29 +355,21 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	if (exec && (isCompilationOk() || forceRun))
 	    run();
 
-	ThreadUtil.bgRun(new Runnable()
-	{
+	ThreadUtil.bgRun(new Runnable() {
 
 	    @Override
-	    public void run()
-	    {
-		if (thread != null)
-		{
+	    public void run() {
+		if (thread != null) {
 		    ThreadUtil.sleep(200);
 		}
 		String textResult = "";
-		for (Integer a : ignoredLines.keySet())
-		{
-		    try
-		    {
-			if (gutter != null)
-			{
+		for (Integer a : ignoredLines.keySet()) {
+		    try {
+			if (gutter != null) {
 			    gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
 			    gutter.repaint();
 			}
-		    }
-		    catch (BadLocationException e)
-		    {
+		    } catch (BadLocationException e) {
 		    }
 		    Exception ee = ignoredLines.get(a);
 		    String msg = ee.getLocalizedMessage();
@@ -416,8 +377,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    System.out.println(msg);
 		    textResult += msg + "\n";
 		}
-		if (errorOutput != null)
-		{
+		if (errorOutput != null) {
 		    errorOutput.append(textResult);
 		}
 	    }
@@ -437,12 +397,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param exec
      *            : run after compile or not.
      */
-    private void interpret(String s)
-    {
+    private void interpret(String s) {
 	RTextArea textArea = new RTextArea();
 	textArea.setText(s);
-	try
-	{
+	try {
 	    Context context = Context.enter();
 	    if (gutter != null)
 		gutter.removeAllTrackingIcons();
@@ -455,27 +413,22 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (provider != null && varInterpretation)
 		detectVariables(s, context);
 	    setCompilationOk(true);
-	}
-	catch (EvaluatorException ee)
-	{
+	} catch (EvaluatorException ee) {
 	    // get the line and column of error
 	    int lineError = ee.lineNumber() - 1;
 	    int columnNumber = ee.columnNumber();
 	    if (columnNumber == -1)
 		columnNumber = 0;
-	    try
-	    {
+	    try {
 		// verify if exists (> 0 and < lineCount)
-		if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-		{
+		if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1)) {
 		    int lineOffset = textArea.getLineStartOffset(lineError);
 		    int lineEndOffset = textArea.getLineEndOffset(lineError);
 
 		    String textToRemove = s.substring(lineOffset, lineEndOffset);
 
 		    textToRemove = "\n";
-		    if (ignoredLines.containsKey(lineError))
-		    {
+		    if (ignoredLines.containsKey(lineError)) {
 			System.out.println("An error occured with the parsing.");
 			return;
 		    }
@@ -484,40 +437,31 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    // interpret again, without the faulty line.
 		    interpret(s);
-		}
-		else
-		{
+		} else {
 		    // stop interpretation
 		    System.out.println("error at unknown line: " + lineError);
 		    ee.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(ee.getMessage());
 		}
-	    }
-	    catch (BadLocationException e1)
-	    {
+	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
 	    }
-	}
-	catch (ScriptException se)
-	{
+	} catch (ScriptException se) {
 	    // get line error
 	    int lineError = lineNumber(se) - 1;
 	    Integer columnNumberI = columnNumber(se);
 	    int columnNumber = columnNumberI != null ? columnNumberI : -1;
 	    if (columnNumber == -1)
 		columnNumber = 0;
-	    try
-	    {
+	    try {
 		// verify integrity (>0, < lineCount)
-		if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-		{
+		if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1)) {
 		    int lineOffset = textArea.getLineStartOffset(lineError);
 		    int lineEndOffset = textArea.getLineEndOffset(lineError);
 
 		    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-		    if (ignoredLines.containsKey(lineError))
-		    {
+		    if (ignoredLines.containsKey(lineError)) {
 			System.out.println("An error occured with the error parsing.");
 			return;
 		    }
@@ -525,35 +469,25 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    // interpret again, without the faulty line.
 		    interpret(s);
-		}
-		else
-		{
+		} else {
 		    // stops interpretation
 		    System.out.println("error at unknown line: " + lineError);
 		    se.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(se.getMessage());
 		}
-	    }
-	    catch (BadLocationException e1)
-	    {
+	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
 	    }
-	}
-	catch (Exception e)
-	{
+	} catch (Exception e) {
 	    e.printStackTrace();
-	}
-	finally
-	{
+	} finally {
 	    Context.exit();
 	}
     }
 
-    public void run()
-    {
-	if (isNewEngine())
-	{
+    public void run() {
+	if (isNewEngine()) {
 	    ArrayList<Method> functions = ScriptEngineHandler.getEngineHandler(engine).getFunctions();
 	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
 	    engine.createBindings();
@@ -561,9 +495,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    thread = new EvalThread(engine, textArea.getText());
 	    thread.setPriority(Thread.MIN_PRIORITY);
 	    thread.start();
-	}
-	else
-	{
+	} else {
 	    EvalThread thread = new EvalThread(engine, textArea.getText());
 	    thread.start();
 	    thread.interrupt();
@@ -589,24 +521,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     protected abstract void detectVariables(String s, Context context) throws Exception;
 
     @Override
-    public void keyTyped(KeyEvent e)
-    {
+    public void keyTyped(KeyEvent e) {
     }
 
     @Override
-    public void keyPressed(KeyEvent e)
-    {
-	switch (e.getKeyCode())
-	{
+    public void keyPressed(KeyEvent e) {
+	switch (e.getKeyCode()) {
 	case KeyEvent.VK_ENTER:
-	    if (e.isControlDown())
-	    {
+	    if (e.isControlDown()) {
 		interpret(false);
 		e.consume();
 		break;
-	    }
-	    else if (e.isShiftDown())
-	    {
+	    } else if (e.isShiftDown()) {
 		break;
 	    }
 
@@ -616,11 +542,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    break;
 
 	case KeyEvent.VK_M:
-	    if (e.isControlDown())
-	    {
+	    if (e.isControlDown()) {
 		Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-		for (String s : bindings.keySet())
-		{
+		for (String s : bindings.keySet()) {
 		    // try {
 		    // Object o = bindings.get(s);
 		    // if (o instanceof NativeFunction) {
@@ -640,8 +564,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    }
 	    break;
 	case KeyEvent.VK_O:
-	    if (e.isControlDown() && e.isShiftDown())
-	    {
+	    if (e.isControlDown() && e.isShiftDown()) {
 		organizeImports(textArea);
 	    }
 	    break;
@@ -653,8 +576,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     protected abstract void organizeImports(JTextComponent textArea2);
 
     @Override
-    public void keyReleased(KeyEvent e)
-    {
+    public void keyReleased(KeyEvent e) {
     }
 
     /**
@@ -665,8 +587,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : the ScriptException raised.
      * @return
      */
-    private Integer columnNumber(ScriptException se)
-    {
+    private Integer columnNumber(ScriptException se) {
 	Throwable cause = se.getCause();
 	int columnNumber = se.getColumnNumber();
 	if (cause == null || columnNumber >= 0)
@@ -682,8 +603,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *            : the ScriptException raised.
      * @return
      */
-    private Integer lineNumber(ScriptException se)
-    {
+    private Integer lineNumber(ScriptException se) {
 	Throwable cause = se.getCause();
 	int lineNumber = se.getLineNumber();
 	if (lineNumber >= 0)
@@ -694,34 +614,25 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    return callMethod(cause, "lineNumber", Integer.class);
     }
 
-    static private Method getMethod(Object object, String methodName)
-    {
-	try
-	{
+    static private Method getMethod(Object object, String methodName) {
+	try {
 	    if (object != null)
 		return object.getClass().getMethod(methodName);
 	    return null;
-	}
-	catch (NoSuchMethodException e)
-	{
+	} catch (NoSuchMethodException e) {
 	    return null;
 	    /* gulp */
 	}
     }
 
-    static private <T> T callMethod(Object object, String methodName, Class<T> cl)
-    {
-	try
-	{
+    static private <T> T callMethod(Object object, String methodName, Class<T> cl) {
+	try {
 	    Method m = getMethod(object, methodName);
-	    if (m != null)
-	    {
+	    if (m != null) {
 		Object result = m.invoke(object);
 		return cl.cast(result);
 	    }
-	}
-	catch (Exception e)
-	{
+	} catch (Exception e) {
 	    e.printStackTrace();
 	}
 	return null;
@@ -744,81 +655,54 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param type
      * @return
      */
-    public Class<?> resolveClassDeclaration(String type)
-    {
+    public Class<?> resolveClassDeclaration(String type) {
 	// try with declared in the script importClass
-	for (String s : scriptDeclaredImportClasses)
-	{
+	for (String s : scriptDeclaredImportClasses) {
 	    if (ClassUtil.getSimpleClassName(s).contentEquals(type))
-		try
-		{
+		try {
 		    return ClassUtil.findClass(s);
-		}
-		catch (ClassNotFoundException e)
-		{
+		} catch (ClassNotFoundException e) {
 		    System.out.println(e.getLocalizedMessage());
-		}
-		catch (NoClassDefFoundError e2)
-		{
+		} catch (NoClassDefFoundError e2) {
 		}
 	}
 
 	// try with declared in the script importPackage
-	for (String s : scriptDeclaredImports)
-	{
-	    try
-	    {
+	for (String s : scriptDeclaredImports) {
+	    try {
 		return ClassUtil.findClass(s + "." + type);
-	    }
-	    catch (ClassNotFoundException e)
-	    {
-	    }
-	    catch (NoClassDefFoundError e2)
-	    {
+	    } catch (ClassNotFoundException e) {
+	    } catch (NoClassDefFoundError e2) {
 	    }
 	}
 
-	if (strict)
-	{
+	if (strict) {
 	    // declared in engine
 	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
 	    // try with declared in the engine importClass
-	    for (String s : engineHandler.getEngineDeclaredImportClasses())
-	    {
+	    for (String s : engineHandler.getEngineDeclaredImportClasses()) {
 		if (ClassUtil.getSimpleClassName(s).contentEquals(type))
-		    try
-		    {
+		    try {
 			return ClassUtil.findClass(s);
-		    }
-		    catch (ClassNotFoundException e)
-		    {
-		    }
-		    catch (NoClassDefFoundError e2)
-		    {
+		    } catch (ClassNotFoundException e) {
+		    } catch (NoClassDefFoundError e2) {
 		    }
 	    }
 
 	    // try with declared in the script importPackage
-	    for (String s : engineHandler.getEngineDeclaredImports())
-	    {
-		try
-		{
+	    for (String s : engineHandler.getEngineDeclaredImports()) {
+		try {
 		    return ClassUtil.findClass(s + "." + type);
-		}
-		catch (ClassNotFoundException e)
-		{
-		}
-		catch (NoClassDefFoundError e2)
-		{
+		} catch (ClassNotFoundException e) {
+		} catch (NoClassDefFoundError e2) {
 		}
 	    }
 	}
 	return null;
     }
 
-    public ScriptEngine getEngine()
-    {
+    public ScriptEngine getEngine() {
 	return engine;
     }
 
@@ -827,28 +711,23 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @author thomasprovoost
      * 
      */
-    private class AutoVerify extends FocusAdapter implements DocumentListener, ActionListener
-    {
+    private class AutoVerify extends FocusAdapter implements DocumentListener, ActionListener {
 
 	private Timer timer;
 	private boolean lastChange;
 
-	public AutoVerify()
-	{
+	public AutoVerify() {
 	    timer = new Timer(1000, this);
 	    timer.setRepeats(false);
 	}
 
 	@Override
-	public void insertUpdate(DocumentEvent e)
-	{
-	    try
-	    {
+	public void insertUpdate(DocumentEvent e) {
+	    try {
 		Document doc = e.getDocument();
 		int offset = e.getOffset();
 		int len = e.getLength();
-		if (doc.getText(offset, len).contentEquals("."))
-		{
+		if (doc.getText(offset, len).contentEquals(".")) {
 		    timer.stop();
 		    lastChange = false;
 		    String fullTxt = doc.getText(0, doc.getLength());
@@ -857,28 +736,22 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    interpret(s);
 		}
-	    }
-	    catch (BadLocationException e1)
-	    {
+	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
 	    }
 	}
 
 	@Override
-	public void removeUpdate(DocumentEvent e)
-	{
+	public void removeUpdate(DocumentEvent e) {
 	}
 
 	@Override
-	public void changedUpdate(DocumentEvent e)
-	{
+	public void changedUpdate(DocumentEvent e) {
 	    lastChange = true;
-	    ThreadUtil.invokeLater(new Runnable()
-	    {
+	    ThreadUtil.invokeLater(new Runnable() {
 
 		@Override
-		public void run()
-		{
+		public void run() {
 		    if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
 			timer.restart();
 		}
@@ -886,21 +759,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	}
 
 	@Override
-	public void actionPerformed(ActionEvent e)
-	{
+	public void actionPerformed(ActionEvent e) {
 	    lastChange = false;
 	    interpret(textArea.getText());
 	}
 
 	@Override
-	public void focusLost(FocusEvent e)
-	{
+	public void focusLost(FocusEvent e) {
 	    timer.stop();
 	}
 
 	@Override
-	public void focusGained(FocusEvent e)
-	{
+	public void focusGained(FocusEvent e) {
 	    if (lastChange)
 		timer.restart();
 	}
@@ -908,32 +778,24 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
     @SuppressWarnings("unchecked")
     @Override
-    public void pluginRepositeryLoaderChanged(PluginDescriptor plugin)
-    {
+    public void pluginRepositeryLoaderChanged(PluginDescriptor plugin) {
 	if (plugin == null)
 	    return;
 	Class<? extends Plugin> clazz;
-	try
-	{
+	try {
 	    clazz = (Class<? extends Plugin>) ClassUtil.findClass(plugin.getClassAsString());
-	}
-	catch (ClassNotFoundException e)
-	{
+	} catch (ClassNotFoundException e) {
 	    return;
 	}
 
-	if (!plugin.isInstalled())
-	{
+	if (!plugin.isInstalled()) {
 	    // uninstalled the plugin
 	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	    HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 	    engineTypesMethod.remove(clazz);
-	}
-	else
-	{
+	} else {
 	    // plugin installed
-	    if (provider instanceof IcyCompletionProvider)
-	    {
+	    if (provider instanceof IcyCompletionProvider) {
 		// ((IcyCompletionProvider)
 		// provider).findBindingsMethods(engine, clazz);
 	    }
@@ -946,47 +808,45 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @author Thomas Provoost
      * 
      */
-    public class EvalThread extends Thread
-    {
+    public class EvalThread extends Thread {
 
 	private String s;
 	private ScriptEngine evalEngine;
 
-	public EvalThread(ScriptEngine engine, String script)
-	{
+	public EvalThread(ScriptEngine engine, String script) {
 	    this.evalEngine = engine;
 	    this.s = script;
 	}
 
 	@Override
-	public void run()
-	{
+	public void run() {
 	    fireEvaluationStarted();
-	    StringWriter sw = new StringWriter();
-	    PrintWriter pw = new PrintWriter(sw, true);
+	    final StringWriter sw = new StringWriter();
+	    PrintWriter pw = new PrintWriter(sw, true) {
+		@Override
+		public void write(String s) {
+		    if (errorOutput != null)
+			errorOutput.append(s);
+		}
+	    };
 	    evalEngine.getContext().setWriter(pw);
 	    evalEngine.getContext().setErrorWriter(pw);
-	    try
-	    {
+	    try {
 		eval(evalEngine, s);
 
 		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
 		Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-		for (String s : bn.keySet())
-		{
+		for (String s : bn.keySet()) {
 		    List<Completion> completions = provider.getCompletionByInputText(s);
 		    boolean found = false;
-		    if (completions != null)
-		    {
-			for (Completion c : completions)
-			{
+		    if (completions != null) {
+			for (Completion c : completions) {
 			    if (c.getReplacementText().contentEquals(s))
 				found = true;
 			}
 		    }
-		    if (completions == null || !found)
-		    {
+		    if (completions == null || !found) {
 			Object value = bn.get(s);
 			String type = "";
 			if (value != null)
@@ -1001,102 +861,54 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
 		BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
 		frame.update();
-	    }
-	    catch (ThreadDeath td)
-	    {
+	    } catch (ThreadDeath td) {
 		System.out.println("shutdown");
-	    }
-	    catch (ScriptException se)
-	    {
+	    } catch (ScriptException se) {
 		int lineError = lineNumber(se) - 1;
 		Integer columnNumberI = columnNumber(se);
 		int columnNumber = columnNumberI != null ? columnNumberI : -1;
 		if (columnNumber == -1)
 		    columnNumber = 0;
 
-		if (!(textArea instanceof JTextArea))
-		{
-		    se.printStackTrace();
-		    if (errorOutput != null)
-			errorOutput.append(se.getMessage());
-		    else
-			System.out.println(se.getMessage());
-		}
-		else
-		{
-		    try
-		    {
-			if (lineError >= 0 && lineError <= ((JTextArea) textArea).getLineOfOffset(s.length() - 1))
-			{
-			    int lineOffset = ((JTextArea) textArea).getLineStartOffset(lineError);
-			    int lineEndOffset = ((JTextArea) textArea).getLineEndOffset(lineError);
-
-			    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-			    if (ignoredLines.containsKey(lineError))
-			    {
-				// System.out.println("An error occured with the error parsing.");
-				return;
-			    }
-			    ignoredLines.put(lineError, se);
-			}
-			else
-			{
-			    System.out.println("error at unknown line: " + lineError);
-			    se.printStackTrace();
-			    if (errorOutput != null)
-				errorOutput.append(se.getMessage());
-			}
-		    }
-		    catch (BadLocationException e1)
-		    {
-			e1.printStackTrace();
-		    }
-		}
-	    }
-	    finally
-	    {
+		// se.printStackTrace();
 		if (errorOutput != null)
-		    errorOutput.append(sw.getBuffer().toString());
+		    errorOutput.append(se.getMessage());
+		else
+		    System.out.println(se.getMessage());
+	    } finally {
 		fireEvaluationOver();
 		thread = null;
 	    }
 	}
     }
 
-    public void killScript()
-    {
+    public void killScript() {
 	// Something is Running !
-	if (thread != null)
-	{
+	if (thread != null) {
 	    thread.stop();
 	    thread = null;
 	}
     }
 
-    public void fireEvaluationStarted()
-    {
+    public void fireEvaluationStarted() {
 	for (ScriptListener listener : new ArrayList<ScriptListener>(listeners))
 	    listener.evaluationStarted();
     }
 
-    public void fireEvaluationOver()
-    {
+    public void fireEvaluationOver() {
 	for (ScriptListener listener : new ArrayList<ScriptListener>(listeners))
 	    listener.evaluationOver();
     }
 
-    public boolean isRunning()
-    {
+    public boolean isRunning() {
 	return thread != null;
     }
 
-    public void addScriptListener(ScriptListener listener)
-    {
+    public void addScriptListener(ScriptListener listener) {
 	listeners.add(listener);
     }
 
-    public void removeScriptListener(ScriptListener listener)
-    {
+    public void removeScriptListener(ScriptListener listener) {
 	listeners.remove(listener);
     }
 

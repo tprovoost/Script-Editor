@@ -348,11 +348,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    {
 		// the ScriptHandler in the Console is independant, so it needs
 		// to have
-		// if (language.contentEquals("python")) {
-		// console = new PythonScriptingconsole();
-		// } else {
-		console = new Scriptingconsole();
-		// }
+		if (language.contentEquals("python"))
+		{
+		    console = new PythonScriptingconsole();
+		}
+		else
+		{
+		    console = new Scriptingconsole();
+		}
 
 		// set the language for the console too.
 		console.setLanguage(language);

@@ -4,15 +4,18 @@ import icy.util.DateUtil;
 
 import java.awt.Dimension;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
 import javax.swing.JTextArea;
 
+import org.python.core.PyException;
 import org.python.util.InteractiveConsole;
 
-public class PythonScriptingconsole extends Scriptingconsole
-{
+import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
+
+public class PythonScriptingconsole extends Scriptingconsole {
 
     /**
      * 
@@ -23,56 +26,69 @@ public class PythonScriptingconsole extends Scriptingconsole
     private JTextArea output;
     private InteractiveConsole console;
 
-    public PythonScriptingconsole()
-    {
+    public PythonScriptingconsole() {
 	addKeyListener(this);
 
 	console = new InteractiveConsole();
+
+	if (PythonScriptingHandler.getInterpreter() == null) {
+	    PythonScriptingHandler.setInterpreter(console);
+	}
 
 	setMinimumSize(new Dimension(0, 25));
 	setPreferredSize(new Dimension(0, 25));
     }
 
-    public void setLanguage(String language)
-    {
-
+    public void setLanguage(String language) {
     }
 
     @Override
-    public void keyTyped(KeyEvent e)
-    {
+    public void keyTyped(KeyEvent e) {
     }
 
     @Override
-    public void keyPressed(KeyEvent e)
-    {
+    public void keyPressed(KeyEvent e) {
 	String text = getText();
-	switch (e.getKeyCode())
-	{
+	switch (e.getKeyCode()) {
 	case KeyEvent.VK_DOWN:
-	    posInHistory = (posInHistory + 1) % history.size();
-	    setText(history.get(posInHistory));
+	    if (posInHistory < history.size()) {
+		posInHistory = (posInHistory + 1) % history.size();
+		setText(history.get(posInHistory));
+	    }
 	    break;
 
 	case KeyEvent.VK_UP:
-	    posInHistory = posInHistory == 0 ? history.size() - 1 : posInHistory - 1;
-	    setText(history.get(posInHistory));
+	    if (posInHistory > 0) {
+		posInHistory = posInHistory == 0 ? history.size() - 1
+			: posInHistory - 1;
+		setText(history.get(posInHistory));
+	    }
 	    break;
 
 	case KeyEvent.VK_ENTER:
-	    if (!text.isEmpty())
-	    {
+	    if (!text.isEmpty()) {
 		String time = DateUtil.now("HH:mm:ss");
 		if (output != null)
-		    output.append("> " + text + "\n");
+		    output.append(">>> " + text + "\n");
 		else
 		    System.out.println(time + ": " + text);
-		// PyObject locals = console.getLocals();
-		// console.setLocals(new PyStringMap());
-		console.push(text);
-		// console.setLocals(locals);
-		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
-		    history.add(text);
+		try {
+		    console.setOut(scriptHandler.getEngine().getContext()
+			    .getWriter());
+		    console.setErr(scriptHandler.getEngine().getContext()
+			    .getWriter());
+		    // console.interact();
+		    console.push(text);
+		} catch (PyException pe) {
+		    try {
+			scriptHandler.getEngine().getContext().getWriter()
+				.write(pe.toString());
+		    } catch (IOException e1) {
+		    }
+		}
+		if (history.isEmpty()
+			|| !history.get(posInHistory).contentEquals(text))
+		    history.add(0, text);
 		setText("");
 		posInHistory = 0;
 		BindingsScriptFrame.getInstance().update();
@@ -82,8 +98,7 @@ public class PythonScriptingconsole extends Scriptingconsole
     }
 
     @Override
-    public void keyReleased(KeyEvent e)
-    {
+    public void keyReleased(KeyEvent e) {
 
     }
 
@@ -94,8 +109,7 @@ public class PythonScriptingconsole extends Scriptingconsole
      * @param factory
      * @return
      */
-    public String getLanguageName(ScriptEngineFactory factory)
-    {
+    public String getLanguageName(ScriptEngineFactory factory) {
 	String languageName = factory.getLanguageName();
 	if (languageName.contentEquals("ECMAScript"))
 	    return "javascript";
@@ -104,8 +118,7 @@ public class PythonScriptingconsole extends Scriptingconsole
 	return languageName;
     }
 
-    public void setOutput(JTextArea output)
-    {
+    public void setOutput(JTextArea output) {
 	this.output = output;
     }
 
