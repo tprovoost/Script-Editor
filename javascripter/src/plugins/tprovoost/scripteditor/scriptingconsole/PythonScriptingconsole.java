@@ -5,7 +5,8 @@ import icy.util.DateUtil;
 import java.awt.Dimension;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import javax.script.ScriptEngineFactory;
 import javax.swing.JTextArea;
@@ -21,14 +22,9 @@ public class PythonScriptingconsole extends Scriptingconsole {
      * 
      */
     private static final long serialVersionUID = 1L;
-    private ArrayList<String> history = new ArrayList<String>();
-    private int posInHistory = 0;
-    private JTextArea output;
     private InteractiveConsole console;
 
     public PythonScriptingconsole() {
-	addKeyListener(this);
-
 	console = new InteractiveConsole();
 
 	if (PythonScriptingHandler.getInterpreter() == null) {
@@ -44,23 +40,26 @@ public class PythonScriptingconsole extends Scriptingconsole {
 
     @Override
     public void keyTyped(KeyEvent e) {
+
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
 	String text = getText();
 	switch (e.getKeyCode()) {
-	case KeyEvent.VK_DOWN:
-	    if (posInHistory < history.size()) {
-		posInHistory = (posInHistory + 1) % history.size();
+	case KeyEvent.VK_UP:
+	    if (posInHistory < history.size() - 1) {
+		++posInHistory;
 		setText(history.get(posInHistory));
+		e.consume();
 	    }
 	    break;
 
-	case KeyEvent.VK_UP:
+	case KeyEvent.VK_DOWN:
 	    if (posInHistory > 0) {
-		posInHistory = posInHistory == 0 ? history.size() - 1 : posInHistory - 1;
+		--posInHistory;
 		setText(history.get(posInHistory));
+		e.consume();
 	    }
 	    break;
 
@@ -72,8 +71,6 @@ public class PythonScriptingconsole extends Scriptingconsole {
 		else
 		    System.out.println(time + ": " + text);
 		try {
-		    console.setOut(scriptHandler.getEngine().getContext().getWriter());
-		    console.setErr(scriptHandler.getEngine().getContext().getWriter());
 		    console.push(text);
 		} catch (PyException pe) {
 		    try {
@@ -81,11 +78,11 @@ public class PythonScriptingconsole extends Scriptingconsole {
 		    } catch (IOException e1) {
 		    }
 		}
-		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
-		    history.add(0, text);
+		history.add(0, text);
 		setText("");
-		posInHistory = 0;
+		posInHistory = -1;
 		BindingsScriptFrame.getInstance().update();
+		e.consume();
 	    }
 	    break;
 	}
@@ -112,8 +109,18 @@ public class PythonScriptingconsole extends Scriptingconsole {
 	return languageName;
     }
 
-    public void setOutput(JTextArea output) {
-	this.output = output;
+    public void setOutput(JTextArea outputNew) {
+	output = outputNew;
+	final StringWriter sw = new StringWriter();
+	PrintWriter pw = new PrintWriter(sw, true) {
+	    @Override
+	    public void write(String s) {
+		if (output != null)
+		    output.append(s);
+	    }
+	};
+	console.setOut(pw);
+	console.setErr(pw);
     }
 
 }

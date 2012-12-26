@@ -1,6 +1,5 @@
 package plugins.tprovoost.scripteditor.gui;
 
-import icy.file.FileUtil;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.plugin.PluginRepositoryLoader;
@@ -60,8 +59,7 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
-{
+public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener {
     /** */
     private static final long serialVersionUID = 1L;
     private ScriptingHandler scriptHandler;
@@ -96,8 +94,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @param name
      */
-    public ScriptingPanel(String name)
-    {
+    public ScriptingPanel(String name, String language) {
 	this.name = name;
 	setLayout(new BorderLayout());
 
@@ -108,12 +105,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	scrollpane = new JScrollPane(output);
 	scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 	scrollpane.setAutoscrolls(true);
-	scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener()
-	{
+	scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
 	    @Override
-	    public void adjustmentValueChanged(AdjustmentEvent e)
-	    {
+	    public void adjustmentValueChanged(AdjustmentEvent e) {
 		if (!output.getText().isEmpty())
 		    output.setCaretPosition(output.getText().length() - 1);
 	    }
@@ -137,11 +132,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	pane.setIconRowHeaderEnabled(true);
 
 	// creates the options panel
-	String ext = FileUtil.getFileExtension(name, false);
-	if (ext.contentEquals("py"))
-	    options = new PanelOptions("python");
-	else
-	    options = new PanelOptions();
+	options = new PanelOptions(language);
 	installLanguage(options.combo.getSelectedItem().toString());
 	rebuildGUI();
 
@@ -150,23 +141,19 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	textArea.requestFocus();
     }
 
-    public RSyntaxTextArea getTextArea()
-    {
+    public RSyntaxTextArea getTextArea() {
 	return textArea;
     }
 
-    public RTextScrollPane getPane()
-    {
+    public RTextScrollPane getPane() {
 	return pane;
     }
 
-    public String getPanelName()
-    {
+    public String getPanelName() {
 	return name;
     }
 
-    public void setSyntax(String syntaxType)
-    {
+    public void setSyntax(String syntaxType) {
 	textArea.setSyntaxEditingStyle(syntaxType);
     }
 
@@ -175,15 +162,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @param s
      */
-    public void setTheme(String s)
-    {
-	try
-	{
+    public void setTheme(String s) {
+	try {
 	    Theme t = Theme.load(getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/themes/" + s + ".xml"));
 	    t.apply(textArea);
-	}
-	catch (IOException e)
-	{
+	} catch (IOException e) {
 	    System.out.println("Couldn't load theme");
 	}
     }
@@ -194,13 +177,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * @param f
      * @return
      */
-    public boolean saveFileAs(File f)
-    {
-	if (f != null)
-	{
+    public boolean saveFileAs(File f) {
+	if (f != null) {
 	    BufferedWriter writer = null;
-	    try
-	    {
+	    try {
 		String s = textArea.getText();
 		writer = new BufferedWriter(new FileWriter(f));
 		writer.write(s);
@@ -211,9 +191,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		scriptHandler.setFileName(saveFileString);
 		updateTitle();
 		return true;
-	    }
-	    catch (IOException e)
-	    {
+	    } catch (IOException e) {
 		new FailedAnnounceFrame(e.getLocalizedMessage());
 		return false;
 	    }
@@ -226,15 +204,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @return
      */
-    public boolean saveFile()
-    {
+    public boolean saveFile() {
 	if (!isDirty())
 	    return true;
-	if (saveFile != null)
-	{
+	if (saveFile != null) {
 	    BufferedWriter writer = null;
-	    try
-	    {
+	    try {
 		String s = textArea.getText();
 		writer = new BufferedWriter(new FileWriter(saveFile));
 		writer.write(s);
@@ -242,9 +217,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		saveFileString = s;
 		updateTitle();
 		return true;
-	    }
-	    catch (IOException e)
-	    {
+	    } catch (IOException e) {
 		new FailedAnnounceFrame(e.getLocalizedMessage());
 		return false;
 	    }
@@ -252,14 +225,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	return false;
     }
 
-    private void updateTitle()
-    {
+    private void updateTitle() {
 	// if this panel is in a tabbed pane: updates its title.
-	if (tabbedPane != null)
-	{
+	if (tabbedPane != null) {
 	    int idx = tabbedPane.indexOfComponent(this);
-	    if (idx != -1)
-	    {
+	    if (idx != -1) {
 		if (isDirty())
 		    tabbedPane.setTitleAt(idx, name + "*");
 		else
@@ -280,55 +250,45 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * @param language
      *            : javascript / ruby / python / etc.
      */
-    public synchronized void installLanguage(final String language)
-    {
+    public synchronized void installLanguage(final String language) {
 	output.setText("");
 
 	// Autocompletion is done with the following item
-	if (scriptHandler != null)
-	{
+	if (scriptHandler != null) {
 	    scriptHandler.removeScriptListener(this);
 	    textArea.removeKeyListener(scriptHandler);
 	    PluginRepositoryLoader.removeListener(scriptHandler);
 	}
 
 	// the provider provides the results when hitting Ctrl + Space.
-	if (provider == null)
-	{
+	if (provider == null) {
 	    provider = new IcyCompletionProvider();
 	    provider.setAutoActivationRules(false, ".");
-	    ThreadUtil.invokeLater(new Runnable()
-	    {
+	    ThreadUtil.invokeLater(new Runnable() {
 
 		@Override
-		public void run()
-		{
+		public void run() {
 		    provider.setListCellRenderer(new IcyCompletionCellRenderer());
 		}
 	    });
 	}
 	provider.clear();
 
-	if (ac != null)
-	{
+	if (ac != null) {
 	    ac.uninstall();
 	}
 
 	// set the syntax
-	if (language.contentEquals("javascript"))
-	{
+	if (language.contentEquals("javascript")) {
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 	    ac = new JSAutoCompletion(provider);
-	}
-	else if (language.contentEquals("python"))
-	{
+	} else if (language.contentEquals("python")) {
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 	    ac = new PythonAutoCompletion(provider);
-	}
-	else
-	{
+	} else {
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_NONE);
 	    new AnnounceFrame("This language is not yet supported.");
+	    btnRun.setEnabled(false);
 	    return;
 	}
 
@@ -341,19 +301,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	ac.setAutoActivationEnabled(true);
 	ac.setAutoActivationDelay(500);
 	ac.setShowDescWindow(true);
-	ThreadUtil.invokeLater(new Runnable()
-	{
+	ThreadUtil.invokeLater(new Runnable() {
 	    @Override
-	    public void run()
-	    {
+	    public void run() {
 		// the ScriptHandler in the Console is independant, so it needs
 		// to have
-		if (language.contentEquals("python"))
-		{
+		if (language.contentEquals("python")) {
 		    console = new PythonScriptingconsole();
-		}
-		else
-		{
+		} else {
 		    console = new Scriptingconsole();
 		}
 
@@ -365,22 +320,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
-		if (language.contentEquals("javascript"))
-		{
+		if (language.contentEquals("javascript")) {
 		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter(), true);
 		    scriptHandler.setOutput(output);
-		}
-		else if (language.contentEquals("python"))
-		{
+		} else if (language.contentEquals("python")) {
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
 		    scriptHandler.setOutput(output);
-		}
-		else
-		{
+		} else {
 		    scriptHandler = null;
 		}
-		if (scriptHandler != null)
-		{
+		if (scriptHandler != null) {
 		    scriptHandler.addScriptListener(ScriptingPanel.this);
 		    provider.setHandler(scriptHandler);
 		    textArea.addKeyListener(scriptHandler);
@@ -400,8 +349,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @return
      */
-    public ScriptingHandler getScriptHandler()
-    {
+    public ScriptingHandler getScriptHandler() {
 	return scriptHandler;
     }
 
@@ -410,8 +358,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @return
      */
-    public File getSaveFile()
-    {
+    public File getSaveFile() {
 	return saveFile;
     }
 
@@ -420,8 +367,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @return
      */
-    public boolean isDirty()
-    {
+    public boolean isDirty() {
 	String currentText = textArea.getText();
 	return saveFile == null || !saveFileString.contentEquals(currentText);
     }
@@ -429,8 +375,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /**
      * Rebuild the whole GUI.
      */
-    private void rebuildGUI()
-    {
+    private void rebuildGUI() {
 	removeAll();
 	JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, scrollpane);
 	split.setDividerLocation(0.75d);
@@ -449,20 +394,17 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * @author Thomas Provoost
      * 
      */
-    class PanelOptions extends JPanel
-    {
+    class PanelOptions extends JPanel {
 
 	/** */
 	private static final long serialVersionUID = 1L;
 	private JComboBox combo;
 
-	public PanelOptions()
-	{
+	public PanelOptions() {
 	    this("javascript");
 	}
 
-	public PanelOptions(String string)
-	{
+	public PanelOptions(String language) {
 	    final JButton btnBuild = new JButton("Verify");
 	    btnRun = new JButton("Run");
 	    btnStop = new JButton("Stop");
@@ -474,26 +416,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    add(new JLabel("Lang: "));
 	    ArrayList<String> values = new ArrayList<String>();
 	    ScriptEngineManager manager = new ScriptEngineManager();
-	    for (ScriptEngineFactory factory : manager.getEngineFactories())
-	    {
+	    for (ScriptEngineFactory factory : manager.getEngineFactories()) {
 		values.add(getLanguageName(factory));
 	    }
 	    combo = new JComboBox(values.toArray());
-	    combo.setSelectedItem(string);
-	    combo.addItemListener(new ItemListener()
-	    {
+	    combo.setSelectedItem(language);
+	    combo.addItemListener(new ItemListener() {
 
 		@Override
-		public void itemStateChanged(final ItemEvent e)
-		{
-		    ThreadUtil.bgRun(new Runnable()
-		    {
+		public void itemStateChanged(final ItemEvent e) {
+		    ThreadUtil.bgRun(new Runnable() {
 
 			@Override
-			public void run()
-			{
-			    if (e.getStateChange() == ItemEvent.SELECTED)
-			    {
+			public void run() {
+			    if (e.getStateChange() == ItemEvent.SELECTED) {
 				String language = combo.getSelectedItem().toString();
 				installLanguage(language);
 			    }
@@ -505,28 +441,22 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    add(combo);
 	    add(Box.createHorizontalStrut(4));
 
-	    btnBuild.addActionListener(new ActionListener()
-	    {
+	    btnBuild.addActionListener(new ActionListener() {
 
 		@Override
-		public void actionPerformed(ActionEvent e)
-		{
-		    if (scriptHandler != null)
-		    {
+		public void actionPerformed(ActionEvent e) {
+		    if (scriptHandler != null) {
 			scriptHandler.interpret(false);
-		    }
-		    else
+		    } else
 			System.out.println("Script Handler null.");
 		}
 	    });
 	    // add(btnBuild);
 
-	    btnRun.addActionListener(new ActionListener()
-	    {
+	    btnRun.addActionListener(new ActionListener() {
 
 		@Override
-		public void actionPerformed(ActionEvent e)
-		{
+		public void actionPerformed(ActionEvent e) {
 		    if (scriptHandler == null)
 			return;
 		    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
@@ -541,16 +471,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    });
 	    add(btnRun);
 
-	    btnStop.addActionListener(new ActionListener()
-	    {
+	    btnStop.addActionListener(new ActionListener() {
 
 		@Override
-		public void actionPerformed(ActionEvent e)
-		{
+		public void actionPerformed(ActionEvent e) {
 		    if (scriptHandler == null)
 			return;
-		    if (scriptHandler.isRunning())
-		    {
+		    if (scriptHandler.isRunning()) {
 			scriptHandler.killScript();
 		    }
 		}
@@ -567,8 +494,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @param text
      */
-    public void setText(String text)
-    {
+    public void setText(String text) {
 	textArea.setText(text);
     }
 
@@ -579,8 +505,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * @param factory
      * @return
      */
-    public String getLanguageName(ScriptEngineFactory factory)
-    {
+    public String getLanguageName(ScriptEngineFactory factory) {
 	String languageName = factory.getLanguageName();
 	if (languageName.contentEquals("ECMAScript"))
 	    return "javascript";
@@ -590,13 +515,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     }
 
     @Override
-    public void caretUpdate(CaretEvent e)
-    {
+    public void caretUpdate(CaretEvent e) {
 	updateTitle();
     }
 
-    public void setTabbedPane(JTabbedPane tabbedPane)
-    {
+    public void setTabbedPane(JTabbedPane tabbedPane) {
 	this.tabbedPane = tabbedPane;
     }
 
@@ -605,8 +528,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @return
      */
-    public String getLanguage()
-    {
+    public String getLanguage() {
 	return (String) options.combo.getSelectedItem();
     }
 
@@ -622,13 +544,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      *             raised.
      * @see {@link #isDirty()}
      */
-    public void openFile(File f) throws IOException
-    {
+    public void openFile(File f) throws IOException {
 	BufferedReader reader = new BufferedReader(new FileReader(f));
 	String all = "";
 	String line;
-	while ((line = reader.readLine()) != null)
-	{
+	while ((line = reader.readLine()) != null) {
 	    all += (line + "\n");
 	}
 	saveFile = f;
@@ -637,8 +557,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	reader.close();
     }
 
-    public void openStream(InputStream stream) throws IOException
-    {
+    public void openStream(InputStream stream) throws IOException {
 	byte[] data = new byte[stream.available()];
 	stream.read(data);
 	String s = "";
@@ -646,12 +565,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    s += (char) b;
 	textArea.setText(s);
 	stream.close();
-	ThreadUtil.bgRun(new Runnable()
-	{
+	ThreadUtil.bgRun(new Runnable() {
 
 	    @Override
-	    public void run()
-	    {
+	    public void run() {
 		while (scriptHandler == null)
 		    ThreadUtil.sleep(1000);
 		scriptHandler.autoDownloadPlugins();
@@ -660,13 +577,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     }
 
     @Override
-    public void evaluationStarted()
-    {
+    public void evaluationStarted() {
     }
 
     @Override
-    public void evaluationOver()
-    {
+    public void evaluationOver() {
 	btnRun.setEnabled(true);
 	btnStop.setEnabled(false);
     }

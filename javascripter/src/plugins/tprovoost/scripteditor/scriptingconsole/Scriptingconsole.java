@@ -19,8 +19,7 @@ import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 
-public class Scriptingconsole extends JTextField implements KeyListener
-{
+public class Scriptingconsole extends JTextField implements KeyListener {
 
     /**
      * 
@@ -29,12 +28,11 @@ public class Scriptingconsole extends JTextField implements KeyListener
     private static final int MAX_PER_LINE = 5;
     protected IcyCompletionProvider provider;
     protected ScriptingHandler scriptHandler;
-    private ArrayList<String> history = new ArrayList<String>();
-    private int posInHistory = 0;
-    private JTextArea output;
+    protected ArrayList<String> history = new ArrayList<String>();
+    protected int posInHistory = 0;
+    protected JTextArea output;
 
-    public Scriptingconsole()
-    {
+    public Scriptingconsole() {
 	addKeyListener(this);
 
 	provider = new IcyCompletionProvider();
@@ -48,26 +46,19 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	setPreferredSize(new Dimension(0, 25));
     }
 
-    public void setLanguage(String language)
-    {
+    public void setLanguage(String language) {
 	provider.clear();
-	if (language.contentEquals("javascript"))
-	{
+	if (language.contentEquals("javascript")) {
 	    provider = new IcyCompletionProvider();
 	    provider.installDefaultCompletions("javascript");
 	    scriptHandler = new JSScriptingHandler6(provider, this, null, false);
-	}
-	else if (language.contentEquals("python"))
-	{
+	} else if (language.contentEquals("python")) {
 	    provider.installDefaultCompletions("python");
 	    scriptHandler = new PythonScriptingHandler(provider, this, null, false);
-	}
-	else
-	{
+	} else {
 	    scriptHandler = null;
 	}
-	if (scriptHandler != null)
-	{
+	if (scriptHandler != null) {
 	    scriptHandler.setNewEngine(false);
 	    scriptHandler.setForceRun(false);
 	    scriptHandler.setStrict(false);
@@ -75,33 +66,25 @@ public class Scriptingconsole extends JTextField implements KeyListener
     }
 
     @Override
-    public void keyTyped(KeyEvent e)
-    {
+    public void keyTyped(KeyEvent e) {
     }
 
     @Override
-    public void keyPressed(KeyEvent e)
-    {
+    public void keyPressed(KeyEvent e) {
 	String text = getText();
-	switch (e.getKeyCode())
-	{
+	switch (e.getKeyCode()) {
 	case KeyEvent.VK_SPACE:
 	    e.consume();
 	    List<Completion> completions = provider.getCompletions(this);
-	    if (completions == null || !e.isControlDown())
-	    {
+	    if (completions == null || !e.isControlDown()) {
 		return;
 	    }
-	    if (completions.size() == 1)
-	    {
+	    if (completions.size() == 1) {
 		this.setText(completions.get(0).getReplacementText());
-	    }
-	    else
-	    {
+	    } else {
 		int i = 0;
 		String s = "";
-		for (Completion c : completions)
-		{
+		for (Completion c : completions) {
 		    s += c.getReplacementText() + "\t";
 		    if (i != 0 && i % MAX_PER_LINE == 0)
 			s += "\n";
@@ -113,38 +96,42 @@ public class Scriptingconsole extends JTextField implements KeyListener
 		System.out.println(s);
 	    }
 	    break;
-	case KeyEvent.VK_DOWN:
-	    posInHistory = (posInHistory + 1) % history.size();
-	    setText(history.get(posInHistory));
+	case KeyEvent.VK_UP:
+	    if (posInHistory < history.size() - 1) {
+		++posInHistory;
+		setText(history.get(posInHistory));
+		e.consume();
+	    }
 	    break;
 
-	case KeyEvent.VK_UP:
-	    posInHistory = posInHistory == 0 ? history.size() - 1 : posInHistory - 1;
-	    setText(history.get(posInHistory));
+	case KeyEvent.VK_DOWN:
+	    if (posInHistory > 0) {
+		--posInHistory;
+		setText(history.get(posInHistory));
+		e.consume();
+	    }
 	    break;
 
 	case KeyEvent.VK_ENTER:
-	    if (!text.isEmpty())
-	    {
+	    if (!text.isEmpty()) {
 		String time = DateUtil.now("HH:mm:ss");
 		if (output != null)
 		    output.append("> " + text + "\n");
 		else
 		    System.out.println(time + ": " + text);
 		scriptHandler.interpret(true);
-		if (history.isEmpty() || !history.get(posInHistory).contentEquals(text))
-		    history.add(text);
+		history.add(0, text);
 		setText("");
-		posInHistory = 0;
+		posInHistory = -1;
 		BindingsScriptFrame.getInstance().update();
+		e.consume();
 	    }
 	    break;
 	}
     }
 
     @Override
-    public void keyReleased(KeyEvent e)
-    {
+    public void keyReleased(KeyEvent e) {
 
     }
 
@@ -155,8 +142,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
      * @param factory
      * @return
      */
-    public String getLanguageName(ScriptEngineFactory factory)
-    {
+    public String getLanguageName(ScriptEngineFactory factory) {
 	String languageName = factory.getLanguageName();
 	if (languageName.contentEquals("ECMAScript"))
 	    return "javascript";
@@ -165,8 +151,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
 	return languageName;
     }
 
-    public void setOutput(JTextArea output)
-    {
+    public void setOutput(JTextArea output) {
 	this.output = output;
 	if (scriptHandler != null)
 	    scriptHandler.setOutput(output);

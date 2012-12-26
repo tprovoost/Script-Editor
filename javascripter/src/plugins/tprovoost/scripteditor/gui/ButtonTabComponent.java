@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
+import icy.main.Icy;
 import icy.util.EventUtil;
 
 import java.awt.BasicStroke;
@@ -19,6 +20,7 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -27,34 +29,28 @@ import javax.swing.plaf.basic.BasicButtonUI;
  * Component to be used as tabComponent; Contains a JLabel to show the text and
  * a JButton to close the tab it belongs to
  */
-public class ButtonTabComponent extends JPanel
-{
+public class ButtonTabComponent extends JPanel {
     /** */
     private static final long serialVersionUID = 1L;
     private final JTabbedPane pane;
 
-    public ButtonTabComponent(final JTabbedPane pane)
-    {
+    public ButtonTabComponent(final JTabbedPane pane) {
 	// unset default FlowLayout' gaps
 	super(new FlowLayout(FlowLayout.LEFT, 0, 0));
-	if (pane == null)
-	{
+	if (pane == null) {
 	    throw new NullPointerException("TabbedPane is null");
 	}
 	this.pane = pane;
 	setOpaque(false);
 
 	// make JLabel read titles from JTabbedPane
-	JLabel label = new JLabel()
-	{
+	JLabel label = new JLabel() {
 	    /**  */
 	    private static final long serialVersionUID = 1L;
 
-	    public String getText()
-	    {
+	    public String getText() {
 		int i = pane.indexOfTabComponent(ButtonTabComponent.this);
-		if (i != -1)
-		{
+		if (i != -1) {
 		    return pane.getTitleAt(i);
 		}
 		return null;
@@ -71,13 +67,11 @@ public class ButtonTabComponent extends JPanel
 	setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
     }
 
-    private class TabButton extends JButton implements ActionListener
-    {
+    private class TabButton extends JButton implements ActionListener {
 	/** */
 	private static final long serialVersionUID = 1L;
 
-	public TabButton()
-	{
+	public TabButton() {
 	    int size = 17;
 	    setPreferredSize(new Dimension(size, size));
 	    setToolTipText("Close this tab");
@@ -97,30 +91,25 @@ public class ButtonTabComponent extends JPanel
 	    addActionListener(this);
 	}
 
-	public void actionPerformed(ActionEvent e)
-	{
+	public void actionPerformed(ActionEvent e) {
 	    deletePane();
 	}
 
 	// we don't want to update UI for this button
-	public void updateUI()
-	{
+	public void updateUI() {
 	}
 
 	// paint the cross
-	protected void paintComponent(Graphics g)
-	{
+	protected void paintComponent(Graphics g) {
 	    super.paintComponent(g);
 	    Graphics2D g2 = (Graphics2D) g.create();
 	    // shift the image for pressed buttons
-	    if (getModel().isPressed())
-	    {
+	    if (getModel().isPressed()) {
 		g2.translate(1, 1);
 	    }
 	    g2.setStroke(new BasicStroke(2));
 	    g2.setColor(Color.BLACK);
-	    if (getModel().isRollover())
-	    {
+	    if (getModel().isRollover()) {
 		g2.setColor(Color.MAGENTA);
 	    }
 	    int delta = 6;
@@ -130,30 +119,24 @@ public class ButtonTabComponent extends JPanel
 	}
     }
 
-    private final MouseListener buttonMouseListener = new MouseAdapter()
-    {
-	public void mouseEntered(MouseEvent e)
-	{
+    private final MouseListener buttonMouseListener = new MouseAdapter() {
+	public void mouseEntered(MouseEvent e) {
 	    Component component = e.getComponent();
-	    if (component instanceof AbstractButton)
-	    {
+	    if (component instanceof AbstractButton) {
 		AbstractButton button = (AbstractButton) component;
 		button.setBorderPainted(true);
 	    }
 	}
 
-	public void mouseExited(MouseEvent e)
-	{
+	public void mouseExited(MouseEvent e) {
 	    Component component = e.getComponent();
-	    if (component instanceof AbstractButton)
-	    {
+	    if (component instanceof AbstractButton) {
 		AbstractButton button = (AbstractButton) component;
 		button.setBorderPainted(false);
 	    }
 	}
 
-	public void mouseClicked(MouseEvent e)
-	{
+	public void mouseClicked(MouseEvent e) {
 	    if (EventUtil.isMiddleMouseButton(e))
 		deletePane();
 	};
@@ -162,12 +145,22 @@ public class ButtonTabComponent extends JPanel
     /**
      * Remove this pane from the {@link JTabbedPane}.
      */
-    private void deletePane()
-    {
+    public void deletePane() {
+	Component c = pane.getComponentAt(pane.indexOfTabComponent(ButtonTabComponent.this));
+	if (c instanceof ScriptingPanel) {
+	    if (((ScriptingPanel) c).isDirty()) {
+		int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
+			"Some work has not been saved, are you sure you want to close?", "Unsaved file", JOptionPane.WARNING_MESSAGE,
+			JOptionPane.QUESTION_MESSAGE, null, new Object[] { "Save", "Continue", "Cancel" }, "Cancel" + "");
+		if (n == 2)
+		    return;
+		if (n == 0)
+		    ((ScriptingPanel) c).saveFile();
+	    }
+	}
 	int i = pane.indexOfTabComponent(ButtonTabComponent.this);
 	int selectedIdx = pane.getSelectedIndex();
-	if (i != -1)
-	{
+	if (i != -1) {
 	    pane.remove(i);
 	    if (i == selectedIdx)
 		pane.setSelectedIndex(0);

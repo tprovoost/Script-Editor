@@ -104,6 +104,9 @@ public class PreferencesWindow extends IcyFrame
 	table.getColumnModel().getColumn(0).setPreferredWidth(190);
 	panelCenter.setLayout(new BorderLayout(0, 0));
 	panelCenter.add(table);
+	
+	JLabel lblNeedsRestarting = new JLabel("* needs restarting Script Editor");
+	panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 	return toReturn;
     }
 
@@ -146,9 +149,9 @@ public class PreferencesWindow extends IcyFrame
 	{
 	    super(new Object[][]
 	    {
-	    { "Enable variable interpretation (beta)", prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.FALSE) },
+	    { "Enable variable interpretation (beta)*", prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.FALSE) },
 	    { "Override verification (javascript)", prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE) },
-	    { "Enable auto verification (javascript/beta)", prefs.getBoolean(PREF_VERIF, Boolean.FALSE) },
+	    { "Enable auto verification (javascript/beta)*", prefs.getBoolean(PREF_VERIF, Boolean.FALSE) },
 	    { "Enable Strict Mode (javascript)", prefs.getBoolean(PREF_STRICT, Boolean.FALSE) },
 	    { "Always run in a new Engine", prefs.getBoolean(PREF_NEW_ENGINE, Boolean.TRUE) }, }, new String[]
 	    { "Property", "Value" });

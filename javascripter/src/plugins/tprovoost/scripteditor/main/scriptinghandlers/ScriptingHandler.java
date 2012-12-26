@@ -124,6 +124,15 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private boolean strict = false;
     private boolean varInterpretation = true;
 
+    volatile StringWriter sw = new StringWriter();
+    volatile PrintWriter pw = new PrintWriter(sw, true) {
+	@Override
+	public void write(String s) {
+	    if (errorOutput != null)
+		errorOutput.append(s);
+	}
+    };
+
     /**
      * Thread running the evaluation.
      */
@@ -429,7 +438,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    textToRemove = "\n";
 		    if (ignoredLines.containsKey(lineError)) {
-			System.out.println("An error occured with the parsing.");
+			// System.out.println("An error occured with the parsing.");
 			return;
 		    }
 		    ignoredLines.put(lineError, ee);
@@ -439,7 +448,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    interpret(s);
 		} else {
 		    // stop interpretation
-		    System.out.println("error at unknown line: " + lineError);
+		    // System.out.println("error at unknown line: " +
+		    // lineError);
 		    ee.printStackTrace();
 		    if (errorOutput != null)
 			errorOutput.append(ee.getMessage());
@@ -462,7 +472,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		    s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
 		    if (ignoredLines.containsKey(lineError)) {
-			System.out.println("An error occured with the error parsing.");
+			// System.out.println("An error occured with the error parsing.");
 			return;
 		    }
 		    ignoredLines.put(lineError, se);
@@ -821,14 +831,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void run() {
 	    fireEvaluationStarted();
-	    final StringWriter sw = new StringWriter();
-	    PrintWriter pw = new PrintWriter(sw, true) {
-		@Override
-		public void write(String s) {
-		    if (errorOutput != null)
-			errorOutput.append(s);
-		}
-	    };
 	    evalEngine.getContext().setWriter(pw);
 	    evalEngine.getContext().setErrorWriter(pw);
 	    try {

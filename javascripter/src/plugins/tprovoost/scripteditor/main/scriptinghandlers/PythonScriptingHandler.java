@@ -48,7 +48,6 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	} else {
 	    // save the state of the PySystemState
 	    py = new PythonInterpreter(new PyStringMap(), new PySystemState());
-	    PySystemState state = py.getSystemState();
 	    py.setLocals(new PyStringMap());
 	}
 	py.setOut(engine.getContext().getWriter());

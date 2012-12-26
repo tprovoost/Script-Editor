@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
+import icy.file.FileUtil;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
@@ -13,6 +14,7 @@ import icy.system.thread.ThreadUtil;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -40,57 +42,62 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 
 /**
  * Main GUI of the class
+ * 
  * @author tprovoost
- *
+ * 
  */
-public class ScriptingEditor extends IcyFrame
-{
+public class ScriptingEditor extends IcyFrame {
 
     private JTabbedPane tabbedPane;
     private JButton addPaneButton;
-    private String currentDirectoryPath;
+    private String currentDirectoryPath = "";
     private ArrayList<String> previousFiles = new ArrayList<String>();
     private static final int ctrlMask = SystemUtil.getCtrlMask();
-    private static final int MAX_RECENT_FILES = 5;
+    private static final int MAX_RECENT_FILES = 20;
+    private static final String STRING_LAST_DIRECTORY = "lastDirectory";
     private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
     private JMenu menuOpenRecent;
 
-    public ScriptingEditor()
-    {
+    public ScriptingEditor() {
 	super("Script Editor", true, true, true);
+
+	currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
 
 	// load preferences
 	XMLPreferences openedFiles = prefs.node("openedFiles");
-	for (XMLPreferences key : openedFiles.getChildren())
-	{
+	for (XMLPreferences key : openedFiles.getChildren()) {
 	    previousFiles.add(key.get("name", ""));
 	}
 
 	setJMenuBar(createJMenuBar());
 
 	JPanel mainPanel = new JPanel(new BorderLayout());
-	tabbedPane = new JTabbedPane();
-	tabbedPane.addChangeListener(new ChangeListener()
-	{
+	tabbedPane = new JTabbedPane() {
+	    /** */
+	    private static final long serialVersionUID = 1L;
 
 	    @Override
-	    public void stateChanged(ChangeEvent arg0)
-	    {
+	    public void setSelectedIndex(int index) {
+		if (index != tabbedPane.getTabCount() - 1)
+		    super.setSelectedIndex(index);
+	    }
+	};
+	tabbedPane.addChangeListener(new ChangeListener() {
+
+	    @Override
+	    public void stateChanged(ChangeEvent arg0) {
 		Component comp = tabbedPane.getSelectedComponent();
 		if (!(comp instanceof ScriptingPanel))
 		    return;
 		ScriptingPanel panel = (ScriptingPanel) comp;
 		final ScriptingHandler handler = panel.getScriptHandler();
-		ThreadUtil.bgRun(new Runnable()
-		{
+		ThreadUtil.bgRun(new Runnable() {
 
 		    @Override
-		    public void run()
-		    {
+		    public void run() {
 			int max = 20;
 			int i = 0;
-			while (handler == null && i < max)
-			{
+			while (handler == null && i < max) {
 			    ThreadUtil.sleep(500);
 			    ++i;
 			}
@@ -106,13 +113,12 @@ public class ScriptingEditor extends IcyFrame
 	addPaneButton.setMinimumSize(new Dimension(20, 20));
 	addPaneButton.setMaximumSize(new Dimension(20, 20));
 	addPaneButton.setSize(20, 20);
+	addPaneButton.setOpaque(false);
 
-	addPaneButton.addActionListener(new ActionListener()
-	{
+	addPaneButton.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		createNewPane();
 	    }
 	});
@@ -122,8 +128,7 @@ public class ScriptingEditor extends IcyFrame
 	setContentPane(mainPanel);
     }
 
-    public ScriptingPanel createNewPane()
-    {
+    public ScriptingPanel createNewPane() {
 	return createNewPane("Untitled");
     }
 
@@ -141,9 +146,19 @@ public class ScriptingEditor extends IcyFrame
      * @see {@link #createNewPane()}, {@link #openFile(File)},
      *      {@link #openFile(String)}
      */
-    public ScriptingPanel createNewPane(String name)
-    {
-	ScriptingPanel panelCreated = new ScriptingPanel(name);
+    public ScriptingPanel createNewPane(String name) {
+	ScriptingPanel panelCreated;
+	Component c = tabbedPane.getSelectedComponent();
+	if (c instanceof ScriptingPanel) {
+	    String language = ((ScriptingPanel) c).getLanguage();
+	    panelCreated = new ScriptingPanel(name, language);
+	} else {
+	    String ext = FileUtil.getFileExtension(name, false);
+	    if (ext.contentEquals("py"))
+		panelCreated = new ScriptingPanel(name, "python");
+	    else
+		panelCreated = new ScriptingPanel(name, "javascript");
+	}
 	panelCreated.setTabbedPane(tabbedPane);
 	int idx = tabbedPane.getTabCount() - 1;
 	if (idx != -1)
@@ -157,6 +172,11 @@ public class ScriptingEditor extends IcyFrame
 	tabbedPane.addTab("+", new JLabel());
 	tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 	tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
+	Insets i = addPaneButton.getInsets();
+	i.bottom = 0;
+	i.left = 0;
+	i.right = 0;
+	i.top = 0;
 	return panelCreated;
     }
 
@@ -166,36 +186,30 @@ public class ScriptingEditor extends IcyFrame
      * @param f
      * @throws IOException
      */
-    public void openFile(File f) throws IOException
-    {
+    public void openFile(File f) throws IOException {
 	String filename = f.getName();
 	boolean exists = false;
 	for (int i = 0; i < tabbedPane.getTabCount(); ++i)
-	    if (tabbedPane.getTitleAt(i).contentEquals(filename))
-	    {
+	    if (tabbedPane.getTitleAt(i).contentEquals(filename)) {
 		tabbedPane.setSelectedIndex(i);
 		exists = true;
 	    }
-	if (exists)
-	{
+	if (exists) {
 	    return;
 	}
 	ScriptingPanel panel = createNewPane(filename);
 	panel.openFile(f);
 	String path = f.getPath();
 	XMLPreferences openedFiles = prefs.node("openedFiles");
-	if (!previousFiles.contains(path))
-	{
+	if (!previousFiles.contains(path)) {
 	    previousFiles.add(path);
 	    XMLPreferences key = openedFiles.node(path);
 	    key.put("name", path);
 	}
-	if (previousFiles.size() > MAX_RECENT_FILES)
-	{
+	if (previousFiles.size() > MAX_RECENT_FILES) {
 	    filename = previousFiles.get(0);
 	    XMLPreferences key = openedFiles.node(filename);
-	    if (key.exists())
-	    {
+	    if (key.exists()) {
 		openedFiles.remove(filename);
 	    }
 	    previousFiles.remove(0);
@@ -203,44 +217,33 @@ public class ScriptingEditor extends IcyFrame
 	updateRecentFiles();
     }
 
-    private void updateRecentFiles()
-    {
+    private void updateRecentFiles() {
 	menuOpenRecent.removeAll();
 	ArrayList<String> copy = new ArrayList<String>(previousFiles);
-	for (int i = 0; i < copy.size(); ++i)
-	{
+	for (int i = 0; i < copy.size(); ++i) {
 	    String path = previousFiles.get(i);
 	    JMenuItem item = createRecentFileItem(path);
-	    if (item == null)
-	    {
+	    if (item == null) {
 		previousFiles.remove(path);
-	    }
-	    else
-	    {
+		prefs.node("openedFiles").remove(path);
+	    } else {
 		menuOpenRecent.add(item);
 	    }
 	}
     }
 
-    private JMenuItem createRecentFileItem(String filename)
-    {
+    private JMenuItem createRecentFileItem(String filename) {
 	final File f = new File(filename);
 	JMenuItem toReturn = null;
-	if (f.exists())
-	{
-	    toReturn = new JMenuItem(f.getName());
-	    toReturn.addActionListener(new ActionListener()
-	    {
+	if (f.exists()) {
+	    toReturn = new JMenuItem(f.getPath());
+	    toReturn.addActionListener(new ActionListener() {
 
 		@Override
-		public void actionPerformed(ActionEvent e)
-		{
-		    try
-		    {
+		public void actionPerformed(ActionEvent e) {
+		    try {
 			openFile(f);
-		    }
-		    catch (IOException e1)
-		    {
+		    } catch (IOException e1) {
 			e1.printStackTrace();
 		    }
 		}
@@ -255,8 +258,7 @@ public class ScriptingEditor extends IcyFrame
      * @param f
      * @throws IOException
      */
-    public void openStream(String name, InputStream stream) throws IOException
-    {
+    public void openStream(String name, InputStream stream) throws IOException {
 	ScriptingPanel panel = createNewPane(name);
 	panel.openStream(stream);
     }
@@ -267,8 +269,7 @@ public class ScriptingEditor extends IcyFrame
      * @param f
      * @throws IOException
      */
-    public void openFile(String s) throws IOException
-    {
+    public void openFile(String s) throws IOException {
 	openFile(new File(s));
     }
 
@@ -277,26 +278,25 @@ public class ScriptingEditor extends IcyFrame
      * 
      * @see ScriptingEditor#openFile(File)
      */
-    public void showOpenFileDialog()
-    {
+    public void showOpenFileDialog() {
 	JFileChooser fc;
 	if (currentDirectoryPath == "")
 	    fc = new JFileChooser();
 	else
 	    fc = new JFileChooser(currentDirectoryPath);
 	fc.setMultiSelectionEnabled(true);
-	if (fc.showOpenDialog(getFrame()) == JFileChooser.APPROVE_OPTION)
-	{
+	if (fc.showOpenDialog(getFrame()) == JFileChooser.APPROVE_OPTION) {
 	    File[] files = fc.getSelectedFiles();
-	    for (File f : files)
-		try
-		{
+	    for (File f : files) {
+		String path = FileUtil.getDirectory(f.getPath());
+		currentDirectoryPath = path;
+		prefs.put(STRING_LAST_DIRECTORY, path);
+		try {
 		    openFile(f);
-		}
-		catch (IOException e)
-		{
+		} catch (IOException e) {
 		    new FailedAnnounceFrame(f.getName() + " is not a valid file");
 		}
+	    }
 	}
     }
 
@@ -305,21 +305,16 @@ public class ScriptingEditor extends IcyFrame
      * 
      * @see ScriptingEditor#openFile(File)
      */
-    public void showSaveFileDialog(ScriptingPanel panel)
-    {
+    public void showSaveFileDialog(ScriptingPanel panel) {
 	JFileChooser fc;
 	if (currentDirectoryPath == "")
 	    fc = new JFileChooser();
 	else
 	    fc = new JFileChooser(currentDirectoryPath);
-	if (fc.showSaveDialog(getFrame()) == JFileChooser.APPROVE_OPTION)
-	{
-	    if (panel.getLanguage().contentEquals("javascript"))
-	    {
+	if (fc.showSaveDialog(getFrame()) == JFileChooser.APPROVE_OPTION) {
+	    if (panel.getLanguage().contentEquals("javascript")) {
 		fc.setFileFilter(new FileNameExtensionFilter("Javascript files", "js"));
-	    }
-	    else if (panel.getLanguage().contentEquals("python"))
-	    {
+	    } else if (panel.getLanguage().contentEquals("python")) {
 		fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
 	    }
 	    File file = fc.getSelectedFile();
@@ -332,19 +327,16 @@ public class ScriptingEditor extends IcyFrame
      * 
      * @return
      */
-    private JMenuBar createJMenuBar()
-    {
+    private JMenuBar createJMenuBar() {
 	JMenuBar toReturn = new JMenuBar();
 
 	// MENU FILE
 	JMenu menuFile = new JMenu("File");
 	JMenuItem menuNew = new JMenuItem("New");
-	menuNew.addActionListener(new ActionListener()
-	{
+	menuNew.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		createNewPane("Untitled");
 	    }
 	});
@@ -352,12 +344,10 @@ public class ScriptingEditor extends IcyFrame
 	menuNew.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, ctrlMask));
 
 	JMenuItem menuOpen = new JMenuItem("Open...");
-	menuOpen.addActionListener(new ActionListener()
-	{
+	menuOpen.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		showOpenFileDialog();
 	    }
 	});
@@ -369,22 +359,16 @@ public class ScriptingEditor extends IcyFrame
 	menuFile.add(menuOpenRecent);
 
 	JMenuItem menuSave = new JMenuItem("Save");
-	menuSave.addActionListener(new ActionListener()
-	{
+	menuSave.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		Component comp = tabbedPane.getSelectedComponent();
-		if (comp instanceof ScriptingPanel)
-		{
+		if (comp instanceof ScriptingPanel) {
 		    ScriptingPanel panel = ((ScriptingPanel) comp);
-		    if (panel.getSaveFile() == null)
-		    {
+		    if (panel.getSaveFile() == null) {
 			showSaveFileDialog(panel);
-		    }
-		    else if (panel.isDirty())
-		    {
+		    } else if (panel.isDirty()) {
 			panel.saveFile();
 		    }
 		}
@@ -394,15 +378,12 @@ public class ScriptingEditor extends IcyFrame
 	menuFile.add(menuSave);
 
 	JMenuItem menuSaveAs = new JMenuItem("Save As");
-	menuSaveAs.addActionListener(new ActionListener()
-	{
+	menuSaveAs.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		Component comp = tabbedPane.getSelectedComponent();
-		if (comp instanceof ScriptingPanel)
-		{
+		if (comp instanceof ScriptingPanel) {
 		    showSaveFileDialog((ScriptingPanel) comp);
 		}
 	    }
@@ -412,30 +393,29 @@ public class ScriptingEditor extends IcyFrame
 	menuFile.add(new JSeparator());
 
 	JMenuItem menuClose = new JMenuItem("Close");
-	menuClose.addActionListener(new ActionListener()
-	{
+	menuClose.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		int i = tabbedPane.getSelectedIndex();
-		if (i != -1)
-		{
-		    tabbedPane.remove(i);
+		if (i >= 0 && i < tabbedPane.getTabCount() - 1) {
+		    Component c = tabbedPane.getTabComponentAt(i);
+		    if (c instanceof ButtonTabComponent) {
+			((ButtonTabComponent) c).deletePane();
+		    }
 		}
 	    }
 	});
+	menuClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, ctrlMask));
 	menuFile.add(menuClose);
 
 	// MENU EDIT
 	JMenu menuEdit = new JMenu("Edit");
 	JMenuItem menuUndo = new JMenuItem("Undo");
-	menuUndo.addActionListener(new ActionListener()
-	{
+	menuUndo.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		Component comp = tabbedPane.getTabComponentAt(0);
 		if (!(comp instanceof ScriptingPanel))
 		    return;
@@ -448,12 +428,10 @@ public class ScriptingEditor extends IcyFrame
 	menuEdit.add(menuUndo);
 
 	JMenuItem menuRedo = new JMenuItem("Redo");
-	menuRedo.addActionListener(new ActionListener()
-	{
+	menuRedo.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		Component comp = tabbedPane.getTabComponentAt(0);
 		if (!(comp instanceof ScriptingPanel))
 		    return;
@@ -471,12 +449,10 @@ public class ScriptingEditor extends IcyFrame
 
 	JMenu menuOptions = new JMenu("Options");
 	JMenuItem menuPreferences = new JMenuItem("Preferences");
-	menuPreferences.addActionListener(new ActionListener()
-	{
+	menuPreferences.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
 		prefs.addToMainDesktopPane();
 		prefs.setVisible(true);
@@ -485,12 +461,10 @@ public class ScriptingEditor extends IcyFrame
 	menuOptions.add(menuPreferences);
 
 	JMenuItem menuBindingsFrame = new JMenuItem("Bindings Frame");
-	menuBindingsFrame.addActionListener(new ActionListener()
-	{
+	menuBindingsFrame.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
 		frame.update();
 		if (frame.isVisible())
@@ -502,12 +476,10 @@ public class ScriptingEditor extends IcyFrame
 	menuOptions.add(menuBindingsFrame);
 
 	JMenuItem menuHelp = new JMenuItem("Help (online)");
-	menuHelp.addActionListener(new ActionListener()
-	{
+	menuHelp.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent arg0)
-	    {
+	    public void actionPerformed(ActionEvent arg0) {
 		NetworkUtil.openURL("http://icy.bioimageanalysis.org/plugin/Script_Editor#documentation");
 	    }
 	});
@@ -529,17 +501,14 @@ public class ScriptingEditor extends IcyFrame
      * 
      * @param menuTemplate
      */
-    private void populateMenuTemplate(JMenu menuTemplate)
-    {
+    private void populateMenuTemplate(JMenu menuTemplate) {
 	JMenu menuTemplateJS = new JMenu("Javascript");
 	JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
 
-	itemJSDuplicateSequence.addActionListener(new ActionListener()
-	{
+	itemJSDuplicateSequence.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		openJSTemplate("duplicateSequence.js");
 	    }
 	});
@@ -548,12 +517,10 @@ public class ScriptingEditor extends IcyFrame
 	JMenu menuTemplatePython = new JMenu("Python");
 	JMenuItem itemPythonDuplicateSequence = new JMenuItem("Duplicate Sequence");
 
-	itemPythonDuplicateSequence.addActionListener(new ActionListener()
-	{
+	itemPythonDuplicateSequence.addActionListener(new ActionListener() {
 
 	    @Override
-	    public void actionPerformed(ActionEvent e)
-	    {
+	    public void actionPerformed(ActionEvent e) {
 		openPythonTemplate("duplicateSequence.py");
 	    }
 	});
@@ -564,13 +531,11 @@ public class ScriptingEditor extends IcyFrame
 	menuTemplate.add(menuTemplatePython);
     }
 
-    private void openJSTemplate(String templateName)
-    {
+    private void openJSTemplate(String templateName) {
 	openTemplate("js", templateName);
     }
 
-    private void openPythonTemplate(String templateName)
-    {
+    private void openPythonTemplate(String templateName) {
 	openTemplate("python", templateName);
     }
 
@@ -581,17 +546,14 @@ public class ScriptingEditor extends IcyFrame
      * @param type
      * @param templateName
      */
-    private void openTemplate(String type, String templateName)
-    {
+    private void openTemplate(String type, String templateName) {
 	String current = new File(".").getAbsolutePath();
 	current = current.substring(0, current.length() - 1);
-	try
-	{
-	    InputStream is = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/templates/" + type + "/" + templateName);
+	try {
+	    InputStream is = getClass().getClassLoader().getResourceAsStream(
+		    "plugins/tprovoost/scripteditor/templates/" + type + "/" + templateName);
 	    openStream(templateName, is);
-	}
-	catch (IOException e1)
-	{
+	} catch (IOException e1) {
 	}
     }
 }
