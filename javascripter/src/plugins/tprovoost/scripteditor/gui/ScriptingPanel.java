@@ -59,7 +59,7 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener {
+public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, ActionListener {
     /** */
     private static final long serialVersionUID = 1L;
     private ScriptingHandler scriptHandler;
@@ -80,6 +80,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private JScrollPane scrollpane;
     private JTextArea output;
     private Scriptingconsole console;
+    private JButton btnClearConsole;
 
     /** Autocompletion system. Uses provider item. */
     private IcyAutoCompletion ac;
@@ -338,6 +339,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
 		    frame.setEngine(scriptHandler.getEngine());
 		}
+		if (btnClearConsole != null)
+		    btnClearConsole.removeActionListener(ScriptingPanel.this);
+		btnClearConsole = new JButton("Clear");
+		btnClearConsole.addActionListener(ScriptingPanel.this);
 		rebuildGUI();
 		textArea.requestFocus();
 	    }
@@ -383,7 +388,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	split.setOneTouchExpandable(true);
 	add(split, BorderLayout.CENTER);
 	add(options, BorderLayout.NORTH);
-	add(console, BorderLayout.SOUTH);
+	JPanel panelSouth = new JPanel(new BorderLayout());
+	panelSouth.add(console, BorderLayout.CENTER);
+	panelSouth.add(btnClearConsole, BorderLayout.EAST);
+	add(panelSouth, BorderLayout.SOUTH);
 	revalidate();
     }
 
@@ -584,5 +592,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     public void evaluationOver() {
 	btnRun.setEnabled(true);
 	btnStop.setEnabled(false);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+	if (e.getSource() == btnClearConsole) {
+	    if (console != null)
+		console.clear();
+	}
     }
 }

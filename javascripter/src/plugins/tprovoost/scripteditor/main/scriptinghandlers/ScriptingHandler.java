@@ -452,7 +452,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    // lineError);
 		    ee.printStackTrace();
 		    if (errorOutput != null)
-			errorOutput.append(ee.getMessage());
+			errorOutput.append(ee.getMessage() + "\n");
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
@@ -484,7 +484,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		    System.out.println("error at unknown line: " + lineError);
 		    se.printStackTrace();
 		    if (errorOutput != null)
-			errorOutput.append(se.getMessage());
+			errorOutput.append(se.getMessage() + "\n");
 		}
 	    } catch (BadLocationException e1) {
 		e1.printStackTrace();
@@ -874,7 +874,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		// se.printStackTrace();
 		if (errorOutput != null)
-		    errorOutput.append(se.getMessage());
+		    errorOutput.append(se.getMessage() + "\n");
 		else
 		    System.out.println(se.getMessage());
 	    } finally {

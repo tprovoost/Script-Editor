@@ -157,4 +157,9 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 	    scriptHandler.setOutput(output);
     }
 
+    public void clear() {
+	if (output != null)
+	    output.setText("");
+    }
+
 }
