@@ -33,10 +33,12 @@ public class ButtonTabComponent extends JPanel {
     /** */
     private static final long serialVersionUID = 1L;
     private final JTabbedPane pane;
+    private ScriptingEditor parent;
 
-    public ButtonTabComponent(final JTabbedPane pane) {
+    public ButtonTabComponent(ScriptingEditor parent, final JTabbedPane pane) {
 	// unset default FlowLayout' gaps
 	super(new FlowLayout(FlowLayout.LEFT, 0, 0));
+	this.parent = parent;
 	if (pane == null) {
 	    throw new NullPointerException("TabbedPane is null");
 	}
@@ -145,17 +147,22 @@ public class ButtonTabComponent extends JPanel {
     /**
      * Remove this pane from the {@link JTabbedPane}.
      */
-    public void deletePane() {
+    public boolean deletePane() {
 	Component c = pane.getComponentAt(pane.indexOfTabComponent(ButtonTabComponent.this));
 	if (c instanceof ScriptingPanel) {
-	    if (((ScriptingPanel) c).isDirty()) {
+	    ScriptingPanel sp = ((ScriptingPanel) c);
+	    if (sp.isDirty()) {
 		int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
 			"Some work has not been saved, are you sure you want to close?", "Unsaved file", JOptionPane.WARNING_MESSAGE,
 			JOptionPane.QUESTION_MESSAGE, null, new Object[] { "Save", "Continue", "Cancel" }, "Cancel" + "");
 		if (n == 2)
-		    return;
-		if (n == 0)
-		    ((ScriptingPanel) c).saveFile();
+		    return false;
+		if (n == 0) {
+		    if (sp.getSaveFile() != null)
+			return sp.saveFile();
+		    else
+			return sp.showSaveFileDialog(parent.getCurrentDirectory());
+		}
 	    }
 	}
 	int i = pane.indexOfTabComponent(ButtonTabComponent.this);
@@ -165,5 +172,6 @@ public class ButtonTabComponent extends JPanel {
 	    if (i == selectedIdx)
 		pane.setSelectedIndex(0);
 	}
+	return true;
     }
 }

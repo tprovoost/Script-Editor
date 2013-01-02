@@ -2,6 +2,7 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.main.Icy;
 import icy.plugin.PluginRepositoryLoader;
 import icy.system.thread.ThreadUtil;
 
@@ -30,6 +31,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -39,6 +41,7 @@ import javax.swing.JTextArea;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -86,6 +89,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private IcyAutoCompletion ac;
     public JButton btnRun;
     public JButton btnStop;
+    private ScriptingEditor editor;
 
     /**
      * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
@@ -95,8 +99,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @param name
      */
-    public ScriptingPanel(String name, String language) {
+    public ScriptingPanel(ScriptingEditor editor, String name, String language) {
 	this.name = name;
+	this.editor = editor;
 	setLayout(new BorderLayout());
 
 	output = new JTextArea(5, 40);
@@ -191,6 +196,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		name = f.getName();
 		scriptHandler.setFileName(saveFileString);
 		updateTitle();
+		editor.addRecentFile(f);
 		return true;
 	    } catch (IOException e) {
 		new FailedAnnounceFrame(e.getLocalizedMessage());
@@ -222,6 +228,29 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		new FailedAnnounceFrame(e.getLocalizedMessage());
 		return false;
 	    }
+	}
+	return false;
+    }
+
+    /**
+     * Displays a JFileChoose and let the user choose its file, then open it.
+     * 
+     * @see ScriptingEditor#openFile(File)
+     */
+    public boolean showSaveFileDialog(String currentDirectoryPath) {
+	JFileChooser fc;
+	if (currentDirectoryPath == "")
+	    fc = new JFileChooser();
+	else
+	    fc = new JFileChooser(currentDirectoryPath);
+	if (fc.showSaveDialog(Icy.getMainInterface().getMainFrame()) == JFileChooser.APPROVE_OPTION) {
+	    if (getLanguage().contentEquals("javascript")) {
+		fc.setFileFilter(new FileNameExtensionFilter("Javascript files", "js"));
+	    } else if (getLanguage().contentEquals("python")) {
+		fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
+	    }
+	    File file = fc.getSelectedFile();
+	    return saveFileAs(file);
 	}
 	return false;
     }
@@ -374,7 +403,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public boolean isDirty() {
 	String currentText = textArea.getText();
-	return saveFile == null || !saveFileString.contentEquals(currentText);
+	return (saveFile == null && !currentText.isEmpty()) || !saveFileString.contentEquals(currentText);
     }
 
     /**

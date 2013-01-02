@@ -3,6 +3,9 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.file.FileUtil;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
+import icy.gui.frame.IcyFrameAdapter;
+import icy.gui.frame.IcyFrameEvent;
+import icy.gui.frame.IcyFrameListener;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.network.NetworkUtil;
 import icy.preferences.IcyPreferences;
@@ -17,6 +20,7 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
@@ -33,9 +37,9 @@ import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
+import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
@@ -57,6 +61,12 @@ public class ScriptingEditor extends IcyFrame {
     private static final String STRING_LAST_DIRECTORY = "lastDirectory";
     private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
     private JMenu menuOpenRecent;
+    private IcyFrameListener frameListener = new IcyFrameAdapter() {
+	@Override
+	public void icyFrameClosing(IcyFrameEvent e) {
+	    close();
+	}
+    };
 
     public ScriptingEditor() {
 	super("Script Editor", true, true, true);
@@ -151,13 +161,13 @@ public class ScriptingEditor extends IcyFrame {
 	Component c = tabbedPane.getSelectedComponent();
 	if (c instanceof ScriptingPanel) {
 	    String language = ((ScriptingPanel) c).getLanguage();
-	    panelCreated = new ScriptingPanel(name, language);
+	    panelCreated = new ScriptingPanel(this, name, language);
 	} else {
 	    String ext = FileUtil.getFileExtension(name, false);
 	    if (ext.contentEquals("py"))
-		panelCreated = new ScriptingPanel(name, "python");
+		panelCreated = new ScriptingPanel(this, name, "python");
 	    else
-		panelCreated = new ScriptingPanel(name, "javascript");
+		panelCreated = new ScriptingPanel(this, name, "javascript");
 	}
 	panelCreated.setTabbedPane(tabbedPane);
 	int idx = tabbedPane.getTabCount() - 1;
@@ -166,9 +176,9 @@ public class ScriptingEditor extends IcyFrame {
 	else
 	    idx = 0;
 	tabbedPane.addTab(name, panelCreated);
-	tabbedPane.setTitleAt(idx, name + "*");
+	tabbedPane.setTitleAt(idx, name);
 	tabbedPane.repaint();
-	tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(tabbedPane));
+	tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, tabbedPane));
 	tabbedPane.addTab("+", new JLabel());
 	tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 	tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
@@ -199,22 +209,7 @@ public class ScriptingEditor extends IcyFrame {
 	}
 	ScriptingPanel panel = createNewPane(filename);
 	panel.openFile(f);
-	String path = f.getPath();
-	XMLPreferences openedFiles = prefs.node("openedFiles");
-	if (!previousFiles.contains(path)) {
-	    previousFiles.add(path);
-	    XMLPreferences key = openedFiles.node(path);
-	    key.put("name", path);
-	}
-	if (previousFiles.size() > MAX_RECENT_FILES) {
-	    filename = previousFiles.get(0);
-	    XMLPreferences key = openedFiles.node(filename);
-	    if (key.exists()) {
-		openedFiles.remove(filename);
-	    }
-	    previousFiles.remove(0);
-	}
-	updateRecentFiles();
+	addRecentFile(f);
     }
 
     private void updateRecentFiles() {
@@ -301,28 +296,6 @@ public class ScriptingEditor extends IcyFrame {
     }
 
     /**
-     * Displays a JFileChoose and let the user choose its file, then open it.
-     * 
-     * @see ScriptingEditor#openFile(File)
-     */
-    public void showSaveFileDialog(ScriptingPanel panel) {
-	JFileChooser fc;
-	if (currentDirectoryPath == "")
-	    fc = new JFileChooser();
-	else
-	    fc = new JFileChooser(currentDirectoryPath);
-	if (fc.showSaveDialog(getFrame()) == JFileChooser.APPROVE_OPTION) {
-	    if (panel.getLanguage().contentEquals("javascript")) {
-		fc.setFileFilter(new FileNameExtensionFilter("Javascript files", "js"));
-	    } else if (panel.getLanguage().contentEquals("python")) {
-		fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
-	    }
-	    File file = fc.getSelectedFile();
-	    panel.saveFileAs(file);
-	}
-    }
-
-    /**
      * Creates the JMenuBar of the {@link ScriptingEditor}.
      * 
      * @return
@@ -367,7 +340,7 @@ public class ScriptingEditor extends IcyFrame {
 		if (comp instanceof ScriptingPanel) {
 		    ScriptingPanel panel = ((ScriptingPanel) comp);
 		    if (panel.getSaveFile() == null) {
-			showSaveFileDialog(panel);
+			panel.showSaveFileDialog(currentDirectoryPath);
 		    } else if (panel.isDirty()) {
 			panel.saveFile();
 		    }
@@ -377,17 +350,18 @@ public class ScriptingEditor extends IcyFrame {
 	menuSave.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlMask));
 	menuFile.add(menuSave);
 
-	JMenuItem menuSaveAs = new JMenuItem("Save As");
+	JMenuItem menuSaveAs = new JMenuItem("Save As...");
 	menuSaveAs.addActionListener(new ActionListener() {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
 		Component comp = tabbedPane.getSelectedComponent();
 		if (comp instanceof ScriptingPanel) {
-		    showSaveFileDialog((ScriptingPanel) comp);
+		    ((ScriptingPanel) comp).showSaveFileDialog(currentDirectoryPath);
 		}
 	    }
 	});
+	menuSaveAs.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ctrlMask | InputEvent.SHIFT_DOWN_MASK));
 	menuFile.add(menuSaveAs);
 
 	menuFile.add(new JSeparator());
@@ -399,10 +373,7 @@ public class ScriptingEditor extends IcyFrame {
 	    public void actionPerformed(ActionEvent e) {
 		int i = tabbedPane.getSelectedIndex();
 		if (i >= 0 && i < tabbedPane.getTabCount() - 1) {
-		    Component c = tabbedPane.getTabComponentAt(i);
-		    if (c instanceof ButtonTabComponent) {
-			((ButtonTabComponent) c).deletePane();
-		    }
+		    closeTab(i);
 		}
 	    }
 	});
@@ -423,8 +394,7 @@ public class ScriptingEditor extends IcyFrame {
 		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask)).actionPerformed(e);
 	    }
 	});
-	// menuUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z,
-	// ctrlMask));
+	menuUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ctrlMask));
 	menuEdit.add(menuUndo);
 
 	JMenuItem menuRedo = new JMenuItem("Redo");
@@ -439,8 +409,7 @@ public class ScriptingEditor extends IcyFrame {
 		panel.getTextArea().getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask)).actionPerformed(e);
 	    }
 	});
-	// menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y,
-	// ctrlMask));
+	menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask));
 	menuEdit.add(menuRedo);
 
 	// MENU TEMPLATES
@@ -492,7 +461,32 @@ public class ScriptingEditor extends IcyFrame {
 
 	updateRecentFiles();
 
+	setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+	addFrameListener(frameListener);
+
 	return toReturn;
+    }
+
+    protected boolean closeTab(int i) {
+	Component c = tabbedPane.getTabComponentAt(i);
+	if (c instanceof ButtonTabComponent) {
+	    return ((ButtonTabComponent) c).deletePane();
+	}
+	return true;
+    }
+
+    @Override
+    public void close() {
+	for (int i = 0; i < tabbedPane.getTabCount(); ++i) {
+	    if (!closeTab(i))
+		return;
+	}
+	// FIXME
+	removeFromMainDesktopPane();
+	setVisible(false);
+	getInternalFrame().dispose();
+	getExternalFrame().dispose();
+	removeFrameListener(frameListener);
     }
 
     /**
@@ -555,5 +549,29 @@ public class ScriptingEditor extends IcyFrame {
 	    openStream(templateName, is);
 	} catch (IOException e1) {
 	}
+    }
+
+    public String getCurrentDirectory() {
+	return currentDirectoryPath;
+    }
+
+    public void addRecentFile(File f) {
+	String filename = f.getName();
+	String path = f.getPath();
+	XMLPreferences openedFiles = prefs.node("openedFiles");
+	if (!previousFiles.contains(path)) {
+	    previousFiles.add(path);
+	    XMLPreferences key = openedFiles.node(path);
+	    key.put("name", path);
+	}
+	if (previousFiles.size() > MAX_RECENT_FILES) {
+	    filename = previousFiles.get(0);
+	    XMLPreferences key = openedFiles.node(filename);
+	    if (key.exists()) {
+		openedFiles.remove(filename);
+	    }
+	    previousFiles.remove(0);
+	}
+	updateRecentFiles();
     }
 }
