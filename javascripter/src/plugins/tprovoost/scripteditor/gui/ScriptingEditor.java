@@ -7,6 +7,7 @@ import icy.gui.frame.IcyFrameAdapter;
 import icy.gui.frame.IcyFrameEvent;
 import icy.gui.frame.IcyFrameListener;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.preferences.IcyPreferences;
 import icy.preferences.XMLPreferences;
@@ -78,6 +79,7 @@ public class ScriptingEditor extends IcyFrame {
 	for (XMLPreferences key : openedFiles.getChildren()) {
 	    previousFiles.add(key.get("name", ""));
 	}
+	
 
 	setJMenuBar(createJMenuBar());
 
@@ -207,6 +209,11 @@ public class ScriptingEditor extends IcyFrame {
 	if (exists) {
 	    return;
 	}
+	// only one tab opened
+	if (tabbedPane.getTabCount() == 2) {
+	    if (tabbedPane.getTitleAt(0).contentEquals("Untitled"))
+		tabbedPane.remove(0);
+	}
 	ScriptingPanel panel = createNewPane(filename);
 	panel.openFile(f);
 	addRecentFile(f);
@@ -216,7 +223,7 @@ public class ScriptingEditor extends IcyFrame {
 	menuOpenRecent.removeAll();
 	ArrayList<String> copy = new ArrayList<String>(previousFiles);
 	for (int i = 0; i < copy.size(); ++i) {
-	    String path = previousFiles.get(i);
+	    String path = copy.get(i);
 	    JMenuItem item = createRecentFileItem(path);
 	    if (item == null) {
 		previousFiles.remove(path);
@@ -481,12 +488,13 @@ public class ScriptingEditor extends IcyFrame {
 	    if (!closeTab(i))
 		return;
 	}
-	// FIXME
+	// FIXME not completely clean, ask @steph-D
 	removeFromMainDesktopPane();
 	setVisible(false);
 	getInternalFrame().dispose();
 	getExternalFrame().dispose();
 	removeFrameListener(frameListener);
+	Icy.getMainInterface().getMainFrame().repaint();
     }
 
     /**
@@ -507,7 +515,17 @@ public class ScriptingEditor extends IcyFrame {
 	    }
 	});
 	menuTemplateJS.add(itemJSDuplicateSequence);
+	
+	JMenuItem itemThreshold = new JMenuItem("Threshold");
+	itemThreshold.addActionListener(new ActionListener() {
 
+	    @Override
+	    public void actionPerformed(ActionEvent e) {
+		openJSTemplate("threshold.js");
+	    }
+	});
+	menuTemplateJS.add(itemThreshold);
+	
 	JMenu menuTemplatePython = new JMenu("Python");
 	JMenuItem itemPythonDuplicateSequence = new JMenuItem("Duplicate Sequence");
 
@@ -563,6 +581,7 @@ public class ScriptingEditor extends IcyFrame {
 	    previousFiles.add(path);
 	    XMLPreferences key = openedFiles.node(path);
 	    key.put("name", path);
+	    key.putBoolean("opened", true);
 	}
 	if (previousFiles.size() > MAX_RECENT_FILES) {
 	    filename = previousFiles.get(0);

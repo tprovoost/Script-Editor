@@ -342,6 +342,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	this.strict = strict;
     }
 
+    public void setVarInterpretation(boolean varInterpretation) {
+	this.varInterpretation = varInterpretation;
+    }
+
     /**
      * Interpret the script. If <code>exec</code> is true, will try to run the
      * code if compile is successful. Be careful: a building code is not
@@ -360,10 +364,31 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    s = textArea.getText();
 
 	// interpret the code
-	interpret(s);
-	if (exec && (isCompilationOk() || forceRun))
+	if (exec && forceRun) {
 	    run();
+	} else {
+	    interpret(s);
+	    if (exec && (isCompilationOk()))
+		run();
+	}
+	if (gutter != null) {
+	    updateGutter();
+	}
+	updateOutput();
+    }
 
+    private void updateGutter() {
+
+	for (Integer a : ignoredLines.keySet()) {
+	    try {
+		gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
+		gutter.repaint();
+	    } catch (BadLocationException e) {
+	    }
+	}
+    }
+
+    private void updateOutput() {
 	ThreadUtil.bgRun(new Runnable() {
 
 	    @Override
@@ -373,13 +398,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		}
 		String textResult = "";
 		for (Integer a : ignoredLines.keySet()) {
-		    try {
-			if (gutter != null) {
-			    gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
-			    gutter.repaint();
-			}
-		    } catch (BadLocationException e) {
-		    }
 		    Exception ee = ignoredLines.get(a);
 		    String msg = ee.getLocalizedMessage();
 
@@ -865,19 +883,40 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		frame.update();
 	    } catch (ThreadDeath td) {
 		System.out.println("shutdown");
-	    } catch (ScriptException se) {
-		int lineError = lineNumber(se) - 1;
-		Integer columnNumberI = columnNumber(se);
-		int columnNumber = columnNumberI != null ? columnNumberI : -1;
-		if (columnNumber == -1)
-		    columnNumber = 0;
+	    } catch (final ScriptException se) {
+		ThreadUtil.invokeLater(new Runnable() {
 
-		// se.printStackTrace();
-		if (errorOutput != null)
-		    errorOutput.append(se.getMessage() + "\n");
-		else
-		    System.out.println(se.getMessage());
+		    @Override
+		    public void run() {
+			JTextArea textArea = new JTextArea(s);
+			int lineError = lineNumber(se) - 1;
+			Integer columnNumberI = columnNumber(se);
+			int columnNumber = columnNumberI != null ? columnNumberI : -1;
+			if (columnNumber == -1)
+			    columnNumber = 0;
+
+			try {
+			    // verify integrity (>0, < lineCount)
+			    if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1)) {
+				int lineOffset = textArea.getLineStartOffset(lineError);
+				int lineEndOffset = textArea.getLineEndOffset(lineError);
+
+				s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
+				if (ignoredLines.containsKey(lineError)) {
+				    // System.out.println("An error occured with the error parsing.");
+				    return;
+				}
+				ignoredLines.put(lineError, se);
+			    }
+			} catch (BadLocationException e1) {
+			    e1.printStackTrace();
+			}
+		    }
+		});
 	    } finally {
+		if (gutter != null) {
+		    updateGutter();
+		}
 		fireEvaluationOver();
 		thread = null;
 	    }

@@ -154,7 +154,7 @@ public class ButtonTabComponent extends JPanel {
 	    if (sp.isDirty()) {
 		int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
 			"Some work has not been saved, are you sure you want to close?", "Unsaved file", JOptionPane.WARNING_MESSAGE,
-			JOptionPane.QUESTION_MESSAGE, null, new Object[] { "Save", "Continue", "Cancel" }, "Cancel" + "");
+			JOptionPane.QUESTION_MESSAGE, null, new Object[] { "Save", "Discard Changes", "Cancel" }, "Cancel" + "");
 		if (n == 2)
 		    return false;
 		if (n == 0) {

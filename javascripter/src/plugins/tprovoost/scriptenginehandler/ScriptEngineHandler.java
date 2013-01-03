@@ -4,7 +4,6 @@ import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
 import icy.plugin.abstract_.Plugin;
-import icy.system.profile.Chronometer;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;

@@ -106,7 +106,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	output = new JTextArea(5, 40);
 	output.setEditable(false);
-
+	output.setLineWrap(true);
 	output.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 	scrollpane = new JScrollPane(output);
 	scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
@@ -502,7 +502,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
 		    scriptHandler.setForceRun(prefs.isOverrideEnabled());
 		    scriptHandler.setStrict(prefs.isStrictModeEnabled());
-		    scriptHandler.setForceRun(prefs.isVarInterpretationEnabled());
+		    scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
 		    scriptHandler.interpret(true);
 		}
 	    });
