@@ -7,6 +7,7 @@ import icy.gui.frame.IcyFrameAdapter;
 import icy.gui.frame.IcyFrameEvent;
 import icy.gui.frame.IcyFrameListener;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.gui.main.MainFrame;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.preferences.IcyPreferences;
@@ -65,7 +66,14 @@ public class ScriptingEditor extends IcyFrame {
     private IcyFrameListener frameListener = new IcyFrameAdapter() {
 	@Override
 	public void icyFrameClosing(IcyFrameEvent e) {
-	    close();
+	    if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE) {
+		while (tabbedPane.getTabCount() > 1) {
+		    if (!closeTab(0))
+			return;
+		}
+		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		close();
+	    }
 	}
     };
 
@@ -79,7 +87,6 @@ public class ScriptingEditor extends IcyFrame {
 	for (XMLPreferences key : openedFiles.getChildren()) {
 	    previousFiles.add(key.get("name", ""));
 	}
-	
 
 	setJMenuBar(createJMenuBar());
 
@@ -482,21 +489,6 @@ public class ScriptingEditor extends IcyFrame {
 	return true;
     }
 
-    @Override
-    public void close() {
-	for (int i = 0; i < tabbedPane.getTabCount(); ++i) {
-	    if (!closeTab(i))
-		return;
-	}
-	// FIXME not completely clean, ask @steph-D
-	removeFromMainDesktopPane();
-	setVisible(false);
-	getInternalFrame().dispose();
-	getExternalFrame().dispose();
-	removeFrameListener(frameListener);
-	Icy.getMainInterface().getMainFrame().repaint();
-    }
-
     /**
      * Hard coded function populating the templates. May change to an automatic
      * parsing of files.
@@ -515,7 +507,7 @@ public class ScriptingEditor extends IcyFrame {
 	    }
 	});
 	menuTemplateJS.add(itemJSDuplicateSequence);
-	
+
 	JMenuItem itemThreshold = new JMenuItem("Threshold");
 	itemThreshold.addActionListener(new ActionListener() {
 
@@ -525,7 +517,7 @@ public class ScriptingEditor extends IcyFrame {
 	    }
 	});
 	menuTemplateJS.add(itemThreshold);
-	
+
 	JMenu menuTemplatePython = new JMenu("Python");
 	JMenuItem itemPythonDuplicateSequence = new JMenuItem("Duplicate Sequence");
 

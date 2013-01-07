@@ -8,6 +8,7 @@ import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 
+import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -108,7 +109,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * This is where the warning / errors are displayed, contained in this
      * scrollpane.
      */
-    private JTextArea errorOutput;
+    private volatile JTextArea errorOutput;
 
     /** Reference to the textarea scrollpane gutter. */
     private Gutter gutter;
@@ -122,14 +123,22 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private boolean forceRun = false;
     private boolean newEngine = true;
     private boolean strict = false;
-    private boolean varInterpretation = true;
+    private boolean varInterpretation = false;
 
-    volatile StringWriter sw = new StringWriter();
-    volatile PrintWriter pw = new PrintWriter(sw, true) {
+    private StringWriter sw = new StringWriter();
+    private PrintWriter pw = new PrintWriter(sw, true) {
 	@Override
-	public void write(String s) {
-	    if (errorOutput != null)
-		errorOutput.append(s);
+	public synchronized void write(final String s) {
+	    if (errorOutput != null) {
+		EventQueue.invokeLater(new Runnable() {
+
+		    @Override
+		    public void run() {
+			errorOutput.append(s);
+		    }
+		});
+	    }
+
 	}
     };
 
@@ -160,6 +169,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	textArea.getDocument().addDocumentListener(new AutoVerify());
 
 	localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
+	
+	engine.getContext().setWriter(pw);
+	engine.getContext().setErrorWriter(pw);
     }
 
     /**
@@ -371,10 +383,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    if (exec && (isCompilationOk()))
 		run();
 	}
-	if (gutter != null) {
-	    updateGutter();
-	}
-	updateOutput();
     }
 
     private void updateGutter() {
@@ -518,7 +526,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	if (isNewEngine()) {
 	    ArrayList<Method> functions = ScriptEngineHandler.getEngineHandler(engine).getFunctions();
 	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
-	    engine.createBindings();
 	    installMethods(engine, functions);
 	    thread = new EvalThread(engine, textArea.getText());
 	    thread.setPriority(Thread.MIN_PRIORITY);
@@ -849,31 +856,35 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void run() {
 	    fireEvaluationStarted();
-	    evalEngine.getContext().setWriter(pw);
-	    evalEngine.getContext().setErrorWriter(pw);
+	    if (evalEngine != engine) {
+		evalEngine.getContext().setWriter(pw);
+		evalEngine.getContext().setErrorWriter(pw);
+	    }
 	    try {
 		eval(evalEngine, s);
 
 		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 
-		Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-		for (String s : bn.keySet()) {
-		    List<Completion> completions = provider.getCompletionByInputText(s);
-		    boolean found = false;
-		    if (completions != null) {
-			for (Completion c : completions) {
-			    if (c.getReplacementText().contentEquals(s))
-				found = true;
-			}
-		    }
-		    if (completions == null || !found) {
-			Object value = bn.get(s);
-			String type = "";
-			if (value != null)
-			    type = value.toString();
-			provider.addCompletion(new VariableCompletion(provider, s, type));
-		    }
-		}
+		// Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+		// for (String s : bn.keySet()) {
+		// List<Completion> completions =
+		// provider.getCompletionByInputText(s);
+		// boolean found = false;
+		// if (completions != null) {
+		// for (Completion c : completions) {
+		// if (c.getReplacementText().contentEquals(s))
+		// found = true;
+		// }
+		// }
+		// if (completions == null || !found) {
+		// Object value = bn.get(s);
+		// String type = "";
+		// if (value != null)
+		// type = value.toString();
+		// provider.addCompletion(new VariableCompletion(provider, s,
+		// type));
+		// }
+		// }
 		for (String key : localVariables.keySet())
 		    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
 		engineHandler.getEngineFunctions().putAll(localFunctions);
@@ -907,6 +918,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				    return;
 				}
 				ignoredLines.put(lineError, se);
+				
+				if (gutter != null) {
+				    updateGutter();
+				}
+				updateOutput();
 			    }
 			} catch (BadLocationException e1) {
 			    e1.printStackTrace();

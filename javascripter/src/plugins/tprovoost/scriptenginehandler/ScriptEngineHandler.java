@@ -53,7 +53,7 @@ public class ScriptEngineHandler extends Plugin {
 	    // Chronometer chrono = new Chronometer("chrono");
 	    try {
 		if (getClass().getClassLoader() instanceof JarClassLoader) {
-		    Collection<Class> col = PluginLoader.getAllClasses().values();
+		    Collection<Class<?>> col = PluginLoader.getAllClasses().values();
 
 		    frame.setLength(col.size());
 		    int i = 0;

@@ -31,8 +31,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     private static PythonInterpreter interpreter;
 
-    public PythonScriptingHandler(DefaultCompletionProvider provider,
-	    JTextComponent textArea, Gutter gutter, boolean autocompilation) {
+    public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
 	super(provider, "python", textArea, gutter, autocompilation);
     }
 
@@ -73,8 +72,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     @Override
-    public void installDefaultLanguageCompletions(String language)
-	    throws ScriptException {
+    public void installDefaultLanguageCompletions(String language) throws ScriptException {
 	importPythonPackages(engine);
 
 	// IMPORT PLUGINS FUNCTIONS
@@ -82,8 +80,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     }
 
-    public void importPythonPackages(ScriptEngine engine)
-	    throws ScriptException {
+    public void importPythonPackages(ScriptEngine engine) throws ScriptException {
     }
 
     @Override
@@ -92,12 +89,10 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     @Override
     protected void detectVariables(String s, Context context) throws Exception {
-	if (engine instanceof PyScriptEngine
-		&& engine.getContext() instanceof ScriptContext) {
+	if (engine instanceof PyScriptEngine && engine.getContext() instanceof ScriptContext) {
 	    CompilerFlags cflags = Py.getCompilerFlags(0, false);
 	    try {
-		mod node = ParserFacade.parseExpressionOrModule(
-			new StringReader(s), "<script>", cflags);
+		mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
 		if (DEBUG)
 		    dumpTree(node);
 		registerVariables(node);
@@ -116,14 +111,12 @@ public class PythonScriptingHandler extends ScriptingHandler {
 		// assign
 		String name = tree.getChild(0).getText();
 		Class<?> type = getType(name);
-		VariableCompletion c = new VariableCompletion(provider, name,
-			type == null ? "" : type.getName());
+		VariableCompletion c = new VariableCompletion(provider, name, type == null ? "" : type.getName());
 		c.setDefinedIn(fileName);
 		c.setSummary("variable");
 		c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 		boolean alreadyExists = false;
-		for (int i = 0; i < variableCompletions.size()
-			&& !alreadyExists; ++i) {
+		for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i) {
 		    if (variableCompletions.get(i).compareTo(c) == 0)
 			alreadyExists = true;
 		}
@@ -150,8 +143,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     private Class<?> getType(String varName) {
-	return engine.getBindings(ScriptContext.ENGINE_SCOPE).get(varName)
-		.getClass();
+	return engine.getBindings(ScriptContext.ENGINE_SCOPE).get(varName).getClass();
     }
 
     @Override

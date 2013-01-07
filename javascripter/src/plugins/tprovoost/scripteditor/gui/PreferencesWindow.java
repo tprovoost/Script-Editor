@@ -29,14 +29,14 @@ public class PreferencesWindow extends IcyFrame {
     private final String PREF_VERIF = "autoverif";
     private final String PREF_STRICT = "strictmode";
     private final String PREF_NEW_ENGINE = "newengine";
-    private boolean beta = true;
+    private boolean release = true;
 
     private PreferencesWindow() {
 	super("Script Editor Preferences", false, true, false, true);
-	if (!beta)
+	if (!release)
 	    tableModel = new PreferencesTableModel();
 	else
-	    tableModel = new PreferencesTableModel(beta);
+	    tableModel = new PreferencesTableModel(release);
 	setContentPane(createGUI());
     }
 
@@ -104,37 +104,37 @@ public class PreferencesWindow extends IcyFrame {
 	panelCenter.add(table);
 
 	JLabel lblNeedsRestarting = new JLabel("* needs restarting Script Editor");
-	if (!beta)
+	if (!release)
 	    panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 	return toReturn;
     }
 
     public boolean isVarInterpretationEnabled() {
-	if (beta)
+	if (release)
 	    return false;
 	return (Boolean) tableModel.getValueAt(0, 1);
     }
 
     public boolean isOverrideEnabled() {
-	if (beta)
+	if (release)
 	    return true;
 	return (Boolean) tableModel.getValueAt(1, 1);
     }
 
     public boolean isAutoBuildEnabled() {
-	if (beta)
+	if (release)
 	    return false;
 	return (Boolean) tableModel.getValueAt(2, 1);
     }
 
     public boolean isStrictModeEnabled() {
-	if (beta)
+	if (release)
 	    return false;
 	return (Boolean) tableModel.getValueAt(3, 1);
     }
 
     public boolean isRunNewEngineEnabled() {
-	if (beta)
+	if (release)
 	    return (Boolean) tableModel.getValueAt(0, 1);
 	return (Boolean) tableModel.getValueAt(4, 1);
     }
@@ -156,7 +156,7 @@ public class PreferencesWindow extends IcyFrame {
 		    "Value" });
 	}
 
-	public PreferencesTableModel(boolean beta) {
+	public PreferencesTableModel(boolean release) {
 	    super(new Object[][] { { "Always run in a new Engine", prefs.getBoolean(PREF_NEW_ENGINE, Boolean.TRUE) } }, new String[] {
 		    "Property", "Value" });
 	}

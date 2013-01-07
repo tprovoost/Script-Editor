@@ -8,6 +8,7 @@ import icy.system.thread.ThreadUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -55,7 +56,7 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.JSAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
+import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler62;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
@@ -81,7 +82,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Provider used for autocompletion. */
     private IcyCompletionProvider provider;
     private JScrollPane scrollpane;
-    private JTextArea output;
+    private JTextArea consoleOutput;
     private Scriptingconsole console;
     private JButton btnClearConsole;
 
@@ -104,19 +105,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	this.editor = editor;
 	setLayout(new BorderLayout());
 
-	output = new JTextArea(5, 40);
-	output.setEditable(false);
-	output.setLineWrap(true);
-	output.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-	scrollpane = new JScrollPane(output);
+	consoleOutput = new JTextArea(5, 40);
+	consoleOutput.setEditable(false);
+	consoleOutput.setLineWrap(true);
+	consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
+	consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+	scrollpane = new JScrollPane(consoleOutput);
 	scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 	scrollpane.setAutoscrolls(true);
 	scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
 
 	    @Override
 	    public void adjustmentValueChanged(AdjustmentEvent e) {
-		if (!output.getText().isEmpty())
-		    output.setCaretPosition(output.getText().length() - 1);
+		if (!consoleOutput.getText().isEmpty())
+		    consoleOutput.setCaretPosition(consoleOutput.getText().length() - 1);
 	    }
 	});
 
@@ -281,7 +283,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      *            : javascript / ruby / python / etc.
      */
     public synchronized void installLanguage(final String language) {
-	output.setText("");
+	consoleOutput.setText("");
 
 	// Autocompletion is done with the following item
 	if (scriptHandler != null) {
@@ -346,16 +348,18 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		console.setLanguage(language);
 
 		// a reference to the output.
-		console.setOutput(output);
+		console.setOutput(consoleOutput);
+		
+		console.setFont(consoleOutput.getFont());
 
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript")) {
-		    scriptHandler = new JSScriptingHandler6(provider, textArea, pane.getGutter(), true);
-		    scriptHandler.setOutput(output);
+		    scriptHandler = new JSScriptingHandler62(provider, textArea, pane.getGutter(), true);
+		    scriptHandler.setOutput(consoleOutput);
 		} else if (language.contentEquals("python")) {
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
-		    scriptHandler.setOutput(output);
+		    scriptHandler.setOutput(consoleOutput);
 		} else {
 		    scriptHandler = null;
 		}
@@ -411,16 +415,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     private void rebuildGUI() {
 	removeAll();
-	JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, scrollpane);
+
+	JPanel bottomPanel = new JPanel(new BorderLayout());
+	bottomPanel.add(scrollpane, BorderLayout.CENTER);
+	JPanel panelSouth = new JPanel(new BorderLayout());
+	panelSouth.add(console, BorderLayout.CENTER);
+	panelSouth.add(btnClearConsole, BorderLayout.EAST);
+	bottomPanel.add(panelSouth, BorderLayout.SOUTH);
+
+	JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, bottomPanel);
 	split.setDividerLocation(0.75d);
 	split.setResizeWeight(0.75d);
 	split.setOneTouchExpandable(true);
 	add(split, BorderLayout.CENTER);
 	add(options, BorderLayout.NORTH);
-	JPanel panelSouth = new JPanel(new BorderLayout());
-	panelSouth.add(console, BorderLayout.CENTER);
-	panelSouth.add(btnClearConsole, BorderLayout.EAST);
-	add(panelSouth, BorderLayout.SOUTH);
 	revalidate();
     }
 

@@ -42,20 +42,16 @@ import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
-public class IcyCompletionProvider extends DefaultCompletionProvider
-{
+public class IcyCompletionProvider extends DefaultCompletionProvider {
 
     private ScriptingHandler handler;
 
-    public void setHandler(ScriptingHandler handler)
-    {
+    public void setHandler(ScriptingHandler handler) {
 	this.handler = handler;
     }
 
-    public void installMethods(ArrayList<Method> methods)
-    {
-	for (final Method method : methods)
-	{
+    public void installMethods(ArrayList<Method> methods) {
+	for (final Method method : methods) {
 	    Class<?> clazz = method.getDeclaringClass();
 	    // make sure the method is public and annotated
 	    int modifiers = method.getModifiers();
@@ -74,8 +70,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	    String params = "";
 	    String functionName = blockFunction.value();
 	    // get the parameters
-	    for (int i = 0; i < paramTypes.length; ++i)
-	    {
+	    for (int i = 0; i < paramTypes.length; ++i) {
 		fParams.add(new Parameter(getType(paramTypes[i], true), "arg" + i));
 		params += ",arg" + i;
 	    }
@@ -113,8 +108,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
      * @param engine
      * @param frame
      */
-    public void findAllMethods(ScriptEngine engine, ProgressFrame frame)
-    {
+    public void findAllMethods(ScriptEngine engine, ProgressFrame frame) {
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
 	HashMap<String, Class<?>> listFunction = engineHandler.getEngineFunctions();
@@ -122,26 +116,23 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 	ArrayList<String> clazzes;
 
-	try
-	{
+	try {
 	    String sep = FileUtil.separator;
 	    clazzes = getClassNamesFromPackage("icy");
-	    ArrayList<String> clazzes2 = getNames("." + sep + "plugins" + sep + "adufour" + sep + "blocks" + sep + "Blocks.jar", "plugins/adufour/blocks");
-	} catch (IOException e1)
-	{
+	    ArrayList<String> clazzes2 = getNames("." + sep + "plugins" + sep + "adufour" + sep + "blocks" + sep + "Blocks.jar",
+		    "plugins/adufour/blocks");
+	} catch (IOException e1) {
 	    e1.printStackTrace();
 	    return;
 	}
 	if (frame != null)
 	    frame.setLength(clazzes.size());
 	Collections.sort(clazzes);
-	for (int idxClass = 0; idxClass < clazzes.size(); ++idxClass)
-	{
+	for (int idxClass = 0; idxClass < clazzes.size(); ++idxClass) {
 	    if (frame != null)
 		frame.setPosition(idxClass);
 	    String className = clazzes.get(idxClass).replace('/', '.');
-	    try
-	    {
+	    try {
 		// the current class
 		Class<?> clazz = Class.forName(className);
 
@@ -149,15 +140,13 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 		Method[] methods = clazz.getMethods();
 
 		// iterate through each
-		for (final Method method : methods)
-		{
+		for (final Method method : methods) {
 		    ArrayList<Parameter> fParams = new ArrayList<Parameter>();
 
 		    Class<?>[] paramTypes = method.getParameterTypes();
 
 		    // get the parameters
-		    for (int i = 0; i < paramTypes.length; ++i)
-		    {
+		    for (int i = 0; i < paramTypes.length; ++i) {
 			fParams.add(new Parameter(getType(paramTypes[i], true), "arg" + i));
 		    }
 
@@ -175,8 +164,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 		    if (listFunction != null)
 			listFunction.put(sfc.getMethodCall().substring("packages.".length()), method.getReturnType());
-		    if (engineTypesMethod != null)
-		    {
+		    if (engineTypesMethod != null) {
 			ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
 			if (methodsExisting == null)
 			    methodsExisting = new ArrayList<ScriptFunctionCompletion>();
@@ -184,16 +172,14 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 			engineTypesMethod.put(clazz, methodsExisting);
 		    }
 		}
-	    } catch (ClassNotFoundException e)
-	    {
+	    } catch (ClassNotFoundException e) {
 	    }
 	}
 
     }
 
     @Override
-    public List<Completion> getCompletions(JTextComponent comp)
-    {
+    public List<Completion> getCompletions(JTextComponent comp) {
 	List<Completion> toReturn = new ArrayList<Completion>();
 	List<Completion> originalList = getCompletionsImpl(comp);
 	List<Completion> inScriptVariables = new ArrayList<Completion>();
@@ -205,8 +191,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 	// String enteredText = getAlreadyEnteredText(comp);
 
-	for (Completion c : new ArrayList<Completion>(originalList))
-	{
+	for (Completion c : new ArrayList<Completion>(originalList)) {
 	    String rText = c.getReplacementText();
 	    // int previousDotIdx = enteredText.lastIndexOf('.') + 1;
 	    // if (previousDotIdx < 0)
@@ -215,21 +200,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	    int previousDotIdx = 0;
 	    int nextDotIdx = -1;
 
-	    if (c instanceof FunctionCompletion)
-	    {
+	    if (c instanceof FunctionCompletion) {
 
 		// the completion is a function.
 
-		if (previousDotIdx == 0 && nextDotIdx == -1)
-		{
+		if (previousDotIdx == 0 && nextDotIdx == -1) {
 		    if (!isFunctionAlreadyDeclared((FunctionCompletion) c, functions))
 			functions.add(c);
-		} else
-		{
+		} else {
 
 		    String res;
-		    if (nextDotIdx == -1)
-		    {
+		    if (nextDotIdx == -1) {
 			res = rText.substring(previousDotIdx);
 			FunctionCompletion co = (FunctionCompletion) c;
 			FunctionCompletion c2 = new FunctionCompletion(c.getProvider(), res, co.getType());
@@ -243,13 +224,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 			    parameters.add(co.getParam(i));
 			if (c instanceof ScriptFunctionCompletion)
 			    inScriptFunctions.add(c2);
-			else
-			{
+			else {
 			    if (!isFunctionAlreadyDeclared(c2, functions))
 				functions.add(c2);
 			}
-		    } else
-		    {
+		    } else {
 			res = rText.substring(previousDotIdx, nextDotIdx);
 			BasicCompletion c2 = duplicateBasicCompletion((BasicCompletion) c, res);
 			if (!exists(c2, basic))
@@ -257,20 +236,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 		    }
 		}
 		originalList.remove(c);
-	    } else if (c instanceof VariableCompletion)
-	    {
+	    } else if (c instanceof VariableCompletion) {
 
-		if (previousDotIdx == 0 && nextDotIdx == -1)
-		{
+		if (previousDotIdx == 0 && nextDotIdx == -1) {
 		    if (c instanceof ScriptFunctionCompletion)
 			inScriptVariables.add(c);
 		    else
 			variables.add(c);
-		} else
-		{
+		} else {
 		    String res;
-		    if (nextDotIdx == -1)
-		    {
+		    if (nextDotIdx == -1) {
 			res = rText.substring(previousDotIdx);
 			VariableCompletion co = (VariableCompletion) c;
 			VariableCompletion c2 = new VariableCompletion(co.getProvider(), res, co.getType());
@@ -280,8 +255,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 			c2.setRelevance(co.getRelevance());
 			if (!isFunctionAlreadyDeclared((FunctionCompletion) c2, variables))
 			    variables.add(c2);
-		    } else
-		    {
+		    } else {
 			res = rText.substring(previousDotIdx, nextDotIdx);
 			BasicCompletion c2 = duplicateBasicCompletion((BasicCompletion) c, res);
 			if (!isFunctionAlreadyDeclared((FunctionCompletion) c2, basic))
@@ -289,14 +263,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 		    }
 		}
 		originalList.remove(c);
-	    } else if (c instanceof BasicCompletion)
-	    {
+	    } else if (c instanceof BasicCompletion) {
 		// the completion is something else
-		if (previousDotIdx == 0 && nextDotIdx == -1)
-		{
+		if (previousDotIdx == 0 && nextDotIdx == -1) {
 		    basic.add(c);
-		} else
-		{
+		} else {
 		    String res = nextDotIdx == -1 ? rText.substring(previousDotIdx) : rText.substring(previousDotIdx, nextDotIdx);
 		    BasicCompletion c2 = duplicateBasicCompletion((BasicCompletion) c, res);
 		    if (!exists(c2, basic))
@@ -316,23 +287,18 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     }
 
     @Override
-    protected boolean isValidChar(char ch)
-    {
+    protected boolean isValidChar(char ch) {
 	return super.isValidChar(ch) || ch == '\"';
     }
 
-    protected boolean isValidCharStrict(char ch)
-    {
+    protected boolean isValidCharStrict(char ch) {
 	return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
     }
 
-    public static boolean exists(Completion c, List<Completion> list)
-    {
+    public static boolean exists(Completion c, List<Completion> list) {
 	boolean found = false;
-	for (Completion ctmp : list)
-	{
-	    if (ctmp.getReplacementText().contentEquals(c.getReplacementText()))
-	    {
+	for (Completion ctmp : list) {
+	    if (ctmp.getReplacementText().contentEquals(c.getReplacementText())) {
 		found = true;
 		break;
 	    }
@@ -340,23 +306,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return found;
     }
 
-    public static boolean isFunctionAlreadyDeclared(FunctionCompletion fc, List<Completion> completions)
-    {
+    public static boolean isFunctionAlreadyDeclared(FunctionCompletion fc, List<Completion> completions) {
 	if (completions.isEmpty())
 	    return false;
 	boolean alreadyDeclared = false;
-	for (int i = 0; i < completions.size(); ++i)
-	{
+	for (int i = 0; i < completions.size(); ++i) {
 	    Completion c = completions.get(i);
-	    if (fc.getReplacementText() == c.getReplacementText())
-	    {
-		if (c instanceof FunctionCompletion)
-		{
+	    if (fc.getReplacementText() == c.getReplacementText()) {
+		if (c instanceof FunctionCompletion) {
 		    FunctionCompletion fctmp = (FunctionCompletion) c;
-		    if (fctmp.getParamCount() == fc.getParamCount())
-		    {
-			for (int paramIdx = 0; paramIdx < fctmp.getParamCount(); ++paramIdx)
-			{
+		    if (fctmp.getParamCount() == fc.getParamCount()) {
+			for (int paramIdx = 0; paramIdx < fctmp.getParamCount(); ++paramIdx) {
 			    if (fctmp.getParam(paramIdx).getType() != fc.getParam(paramIdx).getType())
 				alreadyDeclared = true;
 			}
@@ -367,8 +327,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return alreadyDeclared;
     }
 
-    public BasicCompletion duplicateBasicCompletion(BasicCompletion c, String res)
-    {
+    public BasicCompletion duplicateBasicCompletion(BasicCompletion c, String res) {
 	BasicCompletion co = (BasicCompletion) c;
 	BasicCompletion c2 = new BasicCompletion(c.getProvider(), res);
 	c2.setShortDescription(co.getShortDescription());
@@ -380,8 +339,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     /**
      * {@inheritDoc}
      */
-    protected List<Completion> getCompletionsImpl(JTextComponent comp)
-    {
+    protected List<Completion> getCompletionsImpl(JTextComponent comp) {
 
 	// return completions;
 	List<Completion> retVal = new ArrayList<Completion>();
@@ -391,6 +349,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 	ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
 	HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
+	// FIXME cannot work because returns null on the provider.
 	HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 	HashMap<Integer, IcyFunctionBlock> localFunctions;
 	if (handler != null)
@@ -398,43 +357,34 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	else
 	    localFunctions = new HashMap<Integer, IcyFunctionBlock>();
 
-	if (text != null)
-	{
+	if (text != null) {
 	    // test if inside parenthesis
-	    if (text.contains("("))
-	    {
+	    if (text.contains("(")) {
 		String text2 = String.copyValueOf(text.toCharArray());
 		int idx;
 		int i = 0;
 		int pOpen = 0;
 		int pClose = 0;
-		while (i < text2.length() - 1 && (idx = text2.indexOf('(', i)) != -1)
-		{
+		while (i < text2.length() - 1 && (idx = text2.indexOf('(', i)) != -1) {
 		    ++pOpen;
 		    i += idx + 1;
 		}
-		while (i < text2.length() - 1 && (idx = text2.indexOf(')', i)) != -1)
-		{
+		while (i < text2.length() - 1 && (idx = text2.indexOf(')', i)) != -1) {
 		    ++pClose;
 		    i += idx + 1;
 		}
 		int ppCount = pOpen - pClose;
-		if (ppCount >= 0)
-		{
+		if (ppCount >= 0) {
 		    text = text2.substring(text2.lastIndexOf('(') + 1);
 		    insideParentheses = true;
 		}
 	    }
-	    if (text.isEmpty() || insideParentheses || text.startsWith("Math.") || lastIdx == -1)
-	    {
+	    if (text.isEmpty() || insideParentheses || text.startsWith("Math.") || lastIdx == -1) {
 		doClassicCompletion(text, retVal);
-	    } else
-	    {
-		if (handler != null)
-		{
+	    } else {
+		if (handler != null) {
 		    String command;
-		    if (lastIdx != -1)
-		    {
+		    if (lastIdx != -1) {
 			command = text.substring(0, lastIdx);
 			if (lastIdx <= text.length() - 1) // dot is before the
 							  // last
@@ -445,15 +395,13 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 		    // is the command a classname ?
 		    Class<?> clazz = handler.resolveClassDeclaration(command);
-		    if (clazz != null)
-		    {
+		    if (clazz != null) {
 			// test if this is a static call
-			if ((methods = engineTypesMethod.get(clazz)) != null)
-			{
-			    for (ScriptFunctionCompletion complete : methods)
-			    {
-				if (complete.isStatic() && (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase())))
-				    retVal.add(complete);
+			if ((methods = engineTypesMethod.get(clazz)) != null) {
+			    for (ScriptFunctionCompletion complete : methods) {
+				if (complete.isStatic()
+					&& (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase())))
+				    retVal.add(generateSFCCopy(complete));
 			    }
 			}
 		    }
@@ -461,46 +409,39 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 		    // check in the local variables if it is a variable
 		    // if it is : propose depending on the variable type
 		    Class<?> type = null;
-		    if ((type = handler.getVariableDeclaration(command)) != null || (type = engineVariables.get(command)) != null)
-		    {
+		    if ((type = handler.getVariableDeclaration(command)) != null || (type = engineVariables.get(command)) != null) {
 			methods = engineTypesMethod.get(type);
-			if (methods != null)
-			{
-			    for (ScriptFunctionCompletion complete : methods)
-			    {
+			if (methods != null) {
+			    for (ScriptFunctionCompletion complete : methods) {
 				if (complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
 				else if (!complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 				if (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
-				    retVal.add(complete);
+				    retVal.add(generateSFCCopy(complete));
 			    }
 			}
-		    } else
-		    {
+		    } else {
 			// if not : look the type of the function (if declared).
 			int startOffset = getStartOffset(comp);
 			IcyFunctionBlock fb = localFunctions.get(startOffset);
-			if (fb != null)
-			{
+			if (fb != null) {
 			    // int fbSo = fb.getStartOffset();
 			    // int fbEo = fb.getEndOffset();
 			    // int lastDot = command.lastIndexOf('.');
 			    type = fb.getReturnType();
 			    methods = engineTypesMethod.get(type);
-			    for (ScriptFunctionCompletion complete : methods)
-			    {
+			    for (ScriptFunctionCompletion complete : methods) {
 				if (complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
 				else if (!complete.isStatic())
 				    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 				if (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
-				    retVal.add(complete);
+				    retVal.add(generateSFCCopy(complete));
 			    }
 			}
 		    }
-		} else
-		{
+		} else {
 		    // doClassicCompletion(text, retVal);
 		}
 	    }
@@ -508,42 +449,51 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return retVal;
     }
 
-    protected void doClassicCompletion(String text, List<Completion> retVal)
-    {
+    private Completion generateSFCCopy(ScriptFunctionCompletion complete) {
+	Method method = complete.getMethod();
+	String shortDescript = complete.getShortDescription();
+	
+	ScriptFunctionCompletion sfcCopy = new ScriptFunctionCompletion(this, complete.getName(), method);
+	sfcCopy.setDefinedIn(complete.getDefinedIn());
+	sfcCopy.setRelevance(complete.getRelevance());
+	sfcCopy.setReturnValueDescription(method.getReturnType().toString());
+	if (shortDescript != null)
+	    sfcCopy.setShortDescription(shortDescript);
+	ArrayList<Parameter> params = new ArrayList<Parameter>();
+	for (int i = 0; i < complete.getParamCount(); ++i)
+	    params.add(complete.getParam(i));
+	sfcCopy.setParams(params);
+	return sfcCopy;
+    }
+
+    protected void doClassicCompletion(String text, List<Completion> retVal) {
 	// nothing worked, display normal
 	int index = Collections.binarySearch(completions, text, comparator);
-	if (index < 0)
-	{ // No exact match
+	if (index < 0) { // No exact match
 	    index = -index - 1;
-	} else
-	{
+	} else {
 	    // If there are several overloads for the function being
 	    // completed, Collections.binarySearch() will
 	    // return the index of one of those overloads, but we must
 	    // return all of them, so search backward until we find the
 	    // first one.
 	    int pos = index - 1;
-	    while (pos > 0 && comparator.compare(completions.get(pos), text) == 0)
-	    {
+	    while (pos > 0 && comparator.compare(completions.get(pos), text) == 0) {
 		retVal.add((Completion) completions.get(pos));
 		pos--;
 	    }
 	}
 
-	while (index < completions.size())
-	{
+	while (index < completions.size()) {
 	    Completion c = (Completion) completions.get(index);
-	    if (Util.startsWithIgnoreCase(c.getInputText(), text))
-	    {
-		if (c instanceof ScriptFunctionCompletion)
-		{
+	    if (Util.startsWithIgnoreCase(c.getInputText(), text)) {
+		if (c instanceof ScriptFunctionCompletion) {
 		    if (((ScriptFunctionCompletion) c).isStatic())
 			retVal.add(c);
 		} else
 		    retVal.add(c);
 		index++;
-	    } else
-	    {
+	    } else {
 		break;
 	    }
 	}
@@ -551,8 +501,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     }
 
     @Override
-    public String getAlreadyEnteredText(JTextComponent comp)
-    {
+    public String getAlreadyEnteredText(JTextComponent comp) {
 	// used only for insertion of text
 	Document doc = comp.getDocument();
 
@@ -562,19 +511,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	Element elem = root.getElement(index);
 	int start = elem.getStartOffset();
 	int len = dot - start;
-	try
-	{
+	try {
 	    doc.getText(start, len, seg);
-	} catch (BadLocationException ble)
-	{
+	} catch (BadLocationException ble) {
 	    ble.printStackTrace();
 	    return EMPTY_STRING;
 	}
 
 	int segEnd = seg.offset + len;
 	start = segEnd - 1;
-	while (start >= seg.offset && isValidChar(seg.array[start]))
-	{
+	while (start >= seg.offset && isValidChar(seg.array[start])) {
 	    start--;
 	}
 	start++;
@@ -583,8 +529,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return len == 0 ? EMPTY_STRING : new String(seg.array, start, len);
     }
 
-    public String getAlreadyEnteredTextWithFunc(JTextComponent comp)
-    {
+    public String getAlreadyEnteredTextWithFunc(JTextComponent comp) {
 
 	Document doc = comp.getDocument();
 
@@ -594,19 +539,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	Element elem = root.getElement(index);
 	int start = elem.getStartOffset();
 	int len = dot - start;
-	try
-	{
+	try {
 	    doc.getText(start, len, seg);
-	} catch (BadLocationException ble)
-	{
+	} catch (BadLocationException ble) {
 	    ble.printStackTrace();
 	    return EMPTY_STRING;
 	}
 
 	int segEnd = seg.offset + len;
 	start = segEnd - 1;
-	while (start >= seg.offset && isValidCharStrict(seg.array[start]))
-	{
+	while (start >= seg.offset && isValidCharStrict(seg.array[start])) {
 	    start--;
 	}
 	start++;
@@ -615,8 +557,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return len == 0 ? EMPTY_STRING : new String(seg.array, start, len);
     }
 
-    public int getStartOffset(JTextComponent comp)
-    {
+    public int getStartOffset(JTextComponent comp) {
 
 	Document doc = comp.getDocument();
 
@@ -626,19 +567,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	Element elem = root.getElement(index);
 	int start = elem.getStartOffset();
 	int len = dot - start;
-	try
-	{
+	try {
 	    doc.getText(start, len, seg);
-	} catch (BadLocationException ble)
-	{
+	} catch (BadLocationException ble) {
 	    ble.printStackTrace();
 	    return -1;
 	}
 
 	int segEnd = seg.offset + len;
 	start = segEnd - 1;
-	while (start >= seg.offset && isValidChar(seg.array[start]))
-	{
+	while (start >= seg.offset && isValidChar(seg.array[start])) {
 	    start--;
 	}
 	start++;
@@ -651,21 +589,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
      *            : the class the get the type from
      * @return
      */
-    public static Object getType(Class<?> clazz, boolean simpleName)
-    {
-	if (simpleName)
-	{
+    public static Object getType(Class<?> clazz, boolean simpleName) {
+	if (simpleName) {
 	    if (clazz.isArray())
 		return clazz.getCanonicalName();
 	    return ClassUtil.getSimpleClassName(clazz.getName());
-	} else
-	{
+	} else {
 	    return clazz.getName();
 	}
     }
 
-    public ArrayList<String> getClassNamesFromPackage(String packageName) throws IOException
-    {
+    public ArrayList<String> getClassNamesFromPackage(String packageName) throws IOException {
 	ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 	URL packageURL;
 	ArrayList<String> names = new ArrayList<String>();
@@ -673,8 +607,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	packageName = packageName.replace(".", "/");
 	packageURL = classLoader.getResource(packageName);
 
-	if (packageURL.getProtocol().equals("jar"))
-	{
+	if (packageURL.getProtocol().equals("jar")) {
 	    String jarFileName;
 
 	    // build jar file name, then loop through zipped entries
@@ -684,13 +617,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	    names.addAll(getNames(jarFileName, packageName));
 
 	    // loop through files in classpath
-	} else
-	{
+	} else {
 	    File folder = new File(packageURL.getFile());
 	    File[] contenuti = folder.listFiles();
 	    String entryName;
-	    for (File actual : contenuti)
-	    {
+	    for (File actual : contenuti) {
 		entryName = actual.getName();
 		entryName = entryName.substring(0, entryName.lastIndexOf('.'));
 		names.add(entryName);
@@ -699,8 +630,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return names;
     }
 
-    private ArrayList<String> getNames(String jarFileName, String packageName) throws IOException
-    {
+    private ArrayList<String> getNames(String jarFileName, String packageName) throws IOException {
 	JarFile jf;
 	Enumeration<JarEntry> jarEntries;
 	String entryName;
@@ -708,15 +638,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
 	jf = new JarFile(jarFileName);
 	jarEntries = jf.entries();
-	while (jarEntries.hasMoreElements())
-	{
+	while (jarEntries.hasMoreElements()) {
 	    entryName = jarEntries.nextElement().getName();
-	    if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5)
-	    {
+	    if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
 		Pattern p = Pattern.compile("((\\w|\\.|\\\\|/)+)(|\\$[a-zA-Z0-9]*[a-zA-Z]).class");
 		Matcher m = p.matcher(entryName);
-		if (m.matches())
-		{
+		if (m.matches()) {
 		    entryName = m.group(1) + m.group(3);
 		    toReturn.add(entryName);
 		}
@@ -725,19 +652,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 	return toReturn;
     }
 
-    public void installDefaultCompletions(String language)
-    {
-	InputStream in = getClass().getClassLoader().getResourceAsStream("plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
-	try
-	{
-	    if (in != null)
-	    {
+    public void installDefaultCompletions(String language) {
+	InputStream in = getClass().getClassLoader().getResourceAsStream(
+		"plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
+	try {
+	    if (in != null) {
 		loadFromXML(in);
 		in.close();
 	    } else
 		System.out.println("File not found: " + "plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
-	} catch (IOException ioe)
-	{
+	} catch (IOException ioe) {
 	    ioe.printStackTrace();
 	}
     }

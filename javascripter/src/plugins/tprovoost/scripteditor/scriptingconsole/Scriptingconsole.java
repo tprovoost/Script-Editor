@@ -15,7 +15,7 @@ import javax.swing.JTextField;
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler6;
+import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler62;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 
@@ -37,10 +37,11 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 
 	provider = new IcyCompletionProvider();
 	provider.installDefaultCompletions("javascript");
-	scriptHandler = new JSScriptingHandler6(provider, this, null, false);
+	scriptHandler = new JSScriptingHandler62(provider, this, null, false);
 	scriptHandler.setNewEngine(false);
 	scriptHandler.setForceRun(false);
 	scriptHandler.setStrict(false);
+	scriptHandler.setVarInterpretation(false);
 
 	setMinimumSize(new Dimension(0, 25));
 	setPreferredSize(new Dimension(0, 25));
@@ -51,7 +52,7 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 	if (language.contentEquals("javascript")) {
 	    provider = new IcyCompletionProvider();
 	    provider.installDefaultCompletions("javascript");
-	    scriptHandler = new JSScriptingHandler6(provider, this, null, false);
+	    scriptHandler = new JSScriptingHandler62(provider, this, null, false);
 	} else if (language.contentEquals("python")) {
 	    provider.installDefaultCompletions("python");
 	    scriptHandler = new PythonScriptingHandler(provider, this, null, false);
@@ -62,6 +63,7 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 	    scriptHandler.setNewEngine(false);
 	    scriptHandler.setForceRun(false);
 	    scriptHandler.setStrict(false);
+	    scriptHandler.setVarInterpretation(false);
 	}
     }
 
