@@ -14,7 +14,7 @@ import javax.swing.JTextArea;
 import org.python.core.PyException;
 import org.python.util.InteractiveConsole;
 
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 
 public class PythonScriptingconsole extends Scriptingconsole {
 

@@ -56,12 +56,14 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.JSAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler62;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
+import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
+import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+
+//import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, ActionListener {
     /** */
@@ -89,6 +91,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Autocompletion system. Uses provider item. */
     private IcyAutoCompletion ac;
     public JButton btnRun;
+    private JButton btnRunNew;
     public JButton btnStop;
     private ScriptingEditor editor;
 
@@ -320,7 +323,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	} else {
 	    setSyntax(SyntaxConstants.SYNTAX_STYLE_NONE);
 	    new AnnounceFrame("This language is not yet supported.");
-	    btnRun.setEnabled(false);
+	    ThreadUtil.invokeLater(new Runnable() {
+
+		@Override
+		public void run() {
+		    btnRun.setEnabled(false);
+		    btnRunNew.setEnabled(false);
+		}
+	    });
 	    return;
 	}
 
@@ -349,14 +359,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 		// a reference to the output.
 		console.setOutput(consoleOutput);
-		
+
 		console.setFont(consoleOutput.getFont());
 
 		// add the scripting handler, which handles the compilation
 		// and the parsing of the code for advanced features.
 		if (language.contentEquals("javascript")) {
+		    // if
+		    // (System.getProperty("java.version").startsWith("1.6.")) {
 		    scriptHandler = new JSScriptingHandler62(provider, textArea, pane.getGutter(), true);
+		    // } else {
+		    // scriptHandler = new JSScriptingHandler7(provider,
+		    // textArea, pane.getGutter(), true);
+		    // }
 		    scriptHandler.setOutput(consoleOutput);
+
 		} else if (language.contentEquals("python")) {
 		    scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
 		    scriptHandler.setOutput(consoleOutput);
@@ -452,6 +469,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public PanelOptions(String language) {
 	    final JButton btnBuild = new JButton("Verify");
 	    btnRun = new JButton("Run");
+	    btnRunNew = new JButton("Clear & Run");
 	    btnStop = new JButton("Stop");
 	    btnStop.setEnabled(false);
 
@@ -505,8 +523,15 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    if (scriptHandler == null)
 			return;
 		    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
-		    btnRun.setEnabled(false);
-		    btnStop.setEnabled(true);
+		    ThreadUtil.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+			    btnRun.setEnabled(false);
+			    btnRunNew.setEnabled(false);
+			    btnStop.setEnabled(true);
+			}
+		    });
 		    scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
 		    scriptHandler.setForceRun(prefs.isOverrideEnabled());
 		    scriptHandler.setStrict(prefs.isStrictModeEnabled());
@@ -515,6 +540,31 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 	    });
 	    add(btnRun);
+
+	    btnRunNew.addActionListener(new ActionListener() {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+		    if (scriptHandler == null)
+			return;
+		    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+		    ThreadUtil.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+			    btnRun.setEnabled(false);
+			    btnRunNew.setEnabled(false);
+			    btnStop.setEnabled(true);
+			}
+		    });
+		    scriptHandler.setNewEngine(true);
+		    scriptHandler.setForceRun(prefs.isOverrideEnabled());
+		    scriptHandler.setStrict(prefs.isStrictModeEnabled());
+		    scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+		    scriptHandler.interpret(true);
+		}
+	    });
+	    add(btnRunNew);
 
 	    btnStop.addActionListener(new ActionListener() {
 
@@ -531,7 +581,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	    add(btnStop);
 	    add(Box.createHorizontalGlue());
 	}
-
     }
 
     /**
@@ -627,8 +676,15 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
     @Override
     public void evaluationOver() {
-	btnRun.setEnabled(true);
-	btnStop.setEnabled(false);
+	ThreadUtil.invokeLater(new Runnable() {
+
+	    @Override
+	    public void run() {
+		btnRun.setEnabled(true);
+		btnRunNew.setEnabled(true);
+		btnStop.setEnabled(false);
+	    }
+	});
     }
 
     @Override

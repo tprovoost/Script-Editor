@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.main.scriptinghandlers;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.image.IcyBufferedImage;
 import icy.plugin.PluginDescriptor;
@@ -52,7 +52,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     private int commandEndOffset;
 
     public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
-	super(provider, "javascript", textArea, gutter, autocompilation);
+	super(provider, "ECMAScript", textArea, gutter, autocompilation);
     }
 
     @Override
@@ -62,20 +62,20 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
     @Override
     public void installDefaultLanguageCompletions(String language) {
-	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 	HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
 	// IMPORT PACKAGES
-	try {
-	    importJavaScriptPackages(engine);
-	} catch (ScriptException e1) {
-	}
+	// try {
+	// importJavaScriptPackages(engine);
+	// } catch (ScriptException e1) {
+	// }
 
 	// IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
 	FunctionCompletion c;
 	// ArrayList<Parameter> params = new ArrayList<Parameter>();
 	try {
-	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+	    getEngine().eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
 	    c = new FunctionCompletion(provider, "getSequence", "Sequence");
 	    c.setDefinedIn("MainInterface");
 	    c.setReturnValueDescription("The focused sequence is returned.");
@@ -87,7 +87,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	}
 
 	try {
-	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+	    getEngine().eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
 	    c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
 	    c.setDefinedIn("MainInterface");
 	    c.setShortDescription("Returns the current image viewed in the focused sequence.");
@@ -138,11 +138,11 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     public void installMethods(ScriptEngine engine, ArrayList<Method> methods) {
 	// hardcoded functions, to remove in the future
 	try {
-	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+	    engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
 	} catch (ScriptException e1) {
 	}
 	try {
-	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+	    engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
 	} catch (ScriptException e1) {
 	}
 
@@ -386,7 +386,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 			    commandStartOffset = idxComment;
 			}
 		    }
-		    continue;
+		    break;
 		}
 	    }
 	    commandStartOffset++;
@@ -733,7 +733,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
     private Class<?> resolveCallType(Node n, String text, boolean noerror) throws ScriptException {
 	if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.GETPROP) {
 
-	    String s = buildFunction(n, text);
+	    String s = buildFunction2(n, text);
 	    boolean containsNew = s.contains("new ");
 	    if (containsNew) {
 		s = s.substring("new ".length());
@@ -773,7 +773,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 
 		    // it is a variable
 		    clazz = getVariableDeclaration(classNameOrFunctionNameOrVariable);
-		    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+		    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
 		    // an engine variable
 		    if (clazz == null)
@@ -791,7 +791,7 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		    } else {
 			clazzes = new Class<?>[args.length];
 			for (int i = 0; i < clazzes.length; ++i)
-			    clazzes[i] = ClassUtil.findClass(args[i]);
+			    clazzes[i] = resolveClassDeclaration(args[i]);
 			clazzes = getGenericNumberTypes(text, clazz, firstCall.substring(lastDot + 1, idxP1), clazzes);
 		    }
 
@@ -881,18 +881,76 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		cptAdded++;
 	    }
 	    args += ')';
-	    // FIXME
 	    if (firstChild.getType() != Token.GETELEM) {
 		Class<?> res = localFunctions.get(firstChild.getString() + args);
 		if (res == null)
-		    res = ScriptEngineHandler.getEngineHandler(engine).getEngineFunctions().get(firstChild.getString()); // +
+		    res = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions().get(firstChild.getString()); // +
 															 // args);
 		if (res == null && !noerror)
 		    throw new ScriptException("Var Detection: " + firstChild.getString() + args + " does not exist.", null,
 			    findLineContaining(text));
 		return res;
+	    } else {
+		String s = buildFunction2(n, text);
+
+		int idxP1 = s.indexOf('(');
+		int idxP2 = s.indexOf(')');
+		int lastDot = s.substring(0, idxP1).lastIndexOf('.');
+		if (lastDot < 0) {
+		    lastDot = idxP1; // in case of new for instance.
+		}
+		Class<?> clazz = null;
+
+		// get the className (or binding function name if it is the
+		// case)
+		String className = s.substring(0, lastDot);
+
+		// get the arguments
+		String argsString = s.substring(idxP1 + 1, idxP2);
+
+		// separate arguments
+		String[] argsAsString = argsString.split(",");
+
+		clazz = resolveClassDeclaration(className);
+		if (clazz == null)
+		    throw new ScriptException("Unknown class: " + className, null, findLineContaining(text));
+
+		try {
+		    // generate the Class<?> arguments
+		    Class<?> clazzes[];
+		    if (argsString.isEmpty()) {
+			clazzes = new Class<?>[0];
+		    } else {
+			clazzes = new Class<?>[argsAsString.length];
+			for (int i = 0; i < clazzes.length; ++i)
+			    clazzes[i] = resolveClassDeclaration(argsAsString[i]);
+			clazzes = getGenericNumberTypes(text, clazz, s.substring(lastDot + 1, idxP1), clazzes);
+		    }
+
+		    // the first type
+		    Class<?> returnType;
+		    String call = s.substring(lastDot + 1, idxP1);
+		    if (call.contentEquals("newInstance")) {
+			returnType = clazz;
+		    } else {
+			Method m = clazz.getMethod(call, clazzes);
+			returnType = m.getReturnType();
+		    }
+
+		    if (DEBUG)
+			System.out.println("function created: " + commandStartOffset + " " + text.substring(commandStartOffset));
+		    IcyFunctionBlock fb = new IcyFunctionBlock(s.substring(lastDot + 1, idxP1), commandStartOffset, returnType);
+		    blockFunctions.put(commandStartOffset, fb);
+		    return returnType;
+		} catch (SecurityException e) {
+		} catch (NoSuchMethodException e) {
+		    throw new ScriptException("Var Detection: No such method: " + e.getLocalizedMessage(), null, findLineContaining(text));
+		}
 	    }
-	    throw new ScriptException("function does not exist.", null, findLineContaining(text));
+	    int lineError = findLineContaining(text);
+	    if (lineError != -1)
+		throw new ScriptException("function does not exist. at line number " + lineError, null, lineError);
+	    throw new ScriptException("function does not exist", null, lineError);
 	}
     }
 
@@ -986,13 +1044,21 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    return toReturn;
     }
 
+    /**
+     * @param n
+     * @param text
+     * @return
+     * @throws ScriptException
+     */
+    @SuppressWarnings("unused")
     private String buildFunction(Node n, String text) throws ScriptException {
 	String callName = "";
 	String newType = "";
 	boolean functionNext = true;
 	Node currentChild = n;
+	int type;
 	while (currentChild != null) {
-	    if (currentChild.getType() == Token.GETPROP) {
+	    if ((type = currentChild.getType()) == Token.GETPROP) {
 		String s = currentChild.getLastChild().getString();
 		if (functionNext) {
 		    s += '(';
@@ -1013,10 +1079,10 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		}
 		callName = "." + s + callName;
 		currentChild = currentChild.getFirstChild();
-	    } else if (currentChild.getType() == Token.CALL) {
+	    } else if (type == Token.CALL) {
 		functionNext = true;
 		currentChild = currentChild.getFirstChild();
-	    } else if (currentChild.getType() == Token.NEW) {
+	    } else if (type == Token.NEW) {
 		newType = currentChild.getFirstChild().getString() + "(";
 		// arguments iteration:
 		Node nextChild = currentChild.getNext();
@@ -1033,12 +1099,16 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 		}
 		newType += ")";
 		currentChild = null;
-	    } else {
+	    } else if (type == Token.STRING || type == Token.NAME) {
 		if (functionNext)
 		    callName = "." + currentChild.getString() + "()" + callName;
 		else
 		    callName = "." + currentChild.getString() + callName;
 		currentChild = currentChild.getFirstChild();
+	    } else if (type == Token.GETELEM) {
+		currentChild = currentChild.getFirstChild();
+	    } else {
+		return "";
 	    }
 	}
 	// removes the last dot
@@ -1051,6 +1121,94 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	if (!newType.isEmpty())
 	    callName = "new " + newType + "." + callName;
 
+	return callName;
+    }
+
+    private String buildFunction2(Node n, String text) throws ScriptException {
+	String callName = "";
+	boolean functionNext = true;
+	Node currentChild = n;
+
+	callName = buildFunctionRecursive(callName, currentChild, text, functionNext);
+
+	if (!callName.isEmpty()) {
+
+	    // removes the last dot
+	    callName = callName.substring(1);
+
+	    // removes eventual "Packages." String
+	    if (callName.startsWith("Packages.") || callName.startsWith("packages."))
+		callName = callName.substring("Packages.".length());
+
+	}
+	return callName;
+    }
+
+    /**
+     * Recursive version
+     * 
+     * @throws ScriptException
+     */
+    private String buildFunctionRecursive(String callName, Node n, String text, boolean functionNext) throws ScriptException {
+	if (n != null) {
+	    int type;
+	    if ((type = n.getType()) == Token.GETPROP) {
+		String s = n.getLastChild().getString();
+		if (functionNext) {
+		    s += '(';
+		    Node nextChild = n.getNext();
+		    int cptAdded = 0;
+		    while (nextChild != null) {
+			if (cptAdded > 0)
+			    s += ',';
+			Class<?> result = getRealType(nextChild, text);
+			if (result == null)
+			    throw new ScriptException("unknown type.", "", findLineContaining(text));
+			s += result.getName();
+			nextChild = nextChild.getNext();
+			cptAdded++;
+		    }
+		    s += ')';
+		    functionNext = false;
+		}
+		callName = "." + s + callName;
+		return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+	    } else if (type == Token.CALL) {
+		functionNext = true;
+		return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+	    } else if (type == Token.NEW) {
+		String newType = "";
+		newType = n.getFirstChild().getString() + "(";
+		// arguments iteration:
+		Node nextChild = n.getNext();
+		int cptAdded = 0;
+		while (nextChild != null) {
+		    if (cptAdded > 0)
+			newType += ',';
+		    Class<?> result = getRealType(nextChild, text);
+		    if (result == null)
+			throw new ScriptException("unknown type.");
+		    newType += result.getName();
+		    nextChild = nextChild.getNext();
+		    cptAdded++;
+		}
+		newType += ")";
+		callName = "new " + newType + "." + callName;
+	    } else if (type == Token.STRING || type == Token.NAME) {
+		if (functionNext)
+		    callName = "." + n.getString() + "()" + callName;
+		else
+		    callName = "." + n.getString() + callName;
+		return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+	    } else if (type == Token.GETELEM) {
+		// specific call
+		String a = buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+		String b = buildFunctionRecursive(callName, n.getLastChild(), text, functionNext);
+		a = a.substring(0, a.indexOf('('));
+		b = b.substring(0, b.lastIndexOf('('));
+		callName = a + b;
+	    }
+	}
 	return callName;
     }
 
@@ -1086,6 +1244,8 @@ public class JSScriptingHandler6 extends ScriptingHandler {
 	    } catch (ClassNotFoundException e) {
 	    }
 	    return toReturn;
+	case Token.ARRAYLIT:
+	    return Object[].class;
 	}
 
 	return null;

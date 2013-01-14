@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.main.scriptinghandlers;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 public class IcyFunctionBlock {
 

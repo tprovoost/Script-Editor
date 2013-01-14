@@ -15,9 +15,11 @@ import javax.swing.JTextField;
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler62;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.PythonScriptingHandler;
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
+import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+
+//import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
 public class Scriptingconsole extends JTextField implements KeyListener {
 
@@ -37,7 +39,11 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 
 	provider = new IcyCompletionProvider();
 	provider.installDefaultCompletions("javascript");
+	// if (System.getProperty("java.version").startsWith("1.6.")) {
 	scriptHandler = new JSScriptingHandler62(provider, this, null, false);
+	// } else {
+	// scriptHandler = new JSScriptingHandler7(provider, this, null, false);
+	// }
 	scriptHandler.setNewEngine(false);
 	scriptHandler.setForceRun(false);
 	scriptHandler.setStrict(false);
@@ -52,7 +58,11 @@ public class Scriptingconsole extends JTextField implements KeyListener {
 	if (language.contentEquals("javascript")) {
 	    provider = new IcyCompletionProvider();
 	    provider.installDefaultCompletions("javascript");
+	    // if (System.getProperty("java.version").startsWith("1.6."))
 	    scriptHandler = new JSScriptingHandler62(provider, this, null, false);
+	    // else
+	    // scriptHandler = new JSScriptingHandler7(provider, this, null,
+	    // false);
 	} else if (language.contentEquals("python")) {
 	    provider.installDefaultCompletions("python");
 	    scriptHandler = new PythonScriptingHandler(provider, this, null, false);

@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.main.scriptinghandlers;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
@@ -20,7 +20,6 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.TreeMap;
 
 import javax.script.Bindings;
@@ -37,7 +36,6 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
-import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
@@ -78,6 +76,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     /** Reference to the provider used for the autocompletion. */
     protected DefaultCompletionProvider provider;
 
+    private String engineType;
+
     /**
      * Is the compilation a success? The script will never be run if the
      * compilation / parsing contains issues.
@@ -85,7 +85,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private boolean compilationOk = false;
 
     /** Reference to the current engine. */
-    protected ScriptEngine engine;
 
     /** Reference to the {@link RSyntaxTextArea} this item works on. */
     protected JTextComponent textArea;
@@ -169,9 +168,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	textArea.getDocument().addDocumentListener(new AutoVerify());
 
 	localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
-	
-	engine.getContext().setWriter(pw);
-	engine.getContext().setErrorWriter(pw);
+
+	getEngine().getContext().setWriter(pw);
+	getEngine().getContext().setErrorWriter(pw);
     }
 
     /**
@@ -227,7 +226,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param engineType
      */
     private void setLanguage(String engineType) {
-	engine = ScriptEngineHandler.getEngine(engineType);
+	this.engineType = engineType;
 	try {
 	    installDefaultLanguageCompletions(engineType);
 
@@ -296,17 +295,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		@Override
 		public void run() {
 		    ProgressFrame frame = new ProgressFrame("Loading functions...");
-		    ((IcyCompletionProvider) provider).findAllMethods(engine, frame);
+		    ((IcyCompletionProvider) provider).findAllMethods(getEngine(), frame);
 		    frame.setVisible(false);
 		}
 	    });
 	} else {
 	    // install functions from ScriptEngineHandler
-	    ScriptEngineHandler handler = ScriptEngineHandler.getEngineHandler(engine);
+	    ScriptEngineHandler handler = ScriptEngineHandler.getEngineHandler(getEngine());
 	    ArrayList<Method> functions = handler.getFunctions();
 
 	    ((IcyCompletionProvider) provider).installMethods(functions);
-	    installMethods(engine, functions);
+	    installMethods(getEngine(), functions);
 	}
     }
 
@@ -380,6 +379,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	    run();
 	} else {
 	    interpret(s);
+	    updateOutput();
 	    if (exec && (isCompilationOk()))
 		run();
 	}
@@ -524,16 +524,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
     public void run() {
 	if (isNewEngine()) {
-	    ArrayList<Method> functions = ScriptEngineHandler.getEngineHandler(engine).getFunctions();
-	    ScriptEngine engine = ScriptEngineHandler.getFactory().getEngineByName(this.engine.getFactory().getLanguageName());
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+	    ArrayList<Method> functions = engineHandler.getFunctions();
+	    String engineType2 = getEngine().getFactory().getLanguageName();
+	    ScriptEngine engine = ScriptEngineHandler.getEngine(engineType2, true);
 	    installMethods(engine, functions);
+	    engine.getContext().setWriter(pw);
+	    engine.getContext().setErrorWriter(pw);
 	    thread = new EvalThread(engine, textArea.getText());
 	    thread.setPriority(Thread.MIN_PRIORITY);
 	    thread.start();
 	} else {
+	    ScriptEngine engine = getEngine();
 	    EvalThread thread = new EvalThread(engine, textArea.getText());
 	    thread.start();
-	    thread.interrupt();
 	}
     }
 
@@ -578,7 +582,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	case KeyEvent.VK_M:
 	    if (e.isControlDown()) {
-		Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+		Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
 		for (String s : bindings.keySet()) {
 		    // try {
 		    // Object o = bindings.get(s);
@@ -713,7 +717,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	if (strict) {
 	    // declared in engine
-	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
 	    // try with declared in the engine importClass
 	    for (String s : engineHandler.getEngineDeclaredImportClasses()) {
@@ -738,7 +742,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     }
 
     public ScriptEngine getEngine() {
-	return engine;
+	return ScriptEngineHandler.getEngine(engineType);
     }
 
     /**
@@ -825,7 +829,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	if (!plugin.isInstalled()) {
 	    // uninstalled the plugin
-	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 	    HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 	    engineTypesMethod.remove(clazz);
 	} else {
@@ -835,7 +839,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		// provider).findBindingsMethods(engine, clazz);
 	    }
 	}
-
     }
 
     /**
@@ -856,14 +859,14 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void run() {
 	    fireEvaluationStarted();
-	    if (evalEngine != engine) {
+	    if (evalEngine != getEngine()) {
 		evalEngine.getContext().setWriter(pw);
 		evalEngine.getContext().setErrorWriter(pw);
 	    }
 	    try {
 		eval(evalEngine, s);
 
-		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+		ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
 		// Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
 		// for (String s : bn.keySet()) {
@@ -918,7 +921,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				    return;
 				}
 				ignoredLines.put(lineError, se);
-				
+
 				if (gutter != null) {
 				    updateGutter();
 				}

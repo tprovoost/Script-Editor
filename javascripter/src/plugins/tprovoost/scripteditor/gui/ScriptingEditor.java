@@ -7,8 +7,6 @@ import icy.gui.frame.IcyFrameAdapter;
 import icy.gui.frame.IcyFrameEvent;
 import icy.gui.frame.IcyFrameListener;
 import icy.gui.frame.progress.FailedAnnounceFrame;
-import icy.gui.main.MainFrame;
-import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.preferences.IcyPreferences;
 import icy.preferences.XMLPreferences;
@@ -43,8 +41,8 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import plugins.tprovoost.scripteditor.main.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 /**
  * Main GUI of the class
@@ -436,12 +434,13 @@ public class ScriptingEditor extends IcyFrame {
 
 	    @Override
 	    public void actionPerformed(ActionEvent e) {
-		PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+		final PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
 		prefs.addToMainDesktopPane();
 		prefs.setVisible(true);
 	    }
 	});
-	menuOptions.add(menuPreferences);
+	if (!PreferencesWindow.release)
+	    menuOptions.add(menuPreferences);
 
 	JMenuItem menuBindingsFrame = new JMenuItem("Bindings Frame");
 	menuBindingsFrame.addActionListener(new ActionListener() {

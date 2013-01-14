@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.main.scriptinghandlers;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.image.IcyBufferedImage;
 import icy.plugin.PluginDescriptor;
@@ -52,7 +52,7 @@ public class JSScriptingHandler62 extends ScriptingHandler {
     private int commandEndOffset;
 
     public JSScriptingHandler62(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
-	super(provider, "javascript", textArea, gutter, autocompilation);
+	super(provider, "ECMAScript", textArea, gutter, autocompilation);
     }
 
     @Override
@@ -62,12 +62,12 @@ public class JSScriptingHandler62 extends ScriptingHandler {
 
     @Override
     public void installDefaultLanguageCompletions(String language) {
-	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+	ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 	HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
 	// IMPORT PACKAGES
 	try {
-	    importJavaScriptPackages(engine);
+	    importJavaScriptPackages(getEngine());
 	} catch (ScriptException e1) {
 	}
 
@@ -75,7 +75,7 @@ public class JSScriptingHandler62 extends ScriptingHandler {
 	FunctionCompletion c;
 	// ArrayList<Parameter> params = new ArrayList<Parameter>();
 	try {
-	    engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+	    getEngine().eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
 	    c = new FunctionCompletion(provider, "getSequence", "Sequence");
 	    c.setDefinedIn("MainInterface");
 	    c.setReturnValueDescription("The focused sequence is returned.");
@@ -87,7 +87,7 @@ public class JSScriptingHandler62 extends ScriptingHandler {
 	}
 
 	try {
-	    engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+	    getEngine().eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
 	    c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
 	    c.setDefinedIn("MainInterface");
 	    c.setShortDescription("Returns the current image viewed in the focused sequence.");

@@ -1,6 +1,7 @@
 package plugins.tprovoost.scriptenginehandler;
 
 import icy.gui.frame.progress.ProgressFrame;
+import icy.image.colormap.FireColorMap;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
 import icy.plugin.abstract_.Plugin;
@@ -20,7 +21,7 @@ import org.xeustechnologies.jcl.JarClassLoader;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
-public class ScriptEngineHandler extends Plugin {
+public class ScriptEngineHandler {
 
     /*---------------
      *	   static
@@ -54,10 +55,9 @@ public class ScriptEngineHandler extends Plugin {
 	    try {
 		if (getClass().getClassLoader() instanceof JarClassLoader) {
 		    Collection<Class<?>> col = PluginLoader.getAllClasses().values();
-
 		    frame.setLength(col.size());
 		    int i = 0;
-		    for (Class<?> clazz : new ArrayList<Class>(col)) {
+		    for (Class<?> clazz : new ArrayList<Class<?>>(col)) {
 			if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
 			    continue;
 			findBindingsMethods(clazz);
@@ -81,18 +81,13 @@ public class ScriptEngineHandler extends Plugin {
 	    }
 	}
     }
-
+    
     public static ScriptEngineHandler getLastEngineHandler() {
 	return lastEngineHandler;
     }
 
-    public static ScriptEngine getEngine(String engineType) {
-	ScriptEngine engine = engines.get(engineType);
-	if (engine == null) {
-	    engine = factory.getEngineByName(engineType);
-	    engines.put(engineType, engine);
-	}
-	return engine;
+    public static void setEngine(String engineType, ScriptEngine engine) {
+	engines.put(engineType, engine);
     }
 
     public static ScriptEngineHandler getEngineHandler(ScriptEngine engine) {
@@ -104,6 +99,27 @@ public class ScriptEngineHandler extends Plugin {
 	lastEngineHandler = engineHandler;
 	return engineHandler;
     }
+
+    public static ScriptEngine getEngine(String engineType) {
+	return getEngine(engineType, false);
+    }
+
+    public static ScriptEngine getEngine(String engineType, boolean create) {
+	ScriptEngine engineHash = engines.get(engineType);
+	if (engineHash == null || create) {
+	    engineHash = factory.getEngineByName(engineType);
+	    engines.put(engineType, engineHash);
+	}
+	return engineHash;
+    }
+
+    // public ScriptEngine generateNewEngine() {
+    // String engineType = engine.getFactory().getLanguageName();
+    // ScriptEngine engine = factory.getEngineByName(engineType);
+    // engines.put(engineType, engine);
+    // this.engine = engine;
+    // return engine;
+    // }
 
     public ArrayList<String> getEngineDeclaredImportClasses() {
 	return engineDeclaredImportClasses;
@@ -132,11 +148,16 @@ public class ScriptEngineHandler extends Plugin {
     public void findBindingsMethods(Class<?> clazz) {
 	if (clazz == null)
 	    return;
-
 	// get the annotated methods
-	Method[] methods = clazz.getDeclaredMethods();
+	Method[] methods;
+	try {
+	    methods = clazz.getDeclaredMethods();
+	} catch (Error e) {
+	    return;
+	}
 
 	for (final Method method : methods) {
+
 	    // make sure the method is public and annotated
 	    int modifiers = method.getModifiers();
 	    if (!Modifier.isPublic(modifiers))
@@ -190,4 +211,10 @@ public class ScriptEngineHandler extends Plugin {
     public ArrayList<Method> getFunctions() {
 	return bindingFunctions;
     }
+
+    // TODO
+    private void fireEngineCHanged() {
+
+    }
+
 }

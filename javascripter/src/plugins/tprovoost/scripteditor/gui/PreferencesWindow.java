@@ -29,7 +29,7 @@ public class PreferencesWindow extends IcyFrame {
     private final String PREF_VERIF = "autoverif";
     private final String PREF_STRICT = "strictmode";
     private final String PREF_NEW_ENGINE = "newengine";
-    private boolean release = true;
+    public static boolean release = true;
 
     private PreferencesWindow() {
 	super("Script Editor Preferences", false, true, false, true);

@@ -1,6 +1,9 @@
 package plugins.tprovoost.scripteditor.completion;
 
+import java.awt.image.BufferedImage;
+
 import icy.image.ImageUtil;
+import icy.plugin.PluginLoader;
 
 import javax.swing.ImageIcon;
 import javax.swing.JList;
@@ -18,24 +21,30 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer {
     /** */
     private static final long serialVersionUID = 1L;
 
+    // images
+    public static final BufferedImage imgStatic = ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/static_co.gif"));
+    public static final BufferedImage imgFunction = ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/methpub_obj.gif"));
+
     // icons
-    public ImageIcon iconStaticFunctions = new ImageIcon(ImageUtil.load(getClass().getClassLoader().getResourceAsStream(
-	    "plugins/tprovoost/scripteditor/icons/static_co.gif")));
-    public ImageIcon iconFunctions = new ImageIcon(ImageUtil.load(getClass().getClassLoader().getResourceAsStream(
-	    "plugins/tprovoost/scripteditor/icons/methpub_obj.gif")));
-    public ImageIcon iconVariables = new ImageIcon(ImageUtil.load(getClass().getClassLoader().getResourceAsStream(
-	    "plugins/tprovoost/scripteditor/icons/field_default_obj.gif")));
-    public ImageIcon iconOther = new ImageIcon(ImageUtil.load(getClass().getClassLoader().getResourceAsStream(
-	    "plugins/tprovoost/scripteditor/icons/constant_co.gif")));
-    public ImageIcon iconClass = new ImageIcon(ImageUtil.load(getClass().getClassLoader().getResourceAsStream(
-	    "plugins/tprovoost/scripteditor/icons/class_obj.gif")));
+    public static final ImageIcon iconStaticFunctions = new ImageIcon(imgStatic);
+    public static final ImageIcon iconFunctions = new ImageIcon(imgFunction);
+    public static final ImageIcon iconVariables = new ImageIcon(ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/field_default_obj.gif")));
+    public static final ImageIcon iconOther = new ImageIcon(ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/constant_co.gif")));
+    public static final ImageIcon iconClass = new ImageIcon(ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/class_obj.gif")));
 
     @Override
     protected void prepareForFunctionCompletion(JList list, FunctionCompletion fc, int index, boolean selected, boolean hasFocus) {
 	if (fc instanceof ScriptFunctionCompletion) {
-	    if (((ScriptFunctionCompletion) fc).isStatic())
-		setIcon(iconStaticFunctions);
-	    else
+	    if (((ScriptFunctionCompletion) fc).isStatic()) {
+		BufferedImage func2 = ImageUtil.getCopy(imgFunction);
+		func2.getGraphics().drawImage(imgStatic, 0, 0, null);
+		setIcon(new ImageIcon(func2));
+	    } else
 		setIcon(iconFunctions);
 	} else
 	    setIcon(iconFunctions);

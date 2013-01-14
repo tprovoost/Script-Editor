@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.main.scriptinghandlers;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -39,7 +39,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
     public void eval(ScriptEngine engine, String s) throws ScriptException {
 	PythonInterpreter py;
 	// tests if new engine or current
-	if (this.engine == engine) {
+	if (this.getEngine() == engine) {
 	    // simply run the eval method.
 	    // py = new PythonInterpreter();
 	    // py.setLocals(interpreter.getLocals());
@@ -47,6 +47,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	} else {
 	    // save the state of the PySystemState
 	    py = new PythonInterpreter(new PyStringMap(), new PySystemState());
+	    // TODO load default paths
 	    py.setLocals(new PyStringMap());
 	}
 	py.setOut(engine.getContext().getWriter());
@@ -58,8 +59,11 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	} catch (PyException pe) {
 	    try {
 		engine.getContext().getErrorWriter().write(pe.toString());
+		// throw new ScriptException(pe.getLocalizedMessage(), "", -1);
 	    } catch (IOException e) {
 	    }
+	} finally {
+	    py.cleanup();
 	}
     }
 
@@ -73,7 +77,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     @Override
     public void installDefaultLanguageCompletions(String language) throws ScriptException {
-	importPythonPackages(engine);
+	importPythonPackages(getEngine());
 
 	// IMPORT PLUGINS FUNCTIONS
 	importFunctions();
@@ -89,7 +93,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     @Override
     protected void detectVariables(String s, Context context) throws Exception {
-	if (engine instanceof PyScriptEngine && engine.getContext() instanceof ScriptContext) {
+	if (getEngine() instanceof PyScriptEngine && getEngine().getContext() instanceof ScriptContext) {
 	    CompilerFlags cflags = Py.getCompilerFlags(0, false);
 	    try {
 		mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
@@ -143,7 +147,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     private Class<?> getType(String varName) {
-	return engine.getBindings(ScriptContext.ENGINE_SCOPE).get(varName).getClass();
+	return getEngine().getBindings(ScriptContext.ENGINE_SCOPE).get(varName).getClass();
     }
 
     @Override
