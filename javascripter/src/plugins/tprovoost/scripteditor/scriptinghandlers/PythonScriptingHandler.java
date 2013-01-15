@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Properties;
 
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
@@ -20,6 +22,7 @@ import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
 import org.python.core.PyException;
+import org.python.core.PyString;
 import org.python.core.PyStringMap;
 import org.python.core.PySystemState;
 import org.python.jsr223.PyScriptEngine;
@@ -30,25 +33,33 @@ import sun.org.mozilla.javascript.internal.Context;
 public class PythonScriptingHandler extends ScriptingHandler {
 
     private static PythonInterpreter interpreter;
+    private ScriptEngine engine;
 
     public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
 	super(provider, "python", textArea, gutter, autocompilation);
+	this.engine = getEngine();
     }
 
     @Override
     public void eval(ScriptEngine engine, String s) throws ScriptException {
 	PythonInterpreter py;
 	// tests if new engine or current
-	if (this.getEngine() == engine) {
+	// TODO
+	if (this.engine == engine) {
 	    // simply run the eval method.
 	    // py = new PythonInterpreter();
 	    // py.setLocals(interpreter.getLocals());
 	    py = interpreter;
 	} else {
-	    // save the state of the PySystemState
-	    py = new PythonInterpreter(new PyStringMap(), new PySystemState());
-	    // TODO load default paths
-	    py.setLocals(new PyStringMap());
+	    this.engine = engine;
+	    initializer();
+
+	    // Set __name__ == "__main__" (useful for python scripting)
+	    // Without this, it is "__builtin__"
+	    PyStringMap dict = new PyStringMap();
+	    dict.__setitem__("__name__", new PyString("__main__"));
+
+	    py = new PythonInterpreter(dict, new PySystemState());
 	}
 	py.setOut(engine.getContext().getWriter());
 	py.setErr(engine.getContext().getErrorWriter());
@@ -59,11 +70,8 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	} catch (PyException pe) {
 	    try {
 		engine.getContext().getErrorWriter().write(pe.toString());
-		// throw new ScriptException(pe.getLocalizedMessage(), "", -1);
 	    } catch (IOException e) {
 	    }
-	} finally {
-	    py.cleanup();
 	}
     }
 
@@ -93,7 +101,8 @@ public class PythonScriptingHandler extends ScriptingHandler {
 
     @Override
     protected void detectVariables(String s, Context context) throws Exception {
-	if (getEngine() instanceof PyScriptEngine && getEngine().getContext() instanceof ScriptContext) {
+	ScriptEngine engine = getEngine();
+	if (engine instanceof PyScriptEngine && engine.getContext() instanceof ScriptContext) {
 	    CompilerFlags cflags = Py.getCompilerFlags(0, false);
 	    try {
 		mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
@@ -155,4 +164,43 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	// do nothing
     }
 
+    /**
+     * Initialize the python interpreter state (paths, etc.)
+     */
+    public static void initializer() {
+	// Get preProperties postProperties, and System properties
+	Properties postProps = new Properties();
+	Properties sysProps = System.getProperties();
+
+	// set default python.home property as a subdirectory named "python"
+	// inside Icy dir
+	if (sysProps.getProperty("python.home") == null) {
+	    sysProps.put("python.home", "python");
+	}
+
+	// put System properties (those set with -D on the command line) in
+	// postProps
+	Enumeration<?> e = sysProps.propertyNames();
+	while (e.hasMoreElements()) {
+	    String name = (String) e.nextElement();
+	    if (name.startsWith("python."))
+		postProps.put(name, System.getProperty(name));
+	}
+
+	// Here's the initialization step
+	PythonInterpreter.initialize(sysProps, postProps, null);
+
+	// TODO add bundled libs from jython.jar
+	// PySystemState sys = Py.getSystemState();
+	// sys.path.append(new PyString("jython.jar/Lib"));
+
+	// TODO add execnet path (and maybe pip, virtualenv, setuptools) to
+	// python.path
+	// sys.path.append(new
+	// PyString("jython.jar/Lib/site-packages/execnet"));
+
+	// TODO here we could add custom path entries (from a GUI) to
+	// python.path
+	// sys.path.append(new PyString(gui_configured_path));
+    }
 }

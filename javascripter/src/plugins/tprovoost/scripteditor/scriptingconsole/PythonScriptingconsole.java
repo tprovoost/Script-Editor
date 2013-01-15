@@ -25,6 +25,12 @@ public class PythonScriptingconsole extends Scriptingconsole {
     private InteractiveConsole console;
 
     public PythonScriptingconsole() {
+    
+    // initialize the global python system state (done once)
+    PythonScriptingHandler.initializer();
+    
+    // Note: there is no way to reset the system state for an InteractiveConsole,
+    // so sys.path (for example) is shared for all instances of them !
 	console = new InteractiveConsole();
 
 	if (PythonScriptingHandler.getInterpreter() == null) {

@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
+import icy.gui.component.button.IcyButton;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.main.Icy;
@@ -23,6 +24,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -468,9 +470,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	public PanelOptions(String language) {
 	    final JButton btnBuild = new JButton("Verify");
-	    btnRun = new JButton("Run");
-	    btnRunNew = new JButton("Clear & Run");
-	    btnStop = new JButton("Stop");
+	    btnRun = new IcyButton("Run");
+	    btnRunNew = new IcyButton("Clear Context & Run");
+	    btnStop = new IcyButton("Stop");
 	    btnStop.setEnabled(false);
 
 	    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
@@ -557,6 +559,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			    btnStop.setEnabled(true);
 			}
 		    });
+		    // consoleOutput.setText("");
 		    scriptHandler.setNewEngine(true);
 		    scriptHandler.setForceRun(prefs.isOverrideEnabled());
 		    scriptHandler.setStrict(prefs.isStrictModeEnabled());
