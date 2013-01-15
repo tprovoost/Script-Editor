@@ -26,13 +26,14 @@ import org.python.core.PyString;
 import org.python.core.PyStringMap;
 import org.python.core.PySystemState;
 import org.python.jsr223.PyScriptEngine;
+import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
 
 import sun.org.mozilla.javascript.internal.Context;
 
 public class PythonScriptingHandler extends ScriptingHandler {
 
-    private static PythonInterpreter interpreter;
+    private static InteractiveInterpreter interpreter;
     private ScriptEngine engine;
 
     public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation) {
@@ -75,7 +76,7 @@ public class PythonScriptingHandler extends ScriptingHandler {
 	}
     }
 
-    public static void setInterpreter(PythonInterpreter interpreter) {
+    public static void setInterpreter(InteractiveInterpreter interpreter) {
 	PythonScriptingHandler.interpreter = interpreter;
     }
 

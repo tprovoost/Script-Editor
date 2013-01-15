@@ -3,8 +3,11 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
+import icy.image.ImageUtil;
 import icy.main.Icy;
+import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
+import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 
 import java.awt.BorderLayout;
@@ -16,6 +19,7 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -24,7 +28,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -70,6 +73,12 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, ActionListener {
     /** */
     private static final long serialVersionUID = 1L;
+
+    public static final BufferedImage imgPlayback2 = ImageUtil.load(PluginLoader
+	    .getResourceAsStream("plugins/tprovoost/scripteditor/icons/playback_erase_play_alpha.png"));
+
+    public static final int STRUT_SIZE = 4;
+
     private ScriptingHandler scriptHandler;
     private RSyntaxTextArea textArea;
     private RTextScrollPane pane;
@@ -470,9 +479,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
 	public PanelOptions(String language) {
 	    final JButton btnBuild = new JButton("Verify");
-	    btnRun = new IcyButton("Run");
-	    btnRunNew = new IcyButton("Clear Context & Run");
-	    btnStop = new IcyButton("Stop");
+	    btnRun = new IcyButton(new IcyIcon("playback_play", 16));
+	    btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+	    btnStop = new IcyButton(new IcyIcon("square_shape", 16));
 	    btnStop.setEnabled(false);
 
 	    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
@@ -504,7 +513,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 	    });
 	    add(combo);
-	    add(Box.createHorizontalStrut(4));
+	    add(Box.createHorizontalStrut(STRUT_SIZE * 3));
 
 	    btnBuild.addActionListener(new ActionListener() {
 
@@ -542,7 +551,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 	    });
 	    add(btnRun);
-
+	    add(Box.createHorizontalStrut(STRUT_SIZE));
 	    btnRunNew.addActionListener(new ActionListener() {
 
 		@Override
@@ -568,7 +577,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 	    });
 	    add(btnRunNew);
-
 	    btnStop.addActionListener(new ActionListener() {
 
 		@Override
@@ -580,7 +588,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		    }
 		}
 	    });
-	    add(Box.createHorizontalStrut(5));
+	    add(Box.createHorizontalStrut(STRUT_SIZE));
 	    add(btnStop);
 	    add(Box.createHorizontalGlue());
 	}
