@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
+import icy.file.FileUtil;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
@@ -282,20 +283,37 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             fc = new JFileChooser();
         else
             fc = new JFileChooser(currentDirectoryPath);
+        if (getLanguage().contentEquals("javascript"))
+        {
+            fc.setFileFilter(new FileNameExtensionFilter("Javascript files", "js"));
+        }
+        else if (getLanguage().contentEquals("python"))
+        {
+            fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
+        }
         if (fc.showSaveDialog(Icy.getMainInterface().getMainFrame()) == JFileChooser.APPROVE_OPTION)
         {
-            if (getLanguage().contentEquals("javascript"))
-            {
-                fc.setFileFilter(new FileNameExtensionFilter("Javascript files", "js"));
-            }
-            else if (getLanguage().contentEquals("python"))
-            {
-                fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
-            }
             File file = fc.getSelectedFile();
+            if (FileUtil.getFileExtension(file.getAbsolutePath(), false).isEmpty())
+            {
+                file = addExtension(file);
+            }
             return saveFileAs(file);
         }
         return false;
+    }
+
+    private File addExtension(File file)
+    {
+        if (getLanguage().contentEquals("javascript"))
+        {
+            return new File(file.getAbsolutePath() + ".js");
+        }
+        else if (getLanguage().contentEquals("python"))
+        {
+            return new File(file.getAbsolutePath() + ".py");
+        }
+        return file;
     }
 
     private void updateTitle()
