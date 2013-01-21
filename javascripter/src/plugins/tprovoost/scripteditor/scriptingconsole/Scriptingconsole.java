@@ -18,10 +18,12 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+// import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
 
-//import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
+// import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class Scriptingconsole extends JTextField implements KeyListener {
+public class Scriptingconsole extends JTextField implements KeyListener
+{
 
     /**
      * 
@@ -34,116 +36,137 @@ public class Scriptingconsole extends JTextField implements KeyListener {
     protected int posInHistory = 0;
     protected JTextArea output;
 
-    public Scriptingconsole() {
-	addKeyListener(this);
+    public Scriptingconsole()
+    {
+        addKeyListener(this);
 
-	provider = new IcyCompletionProvider();
-	provider.installDefaultCompletions("javascript");
-	// if (System.getProperty("java.version").startsWith("1.6.")) {
-	scriptHandler = new JSScriptingHandler62(provider, this, null, false);
-	// } else {
-	// scriptHandler = new JSScriptingHandler7(provider, this, null, false);
-	// }
-	scriptHandler.setNewEngine(false);
-	scriptHandler.setForceRun(false);
-	scriptHandler.setStrict(false);
-	scriptHandler.setVarInterpretation(false);
+        provider = new IcyCompletionProvider();
+        provider.installDefaultCompletions("javascript");
+        // // if (System.getProperty("java.version").startsWith("1.6.")) {
+        // scriptHandler = new JSScriptingHandler62(provider, this, null,
+        // false);
+        // // } else {
+        scriptHandler = new JSScriptingHandler62(provider, this, null, false);
+        // // }
+        scriptHandler.setNewEngine(false);
+        scriptHandler.setForceRun(false);
+        scriptHandler.setStrict(false);
+        scriptHandler.setVarInterpretation(false);
 
-	setMinimumSize(new Dimension(0, 25));
-	setPreferredSize(new Dimension(0, 25));
+        setMinimumSize(new Dimension(0, 25));
+        setPreferredSize(new Dimension(0, 25));
     }
 
-    public void setLanguage(String language) {
-	provider.clear();
-	if (language.contentEquals("javascript")) {
-	    provider = new IcyCompletionProvider();
-	    provider.installDefaultCompletions("javascript");
-	    // if (System.getProperty("java.version").startsWith("1.6."))
-	    scriptHandler = new JSScriptingHandler62(provider, this, null, false);
-	    // else
-	    // scriptHandler = new JSScriptingHandler7(provider, this, null,
-	    // false);
-	} else if (language.contentEquals("python")) {
-	    provider.installDefaultCompletions("python");
-	    scriptHandler = new PythonScriptingHandler(provider, this, null, false);
-	} else {
-	    scriptHandler = null;
-	}
-	if (scriptHandler != null) {
-	    scriptHandler.setNewEngine(false);
-	    scriptHandler.setForceRun(false);
-	    scriptHandler.setStrict(false);
-	    scriptHandler.setVarInterpretation(false);
-	}
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-	String text = getText();
-	switch (e.getKeyCode()) {
-	case KeyEvent.VK_SPACE:
-	    e.consume();
-	    List<Completion> completions = provider.getCompletions(this);
-	    if (completions == null || !e.isControlDown()) {
-		return;
-	    }
-	    if (completions.size() == 1) {
-		this.setText(completions.get(0).getReplacementText());
-	    } else {
-		int i = 0;
-		String s = "";
-		for (Completion c : completions) {
-		    s += c.getReplacementText() + "\t";
-		    if (i != 0 && i % MAX_PER_LINE == 0)
-			s += "\n";
-		    ++i;
-		}
-		if (!s.endsWith("\n"))
-		    s += "\n";
-		output.append(s);
-		System.out.println(s);
-	    }
-	    break;
-	case KeyEvent.VK_UP:
-	    if (posInHistory < history.size() - 1) {
-		++posInHistory;
-		setText(history.get(posInHistory));
-		e.consume();
-	    }
-	    break;
-
-	case KeyEvent.VK_DOWN:
-	    if (posInHistory > 0) {
-		--posInHistory;
-		setText(history.get(posInHistory));
-		e.consume();
-	    }
-	    break;
-
-	case KeyEvent.VK_ENTER:
-	    if (!text.isEmpty()) {
-		String time = DateUtil.now("HH:mm:ss");
-		if (output != null)
-		    output.append("> " + text + "\n");
-		else
-		    System.out.println(time + ": " + text);
-		scriptHandler.interpret(true);
-		history.add(0, text);
-		setText("");
-		posInHistory = -1;
-		BindingsScriptFrame.getInstance().update();
-		e.consume();
-	    }
-	    break;
-	}
+    public void setLanguage(String language)
+    {
+        provider.clear();
+        if (language.contentEquals("javascript"))
+        {
+            provider = new IcyCompletionProvider();
+            provider.installDefaultCompletions("javascript");
+            // if (System.getProperty("java.version").startsWith("1.6."))
+            // scriptHandler = new JSScriptingHandler62(provider, this, null,
+            // false);
+            // else
+            scriptHandler = new JSScriptingHandler62(provider, this, null, false);
+        }
+        else if (language.contentEquals("python"))
+        {
+            provider.installDefaultCompletions("python");
+            scriptHandler = new PythonScriptingHandler(provider, this, null, false);
+        }
+        else
+        {
+            scriptHandler = null;
+        }
+        if (scriptHandler != null)
+        {
+            scriptHandler.setNewEngine(false);
+            scriptHandler.setForceRun(false);
+            scriptHandler.setStrict(false);
+            scriptHandler.setVarInterpretation(false);
+        }
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
+    public void keyTyped(KeyEvent e)
+    {
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e)
+    {
+        String text = getText();
+        switch (e.getKeyCode())
+        {
+            case KeyEvent.VK_SPACE:
+                e.consume();
+                List<Completion> completions = provider.getCompletions(this);
+                if (completions == null || !e.isControlDown())
+                {
+                    return;
+                }
+                if (completions.size() == 1)
+                {
+                    this.setText(completions.get(0).getReplacementText());
+                }
+                else
+                {
+                    int i = 0;
+                    String s = "";
+                    for (Completion c : completions)
+                    {
+                        s += c.getReplacementText() + "\t";
+                        if (i != 0 && i % MAX_PER_LINE == 0)
+                            s += "\n";
+                        ++i;
+                    }
+                    if (!s.endsWith("\n"))
+                        s += "\n";
+                    output.append(s);
+                    System.out.println(s);
+                }
+                break;
+            case KeyEvent.VK_UP:
+                if (posInHistory < history.size() - 1)
+                {
+                    ++posInHistory;
+                    setText(history.get(posInHistory));
+                    e.consume();
+                }
+                break;
+
+            case KeyEvent.VK_DOWN:
+                if (posInHistory > 0)
+                {
+                    --posInHistory;
+                    setText(history.get(posInHistory));
+                    e.consume();
+                }
+                break;
+
+            case KeyEvent.VK_ENTER:
+                if (!text.isEmpty())
+                {
+                    String time = DateUtil.now("HH:mm:ss");
+                    if (output != null)
+                        output.append("> " + text + "\n");
+                    else
+                        System.out.println(time + ": " + text);
+                    scriptHandler.interpret(true);
+                    history.add(0, text);
+                    setText("");
+                    posInHistory = -1;
+                    BindingsScriptFrame.getInstance().update();
+                    e.consume();
+                }
+                break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e)
+    {
 
     }
 
@@ -154,24 +177,27 @@ public class Scriptingconsole extends JTextField implements KeyListener {
      * @param factory
      * @return
      */
-    public String getLanguageName(ScriptEngineFactory factory) {
-	String languageName = factory.getLanguageName();
-	if (languageName.contentEquals("ECMAScript"))
-	    return "javascript";
-	if (languageName.contentEquals("python"))
-	    return "python";
-	return languageName;
+    public String getLanguageName(ScriptEngineFactory factory)
+    {
+        String languageName = factory.getLanguageName();
+        if (languageName.contentEquals("ECMAScript"))
+            return "javascript";
+        if (languageName.contentEquals("python"))
+            return "python";
+        return languageName;
     }
 
-    public void setOutput(JTextArea output) {
-	this.output = output;
-	if (scriptHandler != null)
-	    scriptHandler.setOutput(output);
+    public void setOutput(JTextArea output)
+    {
+        this.output = output;
+        if (scriptHandler != null)
+            scriptHandler.setOutput(output);
     }
 
-    public void clear() {
-	if (output != null)
-	    output.setText("");
+    public void clear()
+    {
+        if (output != null)
+            output.setText("");
     }
 
 }

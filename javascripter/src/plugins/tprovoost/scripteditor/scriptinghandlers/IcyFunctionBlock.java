@@ -1,5 +1,8 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
+
 public class IcyFunctionBlock {
 
     private String functionName;
@@ -16,6 +19,10 @@ public class IcyFunctionBlock {
 	this.functionName = functionName;
 	this.startOffset = startOffset;
 	this.returnType = returnType;
+	ScriptEngineManager manager = new ScriptEngineManager();
+	for (ScriptEngineFactory factory : manager.getEngineFactories()) {
+	    System.out.println(factory.getEngineName() + " / " + factory.getEngineVersion());
+	}
     }
 
     public String getFunctionName() {

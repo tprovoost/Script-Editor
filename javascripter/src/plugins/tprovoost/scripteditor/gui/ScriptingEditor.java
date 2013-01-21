@@ -76,7 +76,7 @@ public class ScriptingEditor extends IcyFrame {
     };
 
     public ScriptingEditor() {
-	super("Script Editor", true, true, true);
+	super("Script Editor", true, true, true, true);
 
 	currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
 
