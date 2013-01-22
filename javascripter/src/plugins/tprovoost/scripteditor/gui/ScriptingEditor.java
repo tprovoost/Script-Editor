@@ -90,7 +90,7 @@ public class ScriptingEditor extends IcyFrame
 
         // load preferences
         XMLPreferences openedFiles = prefs.node("openedFiles");
-        ArrayList<String> toOpen = new ArrayList<String>();
+        final ArrayList<String> toOpen = new ArrayList<String>();
         for (XMLPreferences key : openedFiles.getChildren())
         {
             String fileName = key.get("name", "");
@@ -169,16 +169,24 @@ public class ScriptingEditor extends IcyFrame
         setContentPane(mainPanel);
         Icy.getMainInterface().addCanExitListener(acceptlistener);
 
-        for (String s : toOpen)
+        ThreadUtil.invokeLater(new Runnable()
         {
-            try
+
+            @Override
+            public void run()
             {
-                openFile(new File(s));
+                for (String s : toOpen)
+                {
+                    try
+                    {
+                        openFile(new File(s));
+                    }
+                    catch (IOException e1)
+                    {
+                    }
+                }
             }
-            catch (IOException e1)
-            {
-            }
-        }
+        });
     }
 
     /**

@@ -558,8 +558,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
             final JButton btnBuild = new JButton("Verify");
             btnRun = new IcyButton(new IcyIcon("playback_play", 16));
+            btnRun.setToolTipText("Run the script in the current context.");
+
             btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+            btnRunNew.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+
             btnStop = new IcyButton(new IcyIcon("square_shape", 16));
+            btnStop.setToolTipText("Stops the current script.");
             btnStop.setEnabled(false);
 
             setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
