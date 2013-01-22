@@ -54,7 +54,6 @@ import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
  */
 public class ScriptingEditor extends IcyFrame
 {
-
     private JTabbedPane tabbedPane;
     private JButton addPaneButton;
     private String currentDirectoryPath = "";
@@ -91,9 +90,15 @@ public class ScriptingEditor extends IcyFrame
 
         // load preferences
         XMLPreferences openedFiles = prefs.node("openedFiles");
+        ArrayList<String> toOpen = new ArrayList<String>();
         for (XMLPreferences key : openedFiles.getChildren())
         {
-            previousFiles.add(key.get("name", ""));
+            String fileName = key.get("name", "");
+            previousFiles.add(fileName);
+            boolean opened = key.getBoolean("opened", false);
+            key.putBoolean("opened", false);
+            if (opened)
+                toOpen.add(fileName);
         }
 
         setJMenuBar(createJMenuBar());
@@ -163,12 +168,44 @@ public class ScriptingEditor extends IcyFrame
         mainPanel.add(tabbedPane);
         setContentPane(mainPanel);
         Icy.getMainInterface().addCanExitListener(acceptlistener);
+
+        for (String s : toOpen)
+        {
+            try
+            {
+                openFile(new File(s));
+            }
+            catch (IOException e1)
+            {
+            }
+        }
     }
 
+    /**
+     * Close all tabs by dispatching the closing to each tab.
+     * 
+     * @return Returns if success in closing. False means the user decided to cancel the closing.
+     */
     private boolean closeAll()
     {
         if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
         {
+            // Saving state of the opened files.
+            XMLPreferences openedFiles = prefs.node("openedFiles");
+            for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
+            {
+                Component c = tabbedPane.getComponentAt(i);
+                if (c instanceof ScriptingPanel)
+                {
+                    File f = ((ScriptingPanel) c).getSaveFile();
+                    if (f != null)
+                    {
+                        String path = f.getAbsolutePath();
+                        XMLPreferences key = openedFiles.node(path);
+                        key.putBoolean("opened", true);
+                    }
+                }
+            }
             while (tabbedPane.getTabCount() > 1)
             {
                 if (!closeTab(0))
@@ -325,17 +362,6 @@ public class ScriptingEditor extends IcyFrame
             tabbedPane.removeTabAt(0);
         ScriptingPanel panel = createNewPane(name);
         panel.openStream(stream);
-    }
-
-    /**
-     * Open the file f into the editor as a new tab.
-     * 
-     * @param f
-     * @throws IOException
-     */
-    public void openFile(String s) throws IOException
-    {
-        openFile(new File(s));
     }
 
     /**
@@ -684,7 +710,7 @@ public class ScriptingEditor extends IcyFrame
             previousFiles.add(path);
             XMLPreferences key = openedFiles.node(path);
             key.put("name", path);
-            key.putBoolean("opened", true);
+            // key.putBoolean("opened", true);
         }
         if (previousFiles.size() > MAX_RECENT_FILES)
         {

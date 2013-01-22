@@ -53,13 +53,13 @@ import sun.org.mozilla.javascript.internal.Token;
 
 import com.sun.script.javascript.RhinoScriptEngine;
 
-public class JSScriptingHandler62 extends ScriptingHandler
+public class JSScriptingHandlerSimple extends ScriptingHandler
 {
 
     private int commandStartOffset;
     private int commandEndOffset;
 
-    public JSScriptingHandler62(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
+    public JSScriptingHandlerSimple(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
             boolean autocompilation)
     {
         super(provider, "ECMAScript", textArea, gutter, autocompilation);
@@ -574,7 +574,7 @@ public class JSScriptingHandler62 extends ScriptingHandler
                 if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME)
                 {
                     commandStartOffset += "var".length();
-                    Node resNode = n.getFirstChild().getFirstChild();
+                    // Node resNode = n.getFirstChild().getFirstChild();
                     String typeStr = "";
                     VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(), typeStr);
                     c.setSummary("variable");
@@ -585,7 +585,7 @@ public class JSScriptingHandler62 extends ScriptingHandler
                 break;
             case Token.SETNAME:
             {
-                Node resNode = n.getFirstChild().getNext();
+                // Node resNode = n.getFirstChild().getNext();
                 String type = "";
                 VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(), type);
                 c.setSummary("Variable");
@@ -715,6 +715,7 @@ public class JSScriptingHandler62 extends ScriptingHandler
      * @param string
      * @return
      */
+    @SuppressWarnings("unused")
     private int findLineContaining(String text)
     {
         if (textArea instanceof JTextArea)
@@ -736,6 +737,7 @@ public class JSScriptingHandler62 extends ScriptingHandler
             return 1;
     }
 
+    @SuppressWarnings("unused")
     private String generateClassName(Node n, String toReturn)
     {
         if (n.getType() == Token.GETPROP)
