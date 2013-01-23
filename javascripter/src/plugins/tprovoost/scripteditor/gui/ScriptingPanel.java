@@ -28,6 +28,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -68,6 +70,10 @@ import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerSimple;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+import sun.org.mozilla.javascript.internal.Context;
+import sun.org.mozilla.javascript.internal.Function;
+import sun.org.mozilla.javascript.internal.NativeObject;
+import sun.org.mozilla.javascript.internal.ScriptableObject;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
@@ -77,7 +83,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private static final long serialVersionUID = 1L;
 
     public static final BufferedImage imgPlayback2 = ImageUtil.load(PluginLoader
-            .getResourceAsStream("plugins/tprovoost/scripteditor/icons/playback_erase_play_alpha.png"));
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/playback_erase_play_alpha.png"));
 
     public static final int STRUT_SIZE = 4;
 
@@ -131,7 +137,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         scrollpane.setAutoscrolls(true);
         scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener()
         {
-
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e)
             {
@@ -197,7 +202,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         try
         {
             Theme t = Theme.load(getClass().getClassLoader().getResourceAsStream(
-                    "plugins/tprovoost/scripteditor/themes/" + s + ".xml"));
+                    "plugins/tprovoost/scripteditor/resources/themes/" + s + ".xml"));
             t.apply(textArea);
         }
         catch (IOException e)

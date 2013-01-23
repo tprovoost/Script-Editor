@@ -449,7 +449,6 @@ public class ScriptingEditor extends IcyFrame
         JMenuItem menuSave = new JMenuItem("Save");
         menuSave.addActionListener(new ActionListener()
         {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {
@@ -544,6 +543,26 @@ public class ScriptingEditor extends IcyFrame
         });
         menuRedo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ctrlMask));
         menuEdit.add(menuRedo);
+
+        menuEdit.add(new JSeparator());
+        JMenuItem menuFormat = new JMenuItem("Format");
+        menuFormat.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                Component c = tabbedPane.getSelectedComponent();
+                if (c instanceof ScriptingPanel)
+                {
+                    ScriptingPanel panel = ((ScriptingPanel) c);
+                    panel.getScriptHandler().organizeImports();
+                    panel.getScriptHandler().format();
+                }
+            }
+        });
+        menuFormat.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask | InputEvent.SHIFT_DOWN_MASK));
+        menuEdit.add(menuFormat);
 
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");
@@ -695,7 +714,7 @@ public class ScriptingEditor extends IcyFrame
         try
         {
             InputStream is = getClass().getClassLoader().getResourceAsStream(
-                    "plugins/tprovoost/scripteditor/templates/" + type + "/" + templateName);
+                    "plugins/tprovoost/scripteditor/resources/templates/" + type + "/" + templateName);
             openStream(templateName, is);
         }
         catch (IOException e1)

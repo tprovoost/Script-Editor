@@ -153,7 +153,14 @@ public class PythonScriptingHandler extends ScriptingHandler {
     }
 
     @Override
-    protected void organizeImports(JTextComponent textArea2) {
+    public void organizeImports(JTextComponent textArea2) {
+    }
+    
+    @Override
+    public void format()
+    {
+        // TODO Auto-generated method stub
+        
     }
 
     private Class<?> getType(String varName) {

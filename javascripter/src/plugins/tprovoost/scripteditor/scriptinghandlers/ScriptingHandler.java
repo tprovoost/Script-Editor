@@ -688,18 +688,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     // }
                 }
                 break;
-            case KeyEvent.VK_O:
-                if (e.isControlDown() && e.isShiftDown())
-                {
-                    organizeImports(textArea);
-                }
-                break;
             default:
                 break;
         }
     }
 
-    protected abstract void organizeImports(JTextComponent textArea2);
+    public void organizeImports()
+    {
+        organizeImports(textArea);
+    }
+
+    public abstract void organizeImports(JTextComponent textArea);
 
     @Override
     public void keyReleased(KeyEvent e)
@@ -1148,5 +1147,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         listeners.remove(listener);
     }
+
+    /**
+     * Formats the text according to the handler.
+     */
+    public abstract void format();
 
 }

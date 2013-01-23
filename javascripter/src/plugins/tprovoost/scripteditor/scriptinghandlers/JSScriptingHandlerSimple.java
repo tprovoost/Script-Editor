@@ -8,6 +8,11 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
 import icy.util.ClassUtil;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -40,9 +45,11 @@ import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.CompilerEnvirons;
 import sun.org.mozilla.javascript.internal.Context;
+import sun.org.mozilla.javascript.internal.Function;
 import sun.org.mozilla.javascript.internal.FunctionNode;
 import sun.org.mozilla.javascript.internal.ImporterTopLevel;
 import sun.org.mozilla.javascript.internal.NativeArray;
+import sun.org.mozilla.javascript.internal.NativeObject;
 import sun.org.mozilla.javascript.internal.Node;
 import sun.org.mozilla.javascript.internal.Parser;
 import sun.org.mozilla.javascript.internal.RhinoException;
@@ -293,9 +300,89 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
     }
 
     @Override
-    protected void organizeImports(JTextComponent tc)
+    public void organizeImports(JTextComponent tc)
     {
         organizeImportsStatic(tc);
+    }
+
+    @Override
+    public void format()
+    {
+        /*
+         * This formatter uses beautify.js by Einar Lielmanis, <einar@jsbeautifier.org>
+         * http://jsbeautifier.org/
+         */
+        InputStream is = PluginLoader.getResourceAsStream("plugins/tprovoost/scripteditor/resources/beautify.js");
+        Reader reader = new BufferedReader(new InputStreamReader(is));
+        Context context = Context.enter();
+        context.setLanguageVersion(Context.VERSION_1_6);
+        ScriptableObject scope = context.initStandardObjects();
+
+        try
+        {
+            context.evaluateReader(scope, reader, "Beautify", 1, null);
+        }
+        catch (IOException e)
+        {
+            return;
+        }
+        Function fct = (Function) scope.get("js_beautify", scope);
+
+        // boolean preserveNewLines = JSBeautifyOptions.getInstance().getOption("preserveNewLines",
+        // true);
+        // boolean useTabs = JSBeautifyOptions.getInstance().getOption("useTabs", false);
+        // boolean spaceBeforeConditional =
+        // JSBeautifyOptions.getInstance().getOption("spaceBeforeConditional", true);
+        // boolean jslintHappy = JSBeautifyOptions.getInstance().getOption("jslintHappy", false);
+        // boolean indentCase = JSBeautifyOptions.getInstance().getOption("indentCase", false);
+        // int indentSize = JSBeautifyOptions.getInstance().getOption("indentSize", 1);
+        // String braceStyle = JSBeautifyOptions.getInstance().getOption("braceStyle", "collapse");
+
+        boolean preserveNewLines = true;
+        boolean useTabs = true;
+        boolean spaceBeforeConditional = true;
+        boolean jslintHappy = false;
+        boolean indentCase = false;
+        int indentSize = 1;
+        String braceStyle = "collapse";
+
+        NativeObject properties = new NativeObject();
+
+        if (useTabs)
+        {
+            properties.defineProperty("indent_char", "\t", NativeObject.READONLY);
+            properties.defineProperty("indent_size", 1, NativeObject.READONLY);
+        }
+        else
+        {
+            int size = 4;
+            if (indentSize == 0)
+            {
+                size = 2;
+            }
+            else if (indentSize == 1)
+            {
+                size = 4;
+            }
+            else
+            {
+                size = 8;
+            }
+            properties.defineProperty("indent_size", size, NativeObject.READONLY);
+        }
+
+        properties.defineProperty("preserve_newlines", preserveNewLines, NativeObject.READONLY);
+        properties.defineProperty("max_preserve_newlines", false, NativeObject.READONLY);
+        properties.defineProperty("jslint_happy", jslintHappy, NativeObject.READONLY);
+        properties.defineProperty("space_before_conditional", spaceBeforeConditional, NativeObject.READONLY);
+        properties.defineProperty("indent_case", indentCase, NativeObject.READONLY);
+
+        properties.defineProperty("brace_style", braceStyle, NativeObject.READONLY);
+
+        Object result = fct.call(context, scope, scope, new Object[] {textArea.getText(), properties});
+
+        String finalText = result.toString();
+        textArea.setText(finalText);
     }
 
     /**

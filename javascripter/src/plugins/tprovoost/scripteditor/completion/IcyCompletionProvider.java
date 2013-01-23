@@ -773,7 +773,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     public void installDefaultCompletions(String language)
     {
         InputStream in = getClass().getClassLoader().getResourceAsStream(
-                "plugins/tprovoost/scripteditor/lang/" + language.toLowerCase() + ".xml");
+                "plugins/tprovoost/scripteditor/resources/lang/" + language.toLowerCase() + ".xml");
         try
         {
             if (in != null)
@@ -782,7 +782,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 in.close();
             }
             else
-                System.out.println("File not found: " + "plugins/tprovoost/scripteditor/lang/" + language.toLowerCase()
+                System.out.println("File not found: " + "plugins/tprovoost/scripteditor/resources/lang/" + language.toLowerCase()
                         + ".xml");
         }
         catch (IOException ioe)
