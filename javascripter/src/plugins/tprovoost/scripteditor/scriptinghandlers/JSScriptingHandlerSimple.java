@@ -122,37 +122,19 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         // IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
         FunctionCompletion c;
         // ArrayList<Parameter> params = new ArrayList<Parameter>();
-        try
-        {
-            getEngine().eval(
-                    "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
-            c = new FunctionCompletion(provider, "getSequence", "Sequence");
-            c.setDefinedIn("MainInterface");
-            c.setReturnValueDescription("The focused sequence is returned.");
-            c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-            provider.addCompletion(c);
-            engineFunctions.put("getSequence", Sequence.class);
-        }
-        catch (ScriptException e)
-        {
-            System.out.println(e.getMessage());
-        }
+        c = new FunctionCompletion(provider, "getSequence", "Sequence");
+        c.setDefinedIn("MainInterface");
+        c.setReturnValueDescription("The focused sequence is returned.");
+        c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+        provider.addCompletion(c);
+        engineFunctions.put("getSequence", Sequence.class);
 
-        try
-        {
-            getEngine().eval(
-                    "function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
-            c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
-            c.setDefinedIn("MainInterface");
-            c.setShortDescription("Returns the current image viewed in the focused sequence.");
-            c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
-            provider.addCompletion(c);
-            engineFunctions.put("getImage", IcyBufferedImage.class);
-        }
-        catch (ScriptException e)
-        {
-            System.out.println(e.getMessage());
-        }
+        c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
+        c.setDefinedIn("MainInterface");
+        c.setShortDescription("Returns the current image viewed in the focused sequence.");
+        c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
+        provider.addCompletion(c);
+        engineFunctions.put("getImage", IcyBufferedImage.class);
 
         // ADD JS FUNCTIONS
         engineFunctions.put("importClass", void.class);
@@ -201,14 +183,15 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         // hardcoded functions, to remove in the future
         try
         {
-            engine.eval("function getSequence() { return Icy.getMainInterface().getFocusedSequence() }");
+            engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
         }
         catch (ScriptException e1)
         {
+
         }
         try
         {
-            engine.eval("function getImage() { return Icy.getMainInterface().getFocusedImage(); }");
+            engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
         }
         catch (ScriptException e1)
         {

@@ -142,7 +142,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     }
                 });
             }
-
+            else
+            {
+                System.out.print(s);
+            }
         }
     };
 
@@ -353,7 +356,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * 
      * @param compilationOk
      */
-    public void setCompilationOk(boolean compilationOk)
+    private void setCompilationOk(boolean compilationOk)
     {
         this.compilationOk = compilationOk;
     }
@@ -466,6 +469,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 {
                     errorOutput.append(textResult);
                 }
+                else
+                    System.out.print(textResult);
             }
         });
     }
@@ -538,6 +543,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     ee.printStackTrace();
                     if (errorOutput != null)
                         errorOutput.append(ee.getMessage() + "\n");
+                    else
+                        System.out.println(ee.getMessage());
                 }
             }
             catch (BadLocationException e1)
@@ -600,13 +607,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         if (isNewEngine())
         {
-            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
-            ArrayList<Method> functions = engineHandler.getFunctions();
-            String engineType2 = getEngine().getFactory().getLanguageName();
-            ScriptEngine engine = ScriptEngineHandler.getEngine(engineType2, true);
-            installMethods(engine, functions);
-            engine.getContext().setWriter(pw);
-            engine.getContext().setErrorWriter(pw);
+            ScriptEngine engine = createNewEngine();
             thread = new EvalThread(engine, textArea.getText());
             thread.setPriority(Thread.MIN_PRIORITY);
             thread.start();
@@ -617,6 +618,25 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             EvalThread thread = new EvalThread(engine, textArea.getText());
             thread.start();
         }
+    }
+
+    /**
+     * Creates a new engine for the current language.
+     * Will delete the previous one.
+     * 
+     * @return
+     */
+    public ScriptEngine createNewEngine()
+    {
+        ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+        ArrayList<Method> functions = engineHandler.getFunctions();
+        String newEngineType = getEngine().getFactory().getLanguageName();
+        ScriptEngine engine = ScriptEngineHandler.getEngine(newEngineType, true);
+        installMethods(engine, functions);
+        engine.getContext().setWriter(pw);
+        engine.getContext().setErrorWriter(pw);
+
+        return engine;
     }
 
     /**

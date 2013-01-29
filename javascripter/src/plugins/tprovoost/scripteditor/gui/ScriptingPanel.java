@@ -28,8 +28,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -70,10 +68,6 @@ import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerSimple;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
-import sun.org.mozilla.javascript.internal.Context;
-import sun.org.mozilla.javascript.internal.Function;
-import sun.org.mozilla.javascript.internal.NativeObject;
-import sun.org.mozilla.javascript.internal.ScriptableObject;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
@@ -91,7 +85,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private RSyntaxTextArea textArea;
     private RTextScrollPane pane;
     private PanelOptions options;
-    private String name;
+    private String panelName;
     private String saveFileString = "";
 
     /** Default file used to save the content into */
@@ -113,6 +107,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private JButton btnRunNew;
     public JButton btnStop;
     private ScriptingEditor editor;
+    private boolean integrated;
+
+    public ScriptingPanel(ScriptingEditor editor, String name, String language)
+    {
+        this(editor, name, language, false);
+    }
 
     /**
      * Creates a panel for scripting, using an {@link RSyntaxTextArea} for the
@@ -121,10 +121,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      * 
      * @param name
      */
-    public ScriptingPanel(ScriptingEditor editor, String name, String language)
+    public ScriptingPanel(ScriptingEditor editor, String name, String language, boolean integrated)
     {
-        this.name = name;
+        this.panelName = name;
         this.editor = editor;
+        this.integrated = integrated;
         setLayout(new BorderLayout());
 
         consoleOutput = new JTextArea(5, 40);
@@ -184,7 +185,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
     public String getPanelName()
     {
-        return name;
+        return panelName;
     }
 
     public void setSyntax(String syntaxType)
@@ -230,10 +231,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 writer.close();
                 saveFile = f;
                 saveFileString = s;
-                name = f.getName();
+                panelName = f.getName();
                 scriptHandler.setFileName(saveFileString);
                 updateTitle();
-                editor.addRecentFile(f);
+                if (editor != null)
+                    editor.addRecentFile(f);
                 return true;
             }
             catch (IOException e)
@@ -330,9 +332,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (idx != -1)
             {
                 if (isDirty())
-                    tabbedPane.setTitleAt(idx, name + "*");
+                    tabbedPane.setTitleAt(idx, panelName + "*");
                 else
-                    tabbedPane.setTitleAt(idx, name);
+                    tabbedPane.setTitleAt(idx, panelName);
                 Component c = tabbedPane.getTabComponentAt(idx);
                 if (c instanceof JComponent)
                     ((JComponent) c).revalidate();
@@ -455,13 +457,15 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     // } else {
                     scriptHandler = new JSScriptingHandlerSimple(provider, textArea, pane.getGutter(), true);
                     // }
-                    scriptHandler.setOutput(consoleOutput);
+                    if (!integrated)
+                        scriptHandler.setOutput(consoleOutput);
 
                 }
                 else if (language.contentEquals("python"))
                 {
                     scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
-                    scriptHandler.setOutput(consoleOutput);
+                    if (!integrated)
+                        scriptHandler.setOutput(consoleOutput);
                 }
                 else
                 {
@@ -524,19 +528,23 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private void rebuildGUI()
     {
         removeAll();
+        if (!integrated)
+        {
+            JPanel bottomPanel = new JPanel(new BorderLayout());
+            bottomPanel.add(scrollpane, BorderLayout.CENTER);
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(scrollpane, BorderLayout.CENTER);
-        JPanel panelSouth = new JPanel(new BorderLayout());
-        panelSouth.add(console, BorderLayout.CENTER);
-        panelSouth.add(btnClearConsole, BorderLayout.EAST);
-        bottomPanel.add(panelSouth, BorderLayout.SOUTH);
+            JPanel panelSouth = new JPanel(new BorderLayout());
+            panelSouth.add(console, BorderLayout.CENTER);
+            panelSouth.add(btnClearConsole, BorderLayout.EAST);
+            bottomPanel.add(panelSouth, BorderLayout.SOUTH);
 
-        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, bottomPanel);
-        split.setDividerLocation(0.75d);
-        split.setResizeWeight(0.75d);
-        split.setOneTouchExpandable(true);
-        add(split, BorderLayout.CENTER);
+            JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, bottomPanel);
+            split.setDividerLocation(0.75d);
+            split.setResizeWeight(0.75d);
+            split.setOneTouchExpandable(true);
+            add(split, BorderLayout.CENTER);
+        }
+        add(pane);
         add(options, BorderLayout.NORTH);
         revalidate();
     }
@@ -607,6 +615,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 }
             });
             add(combo);
+
+            if (integrated)
+                return;
+
             add(Box.createHorizontalStrut(STRUT_SIZE * 3));
 
             btnBuild.addActionListener(new ActionListener()
@@ -645,11 +657,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                             btnStop.setEnabled(true);
                         }
                     });
-                    scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
-                    scriptHandler.setForceRun(prefs.isOverrideEnabled());
-                    scriptHandler.setStrict(prefs.isStrictModeEnabled());
-                    scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
-                    scriptHandler.interpret(true);
+                    if (!integrated)
+                    {
+                        scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
+                        scriptHandler.setForceRun(prefs.isOverrideEnabled());
+                        scriptHandler.setStrict(prefs.isStrictModeEnabled());
+                        scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+                        scriptHandler.interpret(true);
+                    }
                 }
             });
             add(btnRun);

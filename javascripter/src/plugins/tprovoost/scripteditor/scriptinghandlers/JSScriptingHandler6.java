@@ -23,6 +23,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
@@ -45,10 +47,13 @@ import sun.org.mozilla.javascript.internal.CompilerEnvirons;
 import sun.org.mozilla.javascript.internal.Context;
 import sun.org.mozilla.javascript.internal.Function;
 import sun.org.mozilla.javascript.internal.FunctionNode;
+import sun.org.mozilla.javascript.internal.ImporterTopLevel;
 import sun.org.mozilla.javascript.internal.NativeArray;
 import sun.org.mozilla.javascript.internal.NativeObject;
 import sun.org.mozilla.javascript.internal.Node;
 import sun.org.mozilla.javascript.internal.Parser;
+import sun.org.mozilla.javascript.internal.RhinoException;
+import sun.org.mozilla.javascript.internal.Script;
 import sun.org.mozilla.javascript.internal.ScriptOrFnNode;
 import sun.org.mozilla.javascript.internal.ScriptableObject;
 import sun.org.mozilla.javascript.internal.Token;
@@ -70,7 +75,33 @@ public class JSScriptingHandler6 extends ScriptingHandler
     @Override
     public void eval(ScriptEngine engine, String s) throws ScriptException
     {
-        engine.eval(s);
+        Context context = Context.enter();
+        context.setApplicationClassLoader(PluginLoader.getLoader());
+        try
+        {
+            ScriptableObject scriptable = new ImporterTopLevel(context);
+            Bindings bs = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+            for (String key : bs.keySet())
+            {
+                Object o = bs.get(key);
+                scriptable.put(key, scriptable, o);
+            }
+            Script script = context.compileString(s, "script", 0, null);
+            script.exec(context, scriptable);
+            for (Object o : scriptable.getIds())
+            {
+                String key = (String) o;
+                bs.put(key, scriptable.get(key, scriptable));
+            }
+        }
+        catch (RhinoException e)
+        {
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber());
+        }
+        finally
+        {
+            Context.exit();
+        }
     }
 
     @Override

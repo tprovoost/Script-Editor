@@ -556,7 +556,7 @@ public class ScriptingEditor extends IcyFrame
                 if (c instanceof ScriptingPanel)
                 {
                     ScriptingPanel panel = ((ScriptingPanel) c);
-                    panel.getScriptHandler().organizeImports();
+                    // panel.getScriptHandler().organizeImports();
                     panel.getScriptHandler().format();
                 }
             }
