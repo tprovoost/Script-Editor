@@ -159,6 +159,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.setPaintMarkOccurrencesBorder(true);
         textArea.setPaintMatchedBracketPair(true);
         textArea.setPaintTabLines(true);
+        textArea.setTabsEmulated(false);
+        // textArea.setTabSize(8);
 
         pane = new RTextScrollPane(textArea);
         pane.setIconRowHeaderEnabled(true);
@@ -452,10 +454,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 {
                     // if
                     // (System.getProperty("java.version").startsWith("1.6.")) {
-                    // scriptHandler = new JSScriptingHandler62(provider,
-                    // textArea, pane.getGutter(), true);
-                    // } else {
                     scriptHandler = new JSScriptingHandlerSimple(provider, textArea, pane.getGutter(), true);
+                    // } else {
+                    // scriptHandler = new JSScriptingHandlerSimple(provider, textArea,
+                    // pane.getGutter(), true);
                     // }
                     if (!integrated)
                         scriptHandler.setOutput(consoleOutput);
@@ -659,7 +661,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     });
                     if (!integrated)
                     {
-                        scriptHandler.setNewEngine(prefs.isRunNewEngineEnabled());
+                        scriptHandler.setNewEngine(true);
                         scriptHandler.setForceRun(prefs.isOverrideEnabled());
                         scriptHandler.setStrict(prefs.isStrictModeEnabled());
                         scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());

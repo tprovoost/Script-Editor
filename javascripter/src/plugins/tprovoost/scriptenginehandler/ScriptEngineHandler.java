@@ -52,7 +52,6 @@ public class ScriptEngineHandler
         {
             bindingFunctions = new ArrayList<Method>();
             ProgressFrame frame = new ProgressFrame("Loading functions...");
-            // Chronometer chrono = new Chronometer("chrono");
             try
             {
                 if (getClass().getClassLoader() instanceof JarClassLoader)
@@ -240,12 +239,6 @@ public class ScriptEngineHandler
     public ArrayList<Method> getFunctions()
     {
         return bindingFunctions;
-    }
-
-    // TODO
-    private void fireEngineCHanged()
-    {
-
     }
 
 }

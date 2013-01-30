@@ -562,10 +562,10 @@ public class JSScriptingHandler6 extends ScriptingHandler
                         }
                         else
                         {
-                            commandStartOffset = idxEOL;
+                            commandStartOffset = idxEOL + 1;
                         }
                     }
-                    else if (ch == '*')
+                    else if (chN == '*')
                     {
                         int idxComment = s.indexOf("*/", commandStartOffset);
                         if (idxComment == -1)
@@ -574,10 +574,11 @@ public class JSScriptingHandler6 extends ScriptingHandler
                         }
                         else
                         {
-                            commandStartOffset = idxComment;
+                            commandStartOffset = idxComment + 2;
                         }
                     }
-                    break;
+                    else
+                        break;
                 }
             }
             commandStartOffset++;
@@ -670,7 +671,7 @@ public class JSScriptingHandler6 extends ScriptingHandler
                                     }
                                     else
                                     {
-                                        commandStartOffset = idxEOL + 1;
+                                        commandStartOffset = idxEOL;
                                     }
                                 }
                                 else if (chN == '*')
@@ -682,10 +683,11 @@ public class JSScriptingHandler6 extends ScriptingHandler
                                     }
                                     else
                                     {
-                                        commandStartOffset = idxEOL + "*/".length() + 1;
+                                        commandStartOffset = idxEOL + "*/".length() - 1;
                                     }
                                 }
-                                break;
+                                else
+                                    break;
                             }
                         }
                         commandStartOffset++;
@@ -781,6 +783,7 @@ public class JSScriptingHandler6 extends ScriptingHandler
                 return fc;
             }
             case Token.IF:
+                // case Token.NEW:
             case Token.IFEQ:
             case Token.IFNE:
             case Token.SWITCH:
@@ -790,6 +793,9 @@ public class JSScriptingHandler6 extends ScriptingHandler
             case Token.FOR:
             case Token.ELSE:
             case Token.DO:
+            case Token.LOOP:
+            case Token.FALSE:
+            case Token.TRUE:
             case Token.FINALLY:
             case Token.WHILE:
             {
@@ -943,7 +949,7 @@ public class JSScriptingHandler6 extends ScriptingHandler
 
     private String buildRecursiveNew(Node n)
     {
-        Node currentChild = n;
+        Node currentChild = n.getFirstChild();
         switch (currentChild.getType())
         {
             case Token.GETPROP:
@@ -1016,7 +1022,7 @@ public class JSScriptingHandler6 extends ScriptingHandler
                     String[] args = argsString.split(",");
 
                     // it is a variable
-                    clazz = getVariableDeclaration(classNameOrFunctionNameOrVariable);
+                    clazz = getVariableDeclaration(classNameOrFunctionNameOrVariable, commandStartOffset);
                     ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
                     // an engine variable
@@ -1581,7 +1587,7 @@ public class JSScriptingHandler6 extends ScriptingHandler
             case Token.FALSE:
                 return boolean.class;
             case Token.NAME:
-                return getVariableDeclaration(n.getString());
+                return getVariableDeclaration(n.getString(), commandStartOffset);
             case Token.CALL:
                 Class<?> res = resolveCallType(n, text, false);
                 return res;
@@ -1597,6 +1603,8 @@ public class JSScriptingHandler6 extends ScriptingHandler
                 {
                 }
                 return toReturn;
+            case Token.NEW:
+                return resolveNewType(n, text);
             case Token.ARRAYLIT:
                 return Object[].class;
         }

@@ -431,7 +431,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private void updateGutter()
     {
         gutter.removeAllTrackingIcons();
-        for (Integer a : ignoredLines.keySet())
+        for (Integer a : new ArrayList<Integer>(ignoredLines.keySet()))
         {
             try
             {
@@ -533,7 +533,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 
                     // interpret again, without the faulty line.
-                    interpret(s);
+                    // interpret(s);
                 }
                 else
                 {
@@ -1131,6 +1131,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         }
     }
 
+    @SuppressWarnings("deprecation")
     public void killScript()
     {
         // Something is Running !

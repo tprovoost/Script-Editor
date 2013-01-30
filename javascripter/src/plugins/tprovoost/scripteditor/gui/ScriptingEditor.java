@@ -43,6 +43,8 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
@@ -52,7 +54,7 @@ import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
  * 
  * @author tprovoost
  */
-public class ScriptingEditor extends IcyFrame
+public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 {
     private JTabbedPane tabbedPane;
     private JButton addPaneButton;
@@ -70,6 +72,7 @@ public class ScriptingEditor extends IcyFrame
         public void icyFrameClosing(IcyFrameEvent e)
         {
             closeAll();
+            PreferencesWindow.getPreferencesWindow().removeFrameListener(ScriptingEditor.this);
         }
     };
     private AcceptListener acceptlistener = new AcceptListener()
@@ -167,7 +170,16 @@ public class ScriptingEditor extends IcyFrame
 
         mainPanel.add(tabbedPane);
         setContentPane(mainPanel);
+
+        // ----------------------
+        // setting listeners
+        // ---------------------
+
+        // exit listener
         Icy.getMainInterface().addCanExitListener(acceptlistener);
+
+        // frame listener on preferences
+        PreferencesWindow.getPreferencesWindow().addFrameListener(this);
 
         ThreadUtil.invokeLater(new Runnable()
         {
@@ -750,5 +762,81 @@ public class ScriptingEditor extends IcyFrame
             previousFiles.remove(0);
         }
         updateRecentFiles();
+    }
+
+    @Override
+    public void icyFrameOpened(IcyFrameEvent e)
+    {
+    }
+
+    @Override
+    public void icyFrameClosing(IcyFrameEvent e)
+    {
+    }
+
+    @Override
+    public void icyFrameClosed(IcyFrameEvent e)
+    {
+        PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+
+        for (int i = 0; i < tabbedPane.getTabCount(); ++i)
+        {
+            Component comp = tabbedPane.getComponentAt(i);
+            if (comp instanceof ScriptingPanel)
+            {
+                RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
+                boolean indentWanted = prefWin.isIndentSpacesEnabled();
+                if (textArea.getTabsEmulated() != indentWanted)
+                {
+                    // a change occured
+                    textArea.setTabsEmulated(indentWanted);
+                    if (indentWanted)
+                    {
+                        textArea.convertSpacesToTabs();
+                    }
+                    else
+                    {
+                        textArea.setTabSize(prefWin.indentSpacesCount());
+                        textArea.convertTabsToSpaces();
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void icyFrameIconified(IcyFrameEvent e)
+    {
+    }
+
+    @Override
+    public void icyFrameDeiconified(IcyFrameEvent e)
+    {
+    }
+
+    @Override
+    public void icyFrameActivated(IcyFrameEvent e)
+    {
+    }
+
+    @Override
+    public void icyFrameDeactivated(IcyFrameEvent e)
+    {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void icyFrameInternalized(IcyFrameEvent e)
+    {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void icyFrameExternalized(IcyFrameEvent e)
+    {
+        // TODO Auto-generated method stub
+
     }
 }

@@ -469,7 +469,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                 if (complete.isStatic()
                                         && (text.isEmpty() || complete.getName().toLowerCase()
                                                 .startsWith(text.toLowerCase())))
-                                    retVal.add(generateSFCCopy(complete));
+                                    retVal.add(generateSFCCopy(complete, true));
                             }
                         }
                     }
@@ -527,12 +527,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return retVal;
     }
 
-    private Completion generateSFCCopy(ScriptFunctionCompletion complete)
+    private Completion generateSFCCopy(ScriptFunctionCompletion complete, boolean b)
     {
         Method method = complete.getMethod();
         String shortDescript = complete.getShortDescription();
 
-        ScriptFunctionCompletion sfcCopy = new ScriptFunctionCompletion(this, complete.getName(), method);
+        ScriptFunctionCompletion sfcCopy = new ScriptFunctionCompletion(this, method.getName(), method);
         sfcCopy.setDefinedIn(complete.getDefinedIn());
         sfcCopy.setRelevance(complete.getRelevance());
         sfcCopy.setReturnValueDescription(method.getReturnType().toString());
@@ -543,6 +543,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             params.add(complete.getParam(i));
         sfcCopy.setParams(params);
         return sfcCopy;
+    }
+
+    private Completion generateSFCCopy(ScriptFunctionCompletion complete)
+    {
+        return generateSFCCopy(complete, false);
     }
 
     protected void doClassicCompletion(String text, List<Completion> retVal)
@@ -782,8 +787,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 in.close();
             }
             else
-                System.out.println("File not found: " + "plugins/tprovoost/scripteditor/resources/lang/" + language.toLowerCase()
-                        + ".xml");
+                System.out.println("File not found: " + "plugins/tprovoost/scripteditor/resources/lang/"
+                        + language.toLowerCase() + ".xml");
         }
         catch (IOException ioe)
         {
