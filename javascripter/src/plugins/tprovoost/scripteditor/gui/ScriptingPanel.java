@@ -10,16 +10,26 @@ import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
+import icy.util.EventUtil;
+import icy.util.StringUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Font;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -40,7 +50,10 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -109,6 +122,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private ScriptingEditor editor;
     private boolean integrated;
 
+    protected boolean scrollLocked;
+
     public ScriptingPanel(ScriptingEditor editor, String name, String language)
     {
         this(editor, name, language, false);
@@ -133,19 +148,76 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         consoleOutput.setLineWrap(true);
         consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
         consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-        scrollpane = new JScrollPane(consoleOutput);
-        scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-        scrollpane.setAutoscrolls(true);
-        scrollpane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener()
+
+        // HANDLE RIGHT CLICK POPUP MENU
+        consoleOutput.addMouseListener(new MouseAdapter()
         {
             @Override
-            public void adjustmentValueChanged(AdjustmentEvent e)
+            public void mouseClicked(MouseEvent e)
             {
-                if (!consoleOutput.getText().isEmpty())
-                    consoleOutput.setCaretPosition(consoleOutput.getText().length() - 1);
+                if (EventUtil.isRightMouseButton(e))
+                {
+                    JPopupMenu popup = new JPopupMenu();
+                    JMenuItem itemCopy = new JMenuItem("Copy");
+                    itemCopy.addActionListener(new ActionListener()
+                    {
+
+                        @Override
+                        public void actionPerformed(ActionEvent e)
+                        {
+                            String text = consoleOutput.getSelectedText();
+                            if (StringUtil.isEmpty(text))
+                                text = consoleOutput.getText();
+                            Toolkit.getDefaultToolkit().getSystemClipboard()
+                                    .setContents(new StringSelection(text), null);
+                        }
+                    });
+                    popup.add(itemCopy);
+                    popup.show(consoleOutput, e.getX(), e.getY());
+                    e.consume();
+                }
             }
         });
 
+        // Create the scrollpane around the output
+        scrollpane = new JScrollPane(consoleOutput);
+        scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        scrollpane.setAutoscrolls(true);
+        final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
+
+        // LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
+        scrollbar.addAdjustmentListener(new AdjustmentListener()
+        {
+
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent e)
+            {
+                if (scrollbar.getValueIsAdjusting())
+                {
+                    if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+                        setScrollLocked(false);
+                    else
+                        setScrollLocked(true);
+                }
+                if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
+                {
+                    consoleOutput.setCaretPosition(consoleOutput.getText().length() - 1);
+                }
+            }
+
+        });
+        scrollpane.addMouseWheelListener(new MouseWheelListener()
+        {
+
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+                    setScrollLocked(false);
+                else
+                    setScrollLocked(true);
+            }
+        });
         // creates the text area and set it up
         textArea = new RSyntaxTextArea(20, 60);
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
@@ -193,6 +265,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     public void setSyntax(String syntaxType)
     {
         textArea.setSyntaxEditingStyle(syntaxType);
+    }
+
+    private synchronized boolean isScrollLocked()
+    {
+        return scrollLocked;
+    }
+
+    private synchronized void setScrollLocked(boolean scrollLocked)
+    {
+        this.scrollLocked = scrollLocked;
     }
 
     /**
@@ -287,7 +369,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public boolean showSaveFileDialog(String currentDirectoryPath)
     {
-        JFileChooser fc;
+        final JFileChooser fc;
         if (currentDirectoryPath == "")
             fc = new JFileChooser();
         else
@@ -300,6 +382,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
             fc.setFileFilter(new FileNameExtensionFilter("Python files", "py"));
         }
+        fc.addKeyListener(new KeyAdapter()
+        {
+            @Override
+            public void keyPressed(KeyEvent e)
+            {
+                fc.accept(fc.getSelectedFile());
+            }
+        });
         if (fc.showSaveDialog(Icy.getMainInterface().getMainFrame()) == JFileChooser.APPROVE_OPTION)
         {
             File file = fc.getSelectedFile();
@@ -546,7 +636,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             split.setOneTouchExpandable(true);
             add(split, BorderLayout.CENTER);
         }
-        add(pane);
+        else
+            add(pane);
+
         add(options, BorderLayout.NORTH);
         revalidate();
     }
@@ -571,7 +663,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         public PanelOptions(String language)
         {
-            final JButton btnBuild = new JButton("Verify");
+            // final JButton btnBuild = new JButton("Verify");
             btnRun = new IcyButton(new IcyIcon("playback_play", 16));
             btnRun.setToolTipText("Run the script in the current context.");
 
@@ -621,22 +713,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (integrated)
                 return;
 
-            add(Box.createHorizontalStrut(STRUT_SIZE * 3));
-
-            btnBuild.addActionListener(new ActionListener()
-            {
-
-                @Override
-                public void actionPerformed(ActionEvent e)
-                {
-                    if (scriptHandler != null)
-                    {
-                        scriptHandler.interpret(false);
-                    }
-                    else
-                        System.out.println("Script Handler null.");
-                }
-            });
+            // btnBuild.addActionListener(new ActionListener()
+            // {
+            //
+            // @Override
+            // public void actionPerformed(ActionEvent e)
+            // {
+            // if (scriptHandler != null)
+            // {
+            // scriptHandler.interpret(false);
+            // }
+            // else
+            // System.out.println("Script Handler null.");
+            // }
+            // });
             // add(btnBuild);
 
             btnRun.addActionListener(new ActionListener()
@@ -661,7 +751,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     });
                     if (!integrated)
                     {
-                        scriptHandler.setNewEngine(true);
+                        scriptHandler.setNewEngine(false);
                         scriptHandler.setForceRun(prefs.isOverrideEnabled());
                         scriptHandler.setStrict(prefs.isStrictModeEnabled());
                         scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
@@ -669,8 +759,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     }
                 }
             });
-            add(btnRun);
-            add(Box.createHorizontalStrut(STRUT_SIZE));
+
             btnRunNew.addActionListener(new ActionListener()
             {
 
@@ -699,7 +788,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     scriptHandler.interpret(true);
                 }
             });
-            add(btnRunNew);
+
             btnStop.addActionListener(new ActionListener()
             {
 
@@ -714,6 +803,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     }
                 }
             });
+
+            add(Box.createHorizontalStrut(STRUT_SIZE * 3));
+            add(btnRunNew);
+            add(Box.createHorizontalStrut(STRUT_SIZE));
+            add(btnRun);
             add(Box.createHorizontalStrut(STRUT_SIZE));
             add(btnStop);
             add(Box.createHorizontalGlue());

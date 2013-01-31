@@ -10,6 +10,7 @@ import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 
 import java.awt.EventQueue;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -495,7 +496,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             Context context = Context.enter();
             context.setApplicationClassLoader(PluginLoader.getLoader());
-            updateGutter();
+            if (gutter != null)
+                updateGutter();
             localVariables.clear();
             localFunctions.clear();
             scriptDeclaredImports.clear();
@@ -607,6 +609,20 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         if (isNewEngine())
         {
+            if (errorOutput != null)
+            {
+                Graphics2D g = (Graphics2D) errorOutput.getGraphics();
+                int chW = g.getFontMetrics().charWidth('_');
+                int w = errorOutput.getWidth();
+                int charCount = w / chW;
+                String str = "";
+                for (int i = 0; i < charCount - 1; ++i)
+                    str += '-';
+                errorOutput.append(str + "\n");
+                errorOutput.append("New Engine created" + "\n");
+                errorOutput.append(str + "\n");
+                g.dispose();
+            }
             ScriptEngine engine = createNewEngine();
             thread = new EvalThread(engine, textArea.getText());
             thread.setPriority(Thread.MIN_PRIORITY);

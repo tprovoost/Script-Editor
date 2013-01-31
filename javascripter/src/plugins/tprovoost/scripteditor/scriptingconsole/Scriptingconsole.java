@@ -1,14 +1,26 @@
 package plugins.tprovoost.scripteditor.scriptingconsole;
 
 import icy.util.DateUtil;
+import icy.util.EventUtil;
 
 import java.awt.Dimension;
+import java.awt.HeadlessException;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.script.ScriptEngineFactory;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
@@ -22,7 +34,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class Scriptingconsole extends JTextField implements KeyListener
+public class Scriptingconsole extends JTextField implements KeyListener, MouseListener
 {
 
     /**
@@ -39,6 +51,7 @@ public class Scriptingconsole extends JTextField implements KeyListener
     public Scriptingconsole()
     {
         addKeyListener(this);
+        addMouseListener(this);
 
         provider = new IcyCompletionProvider();
         provider.installDefaultCompletions("javascript");
@@ -198,6 +211,66 @@ public class Scriptingconsole extends JTextField implements KeyListener
     {
         if (output != null)
             output.setText("");
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e)
+    {
+        if (EventUtil.isRightMouseButton(e))
+        {
+            JPopupMenu popup = new JPopupMenu();
+            JMenuItem itemCopy = new JMenuItem("Paste");
+            itemCopy.addActionListener(new ActionListener()
+            {
+
+                @Override
+                public void actionPerformed(ActionEvent e)
+                {
+                    try
+                    {
+                        String paste = (String) Toolkit.getDefaultToolkit().getSystemClipboard()
+                                .getData(DataFlavor.stringFlavor);
+                        String curText = getText();
+                        int pos = getCaretPosition();
+                        String before = curText.substring(0, pos);
+                        String after = curText.substring(pos, curText.length());
+                        setText(before + paste + after);
+                    }
+                    catch (HeadlessException e1)
+                    {
+                    }
+                    catch (UnsupportedFlavorException e1)
+                    {
+                    }
+                    catch (IOException e1)
+                    {
+                    }
+                }
+            });
+            popup.add(itemCopy);
+            popup.show(this, e.getX(), e.getY());
+            e.consume();
+        }
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e)
+    {
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e)
+    {
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e)
+    {
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e)
+    {
     }
 
 }

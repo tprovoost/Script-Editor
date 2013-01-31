@@ -10,6 +10,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -18,7 +19,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableModel;
 
 public class PreferencesWindow extends IcyFrame
 {
@@ -33,13 +33,13 @@ public class PreferencesWindow extends IcyFrame
     private final String PREF_STRICT = "strictmode";
     private final String PREF_INDENT_SPACES = "indent";
     private final String PREF_INDENT_SPACES_VALUE = "nbSpaces";
-    public static boolean release = false;
     private IcyTextField tfSpacesTab;
     private JCheckBox cboxVarInterp;
     private JCheckBox cboxOverride;
     private JCheckBox cboxAutoVerif;
     private JCheckBox cboxStrict;
     private JCheckBox cboxSoft;
+    private boolean release = true;
 
     private PreferencesWindow()
     {
@@ -69,10 +69,10 @@ public class PreferencesWindow extends IcyFrame
 
         panelButtons.add(Box.createHorizontalGlue());
 
-        JButton btnApply = new JButton("Apply");
-        panelButtons.add(btnApply);
+        // JButton btnApply = new JButton("Apply");
+        // panelButtons.add(btnApply);
 
-        panelButtons.add(Box.createHorizontalStrut(20));
+        // panelButtons.add(Box.createHorizontalStrut(20));
 
         JButton btnOk = new JButton("OK");
         btnOk.addActionListener(new ActionListener()
@@ -116,6 +116,7 @@ public class PreferencesWindow extends IcyFrame
         // table.getColumnModel().getColumn(0).setPreferredWidth(190);
         panelCenter.setLayout(new BorderLayout(0, 0));
         panel = new JPanel();
+        panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         panelCenter.add(panel);
 
         // -------------------
@@ -153,7 +154,8 @@ public class PreferencesWindow extends IcyFrame
         // Auto verification
         // ------------------
         JPanel panelAutoVerif = new JPanel();
-        panel.add(panelAutoVerif);
+        if (!release)
+            panel.add(panelAutoVerif);
         panelAutoVerif.setLayout(new BoxLayout(panelAutoVerif, BoxLayout.X_AXIS));
 
         JLabel lblAutoVerif = new JLabel("Enable auto verification (javascript/beta)*");
@@ -184,8 +186,7 @@ public class PreferencesWindow extends IcyFrame
         // ----------
         JPanel panelSoft = new JPanel();
         panelSoft.setLayout(new BoxLayout(panelSoft, BoxLayout.X_AXIS));
-        if (!release)
-            panel.add(panelSoft);
+        panel.add(panelSoft);
 
         JLabel lblSoft = new JLabel("Soft tabs");
         panelSoft.add(lblSoft);
@@ -219,6 +220,16 @@ public class PreferencesWindow extends IcyFrame
             panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 
         loadPrefs();
+
+        cboxSoft.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                tfSpacesTab.setEnabled(cboxSoft.isSelected());
+            }
+        });
 
         return toReturn;
     }
@@ -273,46 +284,48 @@ public class PreferencesWindow extends IcyFrame
         return 8;
     }
 
-    public class PreferencesTableModel extends DefaultTableModel
-    {
-
-        /**
-     *
-     */
-        private static final long serialVersionUID = 1L;
-        Class<?>[] columnTypes = new Class[] {String.class, Boolean.class};
-
-        public PreferencesTableModel()
-        {
-            super(new Object[][] {
-                    {"Enable variable interpretation (beta)*", prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.FALSE)},
-                    {"Override verification (javascript)", prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE)},
-                    {"Enable auto verification (javascript/beta)*", prefs.getBoolean(PREF_VERIF, Boolean.FALSE)},
-                    {"Enable Strict Mode (javascript)", prefs.getBoolean(PREF_STRICT, Boolean.FALSE)},
-                    {"Soft tabs", prefs.getBoolean(PREF_INDENT_SPACES, Boolean.TRUE)},
-                    {"Spaces count for soft tabs", prefs.getInt(PREF_INDENT_SPACES_VALUE, 8)},}, new String[] {
-                    "Property", "Value"});
-        }
-
-        public PreferencesTableModel(boolean release)
-        {
-            super(new Object[][] {{"Indentation by spaces", prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE)}},
-                    new String[] {"Property", "Value"});
-        }
-
-        @Override
-        public Class<?> getColumnClass(int columnIndex)
-        {
-            return columnTypes[columnIndex];
-        }
-
-        @Override
-        public void setValueAt(Object aValue, int row, int column)
-        {
-            super.setValueAt(aValue, row, column);
-            savePrefs();
-        }
-    }
+    // public class PreferencesTableModel extends DefaultTableModel
+    // {
+    //
+    // /**
+    // *
+    // */
+    // private static final long serialVersionUID = 1L;
+    // Class<?>[] columnTypes = new Class[] {String.class, Boolean.class};
+    //
+    // public PreferencesTableModel()
+    // {
+    // super(new Object[][] {
+    // {"Enable variable interpretation (beta)*", prefs.getBoolean(PREF_VAR_INTERPRET,
+    // Boolean.FALSE)},
+    // {"Override verification (javascript)", prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE)},
+    // {"Enable auto verification (javascript/beta)*", prefs.getBoolean(PREF_VERIF, Boolean.FALSE)},
+    // {"Enable Strict Mode (javascript)", prefs.getBoolean(PREF_STRICT, Boolean.FALSE)},
+    // {"Soft tabs", prefs.getBoolean(PREF_INDENT_SPACES, Boolean.TRUE)},
+    // {"Spaces count for soft tabs", prefs.getInt(PREF_INDENT_SPACES_VALUE, 8)},}, new String[] {
+    // "Property", "Value"});
+    // }
+    //
+    // public PreferencesTableModel(boolean release)
+    // {
+    // super(new Object[][] {{"Indentation by spaces", prefs.getBoolean(PREF_INDENT_SPACES,
+    // Boolean.FALSE)}},
+    // new String[] {"Property", "Value"});
+    // }
+    //
+    // @Override
+    // public Class<?> getColumnClass(int columnIndex)
+    // {
+    // return columnTypes[columnIndex];
+    // }
+    //
+    // @Override
+    // public void setValueAt(Object aValue, int row, int column)
+    // {
+    // super.setValueAt(aValue, row, column);
+    // savePrefs();
+    // }
+    // }
 
     public void savePrefs()
     {
@@ -331,10 +344,10 @@ public class PreferencesWindow extends IcyFrame
         cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.FALSE));
         cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
 
-        boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.TRUE);
+        boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE);
         cboxSoft.setSelected(active);
         if (active)
-            tfSpacesTab.setEnabled(false);
+            tfSpacesTab.setEnabled(true);
         tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
     }
 }

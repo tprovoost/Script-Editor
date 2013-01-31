@@ -593,8 +593,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                 prefs.setVisible(true);
             }
         });
-        if (!PreferencesWindow.release)
-            menuOptions.add(menuPreferences);
+        menuOptions.add(menuPreferences);
 
         JMenuItem menuBindingsFrame = new JMenuItem("Bindings Frame");
         menuBindingsFrame.addActionListener(new ActionListener()
@@ -785,9 +784,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
             if (comp instanceof ScriptingPanel)
             {
                 RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
-                boolean indentWanted = prefWin.isIndentSpacesEnabled();
-                if (textArea.getTabsEmulated() != indentWanted)
+                if (!textArea.getText().isEmpty())
                 {
+                    boolean indentWanted = prefWin.isIndentSpacesEnabled();
+                    // if (textArea.getTabsEmulated() != indentWanted)
+                    // {
                     // a change occured
                     textArea.setTabsEmulated(indentWanted);
                     if (indentWanted)
@@ -799,6 +800,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                         textArea.setTabSize(prefWin.indentSpacesCount());
                         textArea.convertTabsToSpaces();
                     }
+                    // }
                 }
             }
         }
