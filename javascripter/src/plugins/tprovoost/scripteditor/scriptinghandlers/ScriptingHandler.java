@@ -41,6 +41,8 @@ import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.EvaluatorException;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
@@ -50,8 +52,6 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
-import sun.org.mozilla.javascript.internal.Context;
-import sun.org.mozilla.javascript.internal.EvaluatorException;
 
 /**
  * This class is in charge of the compilation of the script. It mostly depends

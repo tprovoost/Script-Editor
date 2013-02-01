@@ -17,6 +17,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
+import org.mozilla.javascript.Context;
 import org.python.antlr.PythonTree;
 import org.python.antlr.base.mod;
 import org.python.core.CompilerFlags;
@@ -30,7 +31,6 @@ import org.python.jsr223.PyScriptEngine;
 import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
 
-import sun.org.mozilla.javascript.internal.Context;
 
 public class PythonScriptingHandler extends ScriptingHandler
 {

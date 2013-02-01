@@ -27,7 +27,7 @@ import javax.swing.JTextField;
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerSimple;
+import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 // import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
@@ -59,7 +59,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         // scriptHandler = new JSScriptingHandler62(provider, this, null,
         // false);
         // // } else {
-        scriptHandler = new JSScriptingHandlerSimple(provider, this, null, false);
+        scriptHandler = new JSScriptingHandlerRhino(provider, this, null, false);
         // // }
         scriptHandler.setNewEngine(false);
         scriptHandler.setForceRun(false);
@@ -81,7 +81,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
             // scriptHandler = new JSScriptingHandler62(provider, this, null,
             // false);
             // else
-            scriptHandler = new JSScriptingHandlerSimple(provider, this, null, false);
+            scriptHandler = new JSScriptingHandlerRhino(provider, this, null, false);
         }
         else if (language.contentEquals("python"))
         {

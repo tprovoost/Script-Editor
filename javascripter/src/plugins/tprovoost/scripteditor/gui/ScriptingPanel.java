@@ -78,7 +78,7 @@ import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
-import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerSimple;
+import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
@@ -544,7 +544,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 {
                     // if
                     // (System.getProperty("java.version").startsWith("1.6.")) {
-                    scriptHandler = new JSScriptingHandlerSimple(provider, textArea, pane.getGutter(), true);
+                    scriptHandler = new JSScriptingHandlerRhino(provider, textArea, pane.getGutter(), true);
                     // } else {
                     // scriptHandler = new JSScriptingHandlerSimple(provider, textArea,
                     // pane.getGutter(), true);
