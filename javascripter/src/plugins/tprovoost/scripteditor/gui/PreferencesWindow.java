@@ -39,7 +39,7 @@ public class PreferencesWindow extends IcyFrame
     private JCheckBox cboxAutoVerif;
     private JCheckBox cboxStrict;
     private JCheckBox cboxSoft;
-    private boolean release = true;
+    private boolean release = false;
 
     private PreferencesWindow()
     {
@@ -81,6 +81,7 @@ public class PreferencesWindow extends IcyFrame
             @Override
             public void actionPerformed(ActionEvent e)
             {
+                savePrefs();
                 close();
             }
 

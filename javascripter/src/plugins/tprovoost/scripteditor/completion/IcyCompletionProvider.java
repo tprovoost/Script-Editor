@@ -46,6 +46,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 {
 
     private ScriptingHandler handler;
+    private boolean advanced = true;
 
     public void setHandler(ScriptingHandler handler)
     {
@@ -425,13 +426,14 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     ++pOpen;
                     i += idx + 1;
                 }
+                i = 0;
                 while (i < text2.length() - 1 && (idx = text2.indexOf(')', i)) != -1)
                 {
                     ++pClose;
                     i += idx + 1;
                 }
                 int ppCount = pOpen - pClose;
-                if (ppCount >= 0)
+                if (ppCount > 0)
                 {
                     text = text2.substring(text2.lastIndexOf('(') + 1);
                     insideParentheses = true;
@@ -462,7 +464,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     if (clazz != null)
                     {
                         // test if this is a static call
-                        if ((methods = engineTypesMethod.get(clazz)) != null)
+                        if ((methods = engineTypesMethod.get(clazz)) != null && !advanced)
                         {
                             for (ScriptFunctionCompletion complete : methods)
                             {
@@ -472,19 +474,45 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                     retVal.add(generateSFCCopy(complete, true));
                             }
                         }
+                        else
+                        {
+                            for (Method m : clazz.getMethods())
+                            {
+                                if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
+                                    continue;
+                                FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
+                                        .getName());
+                                if (Modifier.isStatic(m.getModifiers()))
+                                    fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                                else
+                                    fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                                // TODO relevance on type: void or type? assignment
+                                fc.setDefinedIn(clazz.toString());
+                                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                                int i = 0;
+                                for (Class<?> clazzParam : m.getParameterTypes())
+                                {
+                                    params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                    ++i;
+                                }
+                                fc.setParams(params);
+                                retVal.add(fc);
+                            }
+                        }
                     }
 
                     // check in the local variables if it is a variable
                     // if it is : propose depending on the variable type
-                    Class<?> type = null;
-                    if ((type = handler.getVariableDeclaration(command)) != null
-                            || (type = engineVariables.get(command)) != null)
+                    if ((clazz = handler.getVariableDeclaration(command)) != null
+                            || (clazz = engineVariables.get(command)) != null)
                     {
-                        methods = engineTypesMethod.get(type);
-                        if (methods != null)
+                        methods = engineTypesMethod.get(clazz);
+                        if (methods != null && !advanced)
                         {
                             for (ScriptFunctionCompletion complete : methods)
                             {
+                                if (!complete.getName().toLowerCase().startsWith(text.toLowerCase()))
+                                    continue;
                                 if (complete.isStatic())
                                     complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
                                 else if (!complete.isStatic())
@@ -493,27 +521,81 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                     retVal.add(generateSFCCopy(complete));
                             }
                         }
+                        else
+                        {
+                            for (Method m : clazz.getMethods())
+                            {
+                                if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
+                                    continue;
+                                FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
+                                        .getName());
+                                if (Modifier.isStatic(m.getModifiers()))
+                                    fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                                else
+                                    fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                                // TODO relevance on type: void or type? assignment
+                                fc.setDefinedIn(clazz.toString());
+                                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                                int i = 0;
+                                for (Class<?> clazzParam : m.getParameterTypes())
+                                {
+                                    params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                    ++i;
+                                }
+                                fc.setParams(params);
+                                retVal.add(fc);
+                            }
+                        }
                     }
                     else
                     {
                         // if not : look the type of the function (if declared).
-                        int startOffset = getStartOffset(comp);
+                        int startOffset = getStartOffset(comp) - 1;
+                        System.out.println("offset:" + startOffset);
+                        for (Integer i : localFunctions.keySet())
+                            System.out.println(i);
                         IcyFunctionBlock fb = localFunctions.get(startOffset);
                         if (fb != null)
                         {
-                            // int fbSo = fb.getStartOffset();
-                            // int fbEo = fb.getEndOffset();
-                            // int lastDot = command.lastIndexOf('.');
-                            type = fb.getReturnType();
-                            methods = engineTypesMethod.get(type);
-                            for (ScriptFunctionCompletion complete : methods)
+                            clazz = fb.getReturnType();
+                            methods = engineTypesMethod.get(clazz);
+                            if (methods != null && !advanced)
                             {
-                                if (complete.isStatic())
-                                    complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-                                else if (!complete.isStatic())
-                                    complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                                if (text.isEmpty() || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
-                                    retVal.add(generateSFCCopy(complete));
+                                for (ScriptFunctionCompletion complete : methods)
+                                {
+                                    if (complete.isStatic())
+                                        complete.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                                    else if (!complete.isStatic())
+                                        complete.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                                    if (text.isEmpty()
+                                            || complete.getName().toLowerCase().startsWith(text.toLowerCase()))
+                                        retVal.add(generateSFCCopy(complete));
+                                }
+                            }
+                            else
+                            {
+                                for (Method m : clazz.getMethods())
+                                {
+                                    if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
+                                        continue;
+                                    FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
+                                            .getName());
+                                    if (Modifier.isStatic(m.getModifiers()))
+                                        fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                                    else
+                                        fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                                    // TODO relevance on type: void or type? assignment
+                                    fc.setDefinedIn(clazz.toString());
+                                    ArrayList<Parameter> params = new ArrayList<Parameter>();
+                                    int i = 0;
+                                    for (Class<?> clazzParam : m.getParameterTypes())
+                                    {
+                                        params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                        ++i;
+                                    }
+                                    fc.setParams(params);
+                                    retVal.add(fc);
+                                }
                             }
                         }
                     }

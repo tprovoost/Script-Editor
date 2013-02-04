@@ -60,13 +60,13 @@ import sun.org.mozilla.javascript.internal.Token;
 
 import com.sun.script.javascript.RhinoScriptEngine;
 
-public class JSScriptingHandlerSimple extends ScriptingHandler
+public class JSScriptingHandler6 extends ScriptingHandler
 {
 
     private int commandStartOffset;
     private int commandEndOffset;
 
-    public JSScriptingHandlerSimple(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
+    public JSScriptingHandler6(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
             boolean autocompilation)
     {
         super(provider, "ECMAScript", textArea, gutter, autocompilation);
@@ -111,30 +111,45 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
 
         // IMPORT PACKAGES
-        try
-        {
-            importJavaScriptPackages(getEngine());
-        }
-        catch (ScriptException e1)
-        {
-        }
+        // try {
+        // importJavaScriptPackages(engine);
+        // } catch (ScriptException e1) {
+        // }
 
         // IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
         FunctionCompletion c;
         // ArrayList<Parameter> params = new ArrayList<Parameter>();
-        c = new FunctionCompletion(provider, "getSequence", "Sequence");
-        c.setDefinedIn("MainInterface");
-        c.setReturnValueDescription("The focused sequence is returned.");
-        c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-        provider.addCompletion(c);
-        engineFunctions.put("getSequence", Sequence.class);
+        try
+        {
+            getEngine().eval(
+                    "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
+            c = new FunctionCompletion(provider, "getSequence", "Sequence");
+            c.setDefinedIn("MainInterface");
+            c.setReturnValueDescription("The focused sequence is returned.");
+            c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+            provider.addCompletion(c);
+            engineFunctions.put("getSequence", Sequence.class);
+        }
+        catch (ScriptException e)
+        {
+            System.out.println(e.getMessage());
+        }
 
-        c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
-        c.setDefinedIn("MainInterface");
-        c.setShortDescription("Returns the current image viewed in the focused sequence.");
-        c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
-        provider.addCompletion(c);
-        engineFunctions.put("getImage", IcyBufferedImage.class);
+        try
+        {
+            getEngine().eval(
+                    "function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
+            c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
+            c.setDefinedIn("MainInterface");
+            c.setShortDescription("Returns the current image viewed in the focused sequence.");
+            c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
+            provider.addCompletion(c);
+            engineFunctions.put("getImage", IcyBufferedImage.class);
+        }
+        catch (ScriptException e)
+        {
+            System.out.println(e.getMessage());
+        }
 
         // ADD JS FUNCTIONS
         engineFunctions.put("importClass", void.class);
@@ -187,7 +202,6 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         }
         catch (ScriptException e1)
         {
-
         }
         try
         {
@@ -530,10 +544,45 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         // initialize offset values
         //
         commandStartOffset = 0;
-        char charvalue;
+        char ch;
         while (commandStartOffset < s.length()
-                && ((charvalue = s.charAt(commandStartOffset)) == '\n' || charvalue == ' ' || charvalue == '\t'))
+                && ((ch = s.charAt(commandStartOffset)) == '_' || !Character.isLetterOrDigit(ch) || (ch == '/')))
+        {
+            if (ch == '/')
+            {
+                if (commandStartOffset < s.length() - 1)
+                {
+                    char chN = s.charAt(commandStartOffset + 1);
+                    if (chN == '/')
+                    {
+                        int idxEOL = s.indexOf('\n', commandStartOffset);
+                        if (idxEOL == -1)
+                        {
+                            commandStartOffset = s.length() - 1;
+                        }
+                        else
+                        {
+                            commandStartOffset = idxEOL + 1;
+                        }
+                    }
+                    else if (chN == '*')
+                    {
+                        int idxComment = s.indexOf("*/", commandStartOffset);
+                        if (idxComment == -1)
+                        {
+                            commandStartOffset = s.length() - 1;
+                        }
+                        else
+                        {
+                            commandStartOffset = idxComment + 2;
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
             commandStartOffset++;
+        }
 
         int idxln = s.indexOf('\n', commandStartOffset);
         int idxSemiColon = s.indexOf(';', commandStartOffset);
@@ -607,7 +656,42 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
                     // }
                     while (commandStartOffset < text.length()
                             && ((ch = text.charAt(commandStartOffset)) == '_' || !Character.isLetterOrDigit(ch)))
+                    {
+                        if (ch == '/')
+                        {
+                            if (commandStartOffset < text.length() - 1)
+                            {
+                                char chN = text.charAt(commandStartOffset + 1);
+                                if (chN == '/')
+                                {
+                                    int idxEOL = text.indexOf('\n', commandStartOffset);
+                                    if (idxEOL == -1)
+                                    {
+                                        commandStartOffset = text.length() - 1;
+                                    }
+                                    else
+                                    {
+                                        commandStartOffset = idxEOL;
+                                    }
+                                }
+                                else if (chN == '*')
+                                {
+                                    int idxEOL = text.indexOf("*/", commandStartOffset);
+                                    if (idxEOL == -1)
+                                    {
+                                        commandStartOffset = text.length() - 1;
+                                    }
+                                    else
+                                    {
+                                        commandStartOffset = idxEOL + "*/".length() - 1;
+                                    }
+                                }
+                                else
+                                    break;
+                            }
+                        }
                         commandStartOffset++;
+                    }
                     int idxln = text.indexOf('\n', commandStartOffset);
                     int idxSemiColon = text.indexOf(';', commandStartOffset);
                     if (idxln == -1)
@@ -644,23 +728,38 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
                 if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME)
                 {
                     commandStartOffset += "var".length();
-                    // Node resNode = n.getFirstChild().getFirstChild();
-                    String typeStr = "";
+                    Node resNode = n.getFirstChild().getFirstChild();
+                    Class<?> type = getVariableType(resNode, text);
+                    String typeStr = type == null ? "" : type.getName();
                     VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(), typeStr);
                     c.setSummary("variable");
                     c.setDefinedIn(fileName);
                     c.setRelevance(RELEVANCE_HIGH);
+                    int start;
+                    String textLine = text.substring(commandStartOffset, commandEndOffset);
+                    Pattern p = Pattern.compile("(var\\s+|)\\s*\\w+\\s=\\s((\\w|\\.|\\(|\\)|,|\")+)");
+                    Matcher m = p.matcher(textLine);
+                    if (m.find())
+                        start = textLine.indexOf(m.group(2));
+                    else
+                        start = commandStartOffset;
+                    if (type != null)
+                        addVariableDeclaration(c.getName(), type, commandStartOffset);
+                    else
+                        addVariableDeclaration(c.getName(), getRealType(resNode, text), start);
                     return c;
                 }
                 break;
             case Token.SETNAME:
             {
-                // Node resNode = n.getFirstChild().getNext();
-                String type = "";
-                VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(), type);
+                Node resNode = n.getFirstChild().getNext();
+                Class<?> type = getVariableType(resNode, text);
+                String typeStr = type == null ? "" : type.getName();
+                VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(), typeStr);
                 c.setSummary("Variable");
                 c.setDefinedIn(fileName);
                 c.setRelevance(RELEVANCE_HIGH);
+                addVariableDeclaration(c.getName(), type, commandStartOffset);
                 return c;
             }
             case Token.FUNCTION:
@@ -684,6 +783,7 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
                 return fc;
             }
             case Token.IF:
+                // case Token.NEW:
             case Token.IFEQ:
             case Token.IFNE:
             case Token.SWITCH:
@@ -693,6 +793,9 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
             case Token.FOR:
             case Token.ELSE:
             case Token.DO:
+            case Token.LOOP:
+            case Token.FALSE:
+            case Token.TRUE:
             case Token.FINALLY:
             case Token.WHILE:
             {
@@ -723,6 +826,7 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
             // case Token.WITH:
             // break;
             case Token.CALL:
+                resolveCallType(n, text, true);
                 break;
             default:
                 break;
@@ -737,6 +841,57 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
             list = new TreeMap<Integer, Class<?>>();
         list.put(offset, type);
         localVariables.put(name, list);
+    }
+
+    private Class<?> getVariableType(Node n, String text) throws ScriptException
+    {
+        if (n == null)
+            return null;
+        switch (n.getType())
+        {
+            case Token.NUMBER:
+                return Number.class;
+            case Token.STRING:
+                return String.class;
+            case Token.TRUE:
+            case Token.FALSE:
+                return boolean.class;
+            case Token.CALL:
+            {
+                return resolveCallType(n, text, false);
+            }
+            case Token.FUNCTION:
+            {
+                return void.class;
+            }
+            case Token.NEW:
+            {
+                return resolveNewType(n.getFirstChild(), text);
+            }
+            case Token.GETPROP:
+                if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.CALL)
+                    return resolveCallType(n.getFirstChild(), text, false);
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * @param node
+     *        : first child of node "NEW"
+     * @param commandEndOffset
+     * @param commandStartOffset
+     * @return
+     */
+    private Class<?> resolveNewType(Node n, String text) throws ScriptException
+    {
+        String type = buildNew(n, commandStartOffset, commandEndOffset);
+        Class<?> clazz = resolveClassDeclaration(type);
+        if (clazz == null)
+            throw new ScriptException("Type: " + type + " is undefined. Please check imports.", null,
+                    findLineContaining(text));
+        return clazz;
     }
 
     @Override
@@ -778,6 +933,330 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
         return toReturn;
     }
 
+    private String buildNew(Node n, int commandStartOffset, int commandEndOffset)
+    {
+        String newCall = "";
+        newCall = buildRecursiveNew(n);
+
+        // removes the first dot
+        if (newCall.startsWith("."))
+            newCall = newCall.substring(1);
+        if (newCall.startsWith("Packages."))
+            newCall = newCall.substring("Packages.".length());
+
+        return newCall;
+    }
+
+    private String buildRecursiveNew(Node n)
+    {
+        Node currentChild = n.getFirstChild();
+        switch (currentChild.getType())
+        {
+            case Token.GETPROP:
+                return buildRecursiveNew(currentChild.getFirstChild()) + "."
+                        + buildRecursiveNew(currentChild.getLastChild());
+            case Token.STRING:
+            case Token.NAME:
+                return currentChild.getString();
+            case Token.GETELEM: // table
+                return buildRecursiveNew(currentChild.getFirstChild()) + "[]";
+            default:
+                return "";
+        }
+    }
+
+    /**
+     * Represents
+     * 
+     * @param n
+     * @param commandEndOffset
+     * @param commandStartOffset
+     * @return
+     * @throws ScriptException
+     */
+    private Class<?> resolveCallType(Node n, String text, boolean noerror) throws ScriptException
+    {
+        if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.GETPROP)
+        {
+
+            String s = buildFunction2(n, text);
+            boolean containsNew = s.contains("new ");
+            if (containsNew)
+            {
+                s = s.substring("new ".length());
+            }
+
+            // create a regex pattern
+            Pattern p = Pattern.compile("\\w(\\w|\\.)*\\((\\w|\\.|,)*\\)");
+            Matcher match = p.matcher(s);
+
+            int idxP1 = 0;
+            int idxP2;
+            int decal = 0;
+            if (match.find(0))
+            {
+                String firstCall = match.group(0);
+                try
+                {
+                    int idx = text.indexOf(firstCall.substring(0, idxP1), commandStartOffset);
+                    if (idx != -1)
+                        commandStartOffset = idx;
+                    idxP1 = firstCall.indexOf('(');
+                    idxP2 = firstCall.indexOf(')');
+                    decal += idxP2 + 1;
+                    int lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+                    if (lastDot < 0)
+                    {
+                        lastDot = idxP1; // in case of new for instance.
+                    }
+                    Class<?> clazz = null;
+
+                    // get the className (or binding function name if it is the
+                    // case)
+                    String classNameOrFunctionNameOrVariable = firstCall.substring(0, lastDot);
+
+                    // get the arguments
+                    String argsString = firstCall.substring(idxP1 + 1, idxP2);
+
+                    // separate arguments
+                    String[] args = argsString.split(",");
+
+                    // it is a variable
+                    clazz = getVariableDeclaration(classNameOrFunctionNameOrVariable, commandStartOffset);
+                    ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+
+                    // an engine variable
+                    if (clazz == null)
+                        clazz = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
+                    if (clazz == null)
+                        // class
+                        clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+                    if (clazz == null)
+                        throw new ScriptException("Unknown class: " + classNameOrFunctionNameOrVariable, null,
+                                findLineContaining(text));
+
+                    // generate the Class<?> arguments
+                    Class<?> clazzes[];
+                    if (argsString.isEmpty())
+                    {
+                        clazzes = new Class<?>[0];
+                    }
+                    else
+                    {
+                        clazzes = new Class<?>[args.length];
+                        for (int i = 0; i < clazzes.length; ++i)
+                            clazzes[i] = resolveClassDeclaration(args[i]);
+                        clazzes = getGenericNumberTypes(text, clazz, firstCall.substring(lastDot + 1, idxP1), clazzes);
+                    }
+
+                    // the first type !
+                    Class<?> returnType;
+                    if (containsNew)
+                    {
+                        returnType = clazz;
+                    }
+                    else
+                    {
+                        String call = firstCall.substring(lastDot + 1, idxP1);
+                        if (call.contentEquals("newInstance"))
+                        {
+                            returnType = clazz;
+                        }
+                        else
+                        {
+                            Method m = clazz.getMethod(call, clazzes);
+                            returnType = m.getReturnType();
+                        }
+                    }
+
+                    if (DEBUG)
+                        System.out.println("function created: " + commandStartOffset + " "
+                                + text.substring(commandStartOffset));
+                    IcyFunctionBlock fb = new IcyFunctionBlock(firstCall.substring(lastDot + 1, idxP1),
+                            commandStartOffset, returnType);
+                    blockFunctions.put(commandStartOffset, fb);
+
+                    // iterate over the next functions, based on the returnType
+                    while (match.find(decal) && !(firstCall = match.group()).isEmpty())
+                    {
+                        if (returnType == void.class)
+                            throw new ScriptException("Void return, impossible to call something else on it.", null,
+                                    findLineContaining(text));
+                        idxP1 = firstCall.indexOf('(');
+                        idxP2 = firstCall.indexOf(')');
+                        decal += idxP2 + 2; // account for ) and .
+                        argsString = firstCall.substring(idxP1 + 1, idxP2);
+                        args = argsString.split(",");
+                        if (argsString.isEmpty())
+                        {
+                            clazzes = new Class<?>[0];
+                        }
+                        else
+                        {
+                            clazzes = new Class<?>[args.length];
+                            for (int i = 0; i < clazzes.length; ++i)
+                                clazzes[i] = ClassUtil.findClass(args[i]);
+                            lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+                            if (lastDot < 0)
+                            {
+                                lastDot = -1; // in case of new for instance.
+                            }
+                            clazzes = getGenericNumberTypes(text, returnType, firstCall.substring(lastDot + 1, idxP1),
+                                    clazzes);
+                        }
+                        String call = firstCall.substring(lastDot + 1, idxP1);
+                        if (call.contentEquals("newInstance"))
+                        {
+                            clazz.getConstructor(clazzes);
+                            returnType = clazz;
+                        }
+                        else
+                        {
+                            // a =
+                            // java.lang.reflect.Array.newInstance(java.lang.Double,5)
+
+                            Method m = returnType.getMethod(firstCall.substring(0, idxP1), clazzes);
+                            returnType = m.getReturnType();
+                        }
+                        if (DEBUG)
+                            System.out.println("function created: " + commandStartOffset
+                                    + text.substring(commandStartOffset));
+                        fb = new IcyFunctionBlock(firstCall.substring(lastDot + 1, idxP1), commandStartOffset,
+                                returnType);
+                        blockFunctions.put(commandStartOffset, fb);
+                    }
+                    return returnType;
+                }
+                catch (ClassNotFoundException e)
+                {
+                    throw new ScriptException("Class Not Found: " + e.getLocalizedMessage(), null,
+                            findLineContaining(text));
+                }
+                catch (SecurityException e)
+                {
+                }
+                catch (NoSuchMethodException e)
+                {
+                    throw new ScriptException("Var Detection: No such method: " + e.getLocalizedMessage(), null,
+                            findLineContaining(text));
+                }
+            }
+            return null;
+        }
+        else
+        {
+            // direct call: binding
+            Node firstChild = n.getFirstChild();
+
+            // args are calculated but unused as of now.
+            String args = "(";
+            Node nextChild = firstChild.getNext();
+            int cptAdded = 0;
+            while (nextChild != null)
+            {
+                if (cptAdded > 0)
+                    args += ',';
+                Class<?> type = getRealType(nextChild, text);
+                if (type == null)
+                    args += "unknown";
+                else
+                    args += type;
+                nextChild = nextChild.getNext();
+                cptAdded++;
+            }
+            args += ')';
+            if (firstChild.getType() != Token.GETELEM)
+            {
+                Class<?> res = localFunctions.get(firstChild.getString() + args);
+                if (res == null)
+                    res = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions()
+                            .get(firstChild.getString()); // +
+                // args);
+                if (res == null && !noerror)
+                    throw new ScriptException("Var Detection: " + firstChild.getString() + args + " does not exist.",
+                            null, findLineContaining(text));
+                return res;
+            }
+            else
+            {
+                String s = buildFunction2(n, text);
+
+                int idxP1 = s.indexOf('(');
+                int idxP2 = s.indexOf(')');
+                int lastDot = s.substring(0, idxP1).lastIndexOf('.');
+                if (lastDot < 0)
+                {
+                    lastDot = idxP1; // in case of new for instance.
+                }
+                Class<?> clazz = null;
+
+                // get the className (or binding function name if it is the
+                // case)
+                String className = s.substring(0, lastDot);
+
+                // get the arguments
+                String argsString = s.substring(idxP1 + 1, idxP2);
+
+                // separate arguments
+                String[] argsAsString = argsString.split(",");
+
+                clazz = resolveClassDeclaration(className);
+                if (clazz == null)
+                    throw new ScriptException("Unknown class: " + className, null, findLineContaining(text));
+
+                try
+                {
+                    // generate the Class<?> arguments
+                    Class<?> clazzes[];
+                    if (argsString.isEmpty())
+                    {
+                        clazzes = new Class<?>[0];
+                    }
+                    else
+                    {
+                        clazzes = new Class<?>[argsAsString.length];
+                        for (int i = 0; i < clazzes.length; ++i)
+                            clazzes[i] = resolveClassDeclaration(argsAsString[i]);
+                        clazzes = getGenericNumberTypes(text, clazz, s.substring(lastDot + 1, idxP1), clazzes);
+                    }
+
+                    // the first type
+                    Class<?> returnType;
+                    String call = s.substring(lastDot + 1, idxP1);
+                    if (call.contentEquals("newInstance"))
+                    {
+                        returnType = clazz;
+                    }
+                    else
+                    {
+                        Method m = clazz.getMethod(call, clazzes);
+                        returnType = m.getReturnType();
+                    }
+
+                    if (DEBUG)
+                        System.out.println("function created: " + commandStartOffset + " "
+                                + text.substring(commandStartOffset));
+                    IcyFunctionBlock fb = new IcyFunctionBlock(s.substring(lastDot + 1, idxP1), commandStartOffset,
+                            returnType);
+                    blockFunctions.put(commandStartOffset, fb);
+                    return returnType;
+                }
+                catch (SecurityException e)
+                {
+                }
+                catch (NoSuchMethodException e)
+                {
+                    throw new ScriptException("Var Detection: No such method: " + e.getLocalizedMessage(), null,
+                            findLineContaining(text));
+                }
+            }
+            int lineError = findLineContaining(text);
+            if (lineError != -1)
+                throw new ScriptException("function does not exist. at line number " + lineError, null, lineError);
+            throw new ScriptException("function does not exist", null, lineError);
+        }
+    }
+
     /**
      * Returns the line containg the string. Be careful, the first line has
      * index 1.
@@ -785,7 +1264,6 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
      * @param string
      * @return
      */
-    @SuppressWarnings("unused")
     private int findLineContaining(String text)
     {
         if (textArea instanceof JTextArea)
@@ -807,7 +1285,333 @@ public class JSScriptingHandlerSimple extends ScriptingHandler
             return 1;
     }
 
+    /**
+     * FIXME : issue with same name functions, will always use the first one.
+     * 
+     * @param clazz
+     * @param function
+     * @param argsClazzes
+     * @param commandStartOffset
+     * @param commandEndOffset
+     * @return
+     */
+    private Class<?>[] getGenericNumberTypes(String s, Class<?> clazz, String function, Class<?>[] argsClazzes)
+    {
+        Class<?>[] toReturn = new Class<?>[argsClazzes.length];
+        String fullCommand;
+        if (commandStartOffset >= 0 && commandStartOffset < s.length() && commandEndOffset >= 0
+                && commandEndOffset <= s.length())
+            fullCommand = s.substring(commandStartOffset, commandEndOffset);
+        else
+            return null;
+        int idxStart = fullCommand.indexOf(function);
+
+        if (idxStart == -1)
+            return argsClazzes;
+
+        int idxP1 = fullCommand.indexOf('(', idxStart);
+        int idxP2 = fullCommand.indexOf(')', idxStart);
+
+        if (idxP1 == -1 || idxP2 == -1)
+            return argsClazzes;
+
+        String argumentsChained = fullCommand.substring(idxP1 + 1, idxP2);
+        String[] args = argumentsChained.split(",");
+
+        if (args.length != argsClazzes.length)
+            return argsClazzes;
+
+        // FIXME
+        boolean hasNumber = false;
+        for (int i = 0; i < argsClazzes.length; ++i)
+        {
+            if (argsClazzes[i] == Number.class)
+                hasNumber = true;
+            toReturn[i] = argsClazzes[i];
+        }
+        if (hasNumber)
+        {
+            for (Method m : clazz.getMethods())
+            {
+                if (m.getName().contentEquals(function))
+                {
+                    Class<?> params[] = m.getParameterTypes();
+                    boolean ok = true;
+                    if (params.length == argsClazzes.length)
+                    {
+                        for (int i = 0; i < params.length && ok; ++i)
+                        {
+                            if (params[i].isAssignableFrom(argsClazzes[i]))
+                                toReturn[i] = params[i];
+                            else if (params[i].isPrimitive())
+                            {
+                                if ((params[i] == float.class || params[i] == double.class) && args[i].contains("."))
+                                    toReturn[i] = params[i];
+                                else if (!(params[i] == float.class || params[i] == double.class)
+                                        && !args[i].contains("."))
+                                    toReturn[i] = params[i];
+                                else
+                                    break;
+                            }
+                            else
+                                break;
+                        }
+                    }
+                }
+            }
+            return toReturn;
+        }
+        else
+            return toReturn;
+    }
+
+    /**
+     * @param n
+     * @param text
+     * @return
+     * @throws ScriptException
+     */
     @SuppressWarnings("unused")
+    private String buildFunction(Node n, String text) throws ScriptException
+    {
+        String callName = "";
+        String newType = "";
+        boolean functionNext = true;
+        Node currentChild = n;
+        int type;
+        while (currentChild != null)
+        {
+            if ((type = currentChild.getType()) == Token.GETPROP)
+            {
+                String s = currentChild.getLastChild().getString();
+                if (functionNext)
+                {
+                    s += '(';
+                    Node nextChild = currentChild.getNext();
+                    int cptAdded = 0;
+                    while (nextChild != null)
+                    {
+                        if (cptAdded > 0)
+                            s += ',';
+                        Class<?> result = getRealType(nextChild, text);
+                        if (result == null)
+                            throw new ScriptException("unknown type.", "", findLineContaining(text));
+                        s += result.getName();
+                        nextChild = nextChild.getNext();
+                        cptAdded++;
+                    }
+                    s += ')';
+                    functionNext = false;
+                }
+                callName = "." + s + callName;
+                currentChild = currentChild.getFirstChild();
+            }
+            else if (type == Token.CALL)
+            {
+                functionNext = true;
+                currentChild = currentChild.getFirstChild();
+            }
+            else if (type == Token.NEW)
+            {
+                newType = currentChild.getFirstChild().getString() + "(";
+                // arguments iteration:
+                Node nextChild = currentChild.getNext();
+                int cptAdded = 0;
+                while (nextChild != null)
+                {
+                    if (cptAdded > 0)
+                        newType += ',';
+                    Class<?> result = getRealType(nextChild, text);
+                    if (result == null)
+                        throw new ScriptException("unknown type.");
+                    newType += result.getName();
+                    nextChild = nextChild.getNext();
+                    cptAdded++;
+                }
+                newType += ")";
+                currentChild = null;
+            }
+            else if (type == Token.STRING || type == Token.NAME)
+            {
+                if (functionNext)
+                    callName = "." + currentChild.getString() + "()" + callName;
+                else
+                    callName = "." + currentChild.getString() + callName;
+                currentChild = currentChild.getFirstChild();
+            }
+            else if (type == Token.GETELEM)
+            {
+                currentChild = currentChild.getFirstChild();
+            }
+            else
+            {
+                return "";
+            }
+        }
+        // removes the last dot
+        callName = callName.substring(1);
+
+        // removes eventual "Packages." String
+        if (callName.startsWith("Packages.") || callName.startsWith("packages."))
+            callName = callName.substring("Packages.".length());
+
+        if (!newType.isEmpty())
+            callName = "new " + newType + "." + callName;
+
+        return callName;
+    }
+
+    private String buildFunction2(Node n, String text) throws ScriptException
+    {
+        String callName = "";
+        boolean functionNext = true;
+        Node currentChild = n;
+
+        callName = buildFunctionRecursive(callName, currentChild, text, functionNext);
+
+        if (!callName.isEmpty())
+        {
+
+            // removes the last dot
+            callName = callName.substring(1);
+
+            // removes eventual "Packages." String
+            if (callName.startsWith("Packages.") || callName.startsWith("packages."))
+                callName = callName.substring("Packages.".length());
+
+        }
+        return callName;
+    }
+
+    /**
+     * Recursive version
+     * 
+     * @throws ScriptException
+     */
+    private String buildFunctionRecursive(String callName, Node n, String text, boolean functionNext)
+            throws ScriptException
+    {
+        if (n != null)
+        {
+            int type;
+            if ((type = n.getType()) == Token.GETPROP)
+            {
+                String s = n.getLastChild().getString();
+                if (functionNext)
+                {
+                    s += '(';
+                    Node nextChild = n.getNext();
+                    int cptAdded = 0;
+                    while (nextChild != null)
+                    {
+                        if (cptAdded > 0)
+                            s += ',';
+                        Class<?> result = getRealType(nextChild, text);
+                        if (result == null)
+                            throw new ScriptException("unknown type.", "", findLineContaining(text));
+                        s += result.getName();
+                        nextChild = nextChild.getNext();
+                        cptAdded++;
+                    }
+                    s += ')';
+                    functionNext = false;
+                }
+                callName = "." + s + callName;
+                return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+            }
+            else if (type == Token.CALL)
+            {
+                functionNext = true;
+                return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+            }
+            else if (type == Token.NEW)
+            {
+                String newType = "";
+                newType = n.getFirstChild().getString() + "(";
+                // arguments iteration:
+                Node nextChild = n.getNext();
+                int cptAdded = 0;
+                while (nextChild != null)
+                {
+                    if (cptAdded > 0)
+                        newType += ',';
+                    Class<?> result = getRealType(nextChild, text);
+                    if (result == null)
+                        throw new ScriptException("unknown type.");
+                    newType += result.getName();
+                    nextChild = nextChild.getNext();
+                    cptAdded++;
+                }
+                newType += ")";
+                callName = "new " + newType + "." + callName;
+            }
+            else if (type == Token.STRING || type == Token.NAME)
+            {
+                if (functionNext)
+                    callName = "." + n.getString() + "()" + callName;
+                else
+                    callName = "." + n.getString() + callName;
+                return buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+            }
+            else if (type == Token.GETELEM)
+            {
+                // specific call
+                String a = buildFunctionRecursive(callName, n.getFirstChild(), text, functionNext);
+                String b = buildFunctionRecursive(callName, n.getLastChild(), text, functionNext);
+                a = a.substring(0, a.indexOf('('));
+                b = b.substring(0, b.lastIndexOf('('));
+                callName = a + b;
+            }
+        }
+        return callName;
+    }
+
+    /**
+     * Get the type of a variable definition.
+     * 
+     * @param n
+     * @param commandStartOffset
+     * @param commandEndOffset
+     * @return
+     * @throws ScriptException
+     */
+    public Class<?> getRealType(Node n, String text) throws ScriptException
+    {
+        switch (n.getType())
+        {
+            case Token.NUMBER:
+                return Number.class;
+            case Token.STRING:
+                return String.class;
+            case Token.TRUE:
+            case Token.FALSE:
+                return boolean.class;
+            case Token.NAME:
+                return getVariableDeclaration(n.getString(), commandStartOffset);
+            case Token.CALL:
+                Class<?> res = resolveCallType(n, text, false);
+                return res;
+            case Token.GETPROP:
+                // class wanted
+                String className = generateClassName(n, "");
+                Class<?> toReturn = null;
+                try
+                {
+                    toReturn = ClassUtil.findClass(className);
+                }
+                catch (ClassNotFoundException e)
+                {
+                }
+                return toReturn;
+            case Token.NEW:
+                return resolveNewType(n, text);
+            case Token.ARRAYLIT:
+                return Object[].class;
+        }
+
+        return null;
+    }
+
     private String generateClassName(Node n, String toReturn)
     {
         if (n.getType() == Token.GETPROP)

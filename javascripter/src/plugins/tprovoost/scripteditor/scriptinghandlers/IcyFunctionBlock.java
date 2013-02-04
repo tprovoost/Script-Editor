@@ -39,4 +39,14 @@ public class IcyFunctionBlock
     {
         return returnType;
     }
+    
+    public void setStartOffset(int startOffset)
+    {
+        this.startOffset = startOffset;
+    }
+    
+    public void setReturnType(Class<?> returnType)
+    {
+        this.returnType = returnType;
+    }
 }

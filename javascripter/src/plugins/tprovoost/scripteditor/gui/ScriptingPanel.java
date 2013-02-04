@@ -566,6 +566,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 if (scriptHandler != null)
                 {
                     scriptHandler.addScriptListener(ScriptingPanel.this);
+                    PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+                    scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
+                    scriptHandler.setStrict(prefWin.isStrictModeEnabled());
+                    scriptHandler.setForceRun(prefWin.isOverrideEnabled());
                     provider.setHandler(scriptHandler);
                     textArea.addKeyListener(scriptHandler);
                     PluginRepositoryLoader.addListener(scriptHandler);

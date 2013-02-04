@@ -158,7 +158,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
 
     /** Turn to true if you need to display more information in the console. */
-    protected static final boolean DEBUG = false;
+    protected static final boolean DEBUG = true;
 
     // Different relevance of items. Simplify code, but integer values can
     // always be used.
@@ -502,7 +502,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             localFunctions.clear();
             scriptDeclaredImports.clear();
             scriptDeclaredImportClasses.clear();
-            blockFunctions.clear();
             registerImports();
             if (provider != null && varInterpretation)
                 detectVariables(s, context);
@@ -917,7 +916,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         public AutoVerify()
         {
-            timer = new Timer(1000, this);
+            timer = new Timer(4000, this);
             timer.setRepeats(false);
         }
 
@@ -955,16 +954,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void changedUpdate(DocumentEvent e)
         {
             lastChange = true;
-            ThreadUtil.invokeLater(new Runnable()
-            {
-
-                @Override
-                public void run()
-                {
-                    if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
-                        timer.restart();
-                }
-            });
+            timer.restart();
+            // ThreadUtil.invokeLater(new Runnable()
+            // {
+            //
+            // @Override
+            // public void run()
+            // {
+            // if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
+            // timer.restart();
+            // }
+            // });
         }
 
         @Override
@@ -983,8 +983,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         @Override
         public void focusGained(FocusEvent e)
         {
-            if (lastChange)
-                timer.restart();
+            // if (lastChange)
+            // timer.restart();
         }
     }
 
