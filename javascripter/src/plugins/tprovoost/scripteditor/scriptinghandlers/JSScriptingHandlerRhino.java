@@ -54,6 +54,7 @@ import org.mozilla.javascript.ast.ExpressionStatement;
 import org.mozilla.javascript.ast.FunctionCall;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.IfStatement;
+import org.mozilla.javascript.ast.NewExpression;
 import org.mozilla.javascript.ast.PropertyGet;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.StringLiteral;
@@ -630,7 +631,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         // create a regex pattern
-        Pattern p = Pattern.compile("\\w(\\w|\\.)*\\((\\w|\\.|\\[|,|\\])*\\)");
+        Pattern p = Pattern.compile("\\w(\\w|\\.)*\\((\\w|\\.|\\[|,|\\]|\\(|\\)| )*\\)");
         Matcher match = p.matcher(s);
 
         int idxP1 = 0;
@@ -742,7 +743,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     {
                         clazzes = new Class<?>[args.length];
                         for (int i = 0; i < clazzes.length; ++i)
-                            clazzes[i] = ClassUtil.findClass(args[i]);
+                            clazzes[i] = resolveClassDeclaration(args[i]);
                         lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
                         if (lastDot < 0)
                         {
@@ -751,7 +752,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         clazzes = getGenericNumberTypes(text, n, returnType, firstCall.substring(lastDot + 1, idxP1),
                                 clazzes);
                     }
-                    String call2 = firstCall.substring(lastDot + 1, idxP1);
+                    String call2;
+                    if (lastDot != -1)
+                        call2 = firstCall.substring(lastDot + 1, idxP1);
+                    else
+                        call2 = firstCall.substring(0, idxP1);
                     if (call2.contentEquals("newInstance"))
                     {
                         clazz.getConstructor(clazzes);
@@ -770,10 +775,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     blockFunctions.put(fb.getStartOffset(), fb);
                 }
                 return returnType;
-            }
-            catch (ClassNotFoundException e)
-            {
-                throw new ScriptException("Class Not Found: " + e.getLocalizedMessage(), null, n.getLineno());
             }
             catch (SecurityException e)
             {
@@ -1124,7 +1125,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     if (i != 0)
                         args += ",";
-                    args += getRealType(arg);
+                    args += getRealType(arg).getName();
                     i++;
                 }
                 args += ")";
@@ -1163,29 +1164,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     functionBlocksToResolve.add(fb);
                 }
                 return toReturn;
-            }
-            else if (type == Token.NEW)
-            {
-                // TODO
-                // String newType = "";
-                // newType = n.getFirstChild().getString() + "(";
-                // // arguments iteration:
-                // Node nextChild = n.getNext();
-                // int cptAdded = 0;
-                // while (nextChild != null)
-                // {
-                // if (cptAdded > 0)
-                // newType += ',';
-                // Class<?> result = getRealType(nextChild);
-                // if (result == null)
-                // throw new ScriptException("unknown type.");
-                // newType += result.getName();
-                // nextChild = nextChild.getNext();
-                // cptAdded++;
-                // }
-                // newType += ")";
-                // callName = "new " + newType + "." + callName;
-                elem = "new " + elem;
             }
             else if (type == Token.NAME)
             {
@@ -1235,19 +1213,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.GETPROP:
                 // class wanted
                 String className = generateClassName(n, "");
-                Class<?> toReturn = null;
-                try
-                {
-                    toReturn = ClassUtil.findClass(className);
-                }
-                catch (ClassNotFoundException e)
-                {
-                }
-                return toReturn;
+                return resolveClassDeclaration(className);
                 // case Token.NEW:
                 // return resolveNewType(n, text);
             case Token.ARRAYLIT:
                 return Object[].class;
+            case Token.NEW:
+                NewExpression nexp = (NewExpression) n;
+                AstNode target = nexp.getTarget();
+                className = generateClassName(target, "");
+                return resolveClassDeclaration(className);
         }
 
         return null;

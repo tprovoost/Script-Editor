@@ -617,8 +617,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 String str = "";
                 for (int i = 0; i < charCount - 1; ++i)
                     str += '-';
-                errorOutput.append(str + "\n");
-                errorOutput.append("New Engine created" + "\n");
+                // errorOutput.append(str + "\n");
+                // errorOutput.append("New Engine created" + "\n");
                 errorOutput.append(str + "\n");
                 g.dispose();
             }
