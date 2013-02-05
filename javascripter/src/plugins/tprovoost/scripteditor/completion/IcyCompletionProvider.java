@@ -404,7 +404,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
     protected List<Completion> getCompletionsImpl(JTextComponent comp)
     {
 
@@ -572,7 +571,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         populateWithClassTypes(clazz, text, retVal, false);
     }
 
-    @SuppressWarnings("unchecked")
     private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal, boolean staticOnly)
     {
         ArrayList<Completion> listFields = new ArrayList<Completion>();
