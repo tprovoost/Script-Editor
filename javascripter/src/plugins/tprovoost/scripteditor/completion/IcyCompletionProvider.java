@@ -1,18 +1,19 @@
 package plugins.tprovoost.scripteditor.completion;
 
-import icy.file.FileUtil;
 import icy.gui.frame.progress.ProgressFrame;
 import icy.util.ClassUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -47,12 +48,26 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
     private ScriptingHandler handler;
     private boolean advanced = true;
+    private static Comparator<Completion> comparatorFull = new Comparator<Completion>()
+    {
+        @Override
+        public int compare(Completion c1, Completion c2)
+        {
+            int compare = ((Integer) c2.getRelevance()).compareTo(c1.getRelevance());
+            if (compare == 0)
+            {
+                return c1.getInputText().compareTo(c2.getInputText());
+            }
+            return compare;
+        }
+    };
 
     public void setHandler(ScriptingHandler handler)
     {
         this.handler = handler;
     }
 
+    @SuppressWarnings("unchecked")
     public void installMethods(ArrayList<Method> methods)
     {
         for (final Method method : methods)
@@ -106,14 +121,13 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     }
 
     /**
-     * FIXME
-     * 
      * @param localFunctions
      * @param engineTypesMethod
      * @param provider
      * @param engine
      * @param frame
      */
+    @Deprecated
     public void findAllMethods(ScriptEngine engine, ProgressFrame frame)
     {
 
@@ -125,10 +139,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
         try
         {
-            String sep = FileUtil.separator;
             clazzes = getClassNamesFromPackage("icy");
-            ArrayList<String> clazzes2 = getNames("." + sep + "plugins" + sep + "adufour" + sep + "blocks" + sep
-                    + "Blocks.jar", "plugins/adufour/blocks");
         }
         catch (IOException e1)
         {
@@ -324,6 +335,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         toReturn.addAll(functions);
         toReturn.addAll(basic);
         toReturn.addAll(originalList);
+        Collections.sort(toReturn, comparatorFull);
         return toReturn;
     }
 
@@ -392,6 +404,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     protected List<Completion> getCompletionsImpl(JTextComponent comp)
     {
 
@@ -399,11 +412,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         List<Completion> retVal = new ArrayList<Completion>();
         String text = getAlreadyEnteredTextWithFunc(comp);
         int lastIdx = text.lastIndexOf('.');
-        boolean insideParentheses = false;
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
         HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
-        // FIXME cannot work because returns null on the provider.
+
+        // Cannot work directly because returns null on the provider.
         HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
         HashMap<Integer, IcyFunctionBlock> localFunctions;
         if (handler != null)
@@ -436,10 +449,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 if (ppCount > 0)
                 {
                     text = text2.substring(text2.lastIndexOf('(') + 1);
-                    insideParentheses = true;
+                    lastIdx = text.lastIndexOf('.');
                 }
             }
-            if (text.isEmpty() || insideParentheses || text.startsWith("Math.") || lastIdx == -1)
+            if (text.isEmpty() || text.startsWith("Math.") || lastIdx == -1)
             {
                 doClassicCompletion(text, retVal);
             }
@@ -463,7 +476,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     Class<?> clazz = handler.resolveClassDeclaration(command);
                     if (clazz != null)
                     {
-                        // test if this is a static call
+                        // ----------------------------
+                        // STATIC ACCESS
+                        // ----------------------------
                         if ((methods = engineTypesMethod.get(clazz)) != null && !advanced)
                         {
                             for (ScriptFunctionCompletion complete : methods)
@@ -476,28 +491,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            for (Method m : clazz.getMethods())
-                            {
-                                if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
-                                    continue;
-                                FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
-                                        .getName());
-                                if (Modifier.isStatic(m.getModifiers()))
-                                    fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                                else
-                                    continue;
-                                // TODO relevance on type: void or type? assignment
-                                fc.setDefinedIn(clazz.toString());
-                                ArrayList<Parameter> params = new ArrayList<Parameter>();
-                                int i = 0;
-                                for (Class<?> clazzParam : m.getParameterTypes())
-                                {
-                                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
-                                    ++i;
-                                }
-                                fc.setParams(params);
-                                retVal.add(fc);
-                            }
+                            populateWithClassTypes(clazz, text, retVal, true);
                         }
                     }
 
@@ -506,6 +500,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     if ((clazz = handler.getVariableDeclaration(command)) != null
                             || (clazz = engineVariables.get(command)) != null)
                     {
+                        // ----------------------------
+                        // VARIABLE ACCESS
+                        // ----------------------------
                         methods = engineTypesMethod.get(clazz);
                         if (methods != null && !advanced)
                         {
@@ -523,35 +520,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            for (Method m : clazz.getMethods())
-                            {
-                                if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
-                                    continue;
-                                FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
-                                        .getName());
-                                if (Modifier.isStatic(m.getModifiers()))
-                                    fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-                                else
-                                    fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                                // TODO relevance on type: void or type? assignment
-                                fc.setDefinedIn(clazz.toString());
-                                ArrayList<Parameter> params = new ArrayList<Parameter>();
-                                int i = 0;
-                                for (Class<?> clazzParam : m.getParameterTypes())
-                                {
-                                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
-                                    ++i;
-                                }
-                                fc.setParams(params);
-                                retVal.add(fc);
-                            }
+                            populateWithClassTypes(clazz, text, retVal);
                         }
                     }
                     else
                     {
+                        // ----------------------------
+                        // FUNCTION ACCESS
+                        // ----------------------------
                         // if not : look the type of the function (if declared).
                         int startOffset = getStartOffset(comp) - 1;
-                        System.out.println("offset:" + startOffset);
+                        // System.out.println("offset:" + startOffset);
                         for (Integer i : localFunctions.keySet())
                             System.out.println(i);
                         IcyFunctionBlock fb = localFunctions.get(startOffset);
@@ -574,28 +553,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                             }
                             else
                             {
-                                for (Method m : clazz.getMethods())
-                                {
-                                    if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
-                                        continue;
-                                    FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
-                                            .getName());
-                                    if (Modifier.isStatic(m.getModifiers()))
-                                        fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-                                    else
-                                        fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                                    // TODO relevance on type: void or type? assignment
-                                    fc.setDefinedIn(clazz.toString());
-                                    ArrayList<Parameter> params = new ArrayList<Parameter>();
-                                    int i = 0;
-                                    for (Class<?> clazzParam : m.getParameterTypes())
-                                    {
-                                        params.add(new Parameter(getType(clazzParam, true), "arg" + i));
-                                        ++i;
-                                    }
-                                    fc.setParams(params);
-                                    retVal.add(fc);
-                                }
+                                populateWithClassTypes(clazz, text, retVal);
                             }
                         }
                     }
@@ -607,6 +565,88 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             }
         }
         return retVal;
+    }
+
+    private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal)
+    {
+        populateWithClassTypes(clazz, text, retVal, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal, boolean staticOnly)
+    {
+        ArrayList<Completion> listFields = new ArrayList<Completion>();
+        ArrayList<Completion> listMethods = new ArrayList<Completion>();
+        for (Field f : clazz.getFields())
+        {
+            String name = f.getName();
+            if (!name.toLowerCase().startsWith(text.toLowerCase()))
+                continue;
+            int mod = f.getModifiers();
+            if (Modifier.isPublic(mod))
+            {
+                if (!staticOnly)
+                {
+                    VariableCompletion vc = new VariableCompletion(this, name, getType(f.getType(), true));
+                    if (Modifier.isStatic(mod))
+                        vc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                    else
+                        vc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                    listFields.add(vc);
+                }
+                else if (Modifier.isStatic(mod))
+                {
+                    VariableCompletion vc = new VariableCompletion(this, name, getType(f.getType(), true));
+                    vc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                    listFields.add(vc);
+                }
+            }
+        }
+        for (Method m : clazz.getMethods())
+        {
+            if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
+                continue;
+            int mod = m.getModifiers();
+            if (!staticOnly)
+            {
+                ScriptFunctionCompletion fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                if (Modifier.isStatic(mod))
+                    fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
+                else
+                    fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+
+                // TODO relevance assignment = type / expr = void
+                fc.setDefinedIn(clazz.toString());
+                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                int i = 0;
+                for (Class<?> clazzParam : m.getParameterTypes())
+                {
+                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
+                    ++i;
+                }
+                fc.setParams(params);
+                listMethods.add(fc);
+            }
+            else if (Modifier.isStatic(mod))
+            {
+                ScriptFunctionCompletion fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+
+                // TODO relevance assignment = type / expr = void
+                fc.setDefinedIn(clazz.toString());
+                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                int i = 0;
+                for (Class<?> clazzParam : m.getParameterTypes())
+                {
+                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
+                    ++i;
+                }
+                fc.setParams(params);
+                listMethods.add(fc);
+            }
+        }
+        retVal.addAll(listFields);
+        retVal.addAll(listMethods);
     }
 
     private Completion generateSFCCopy(ScriptFunctionCompletion complete, boolean b)
@@ -632,6 +672,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return generateSFCCopy(complete, false);
     }
 
+    @SuppressWarnings("unchecked")
     protected void doClassicCompletion(String text, List<Completion> retVal)
     {
         // nothing worked, display normal

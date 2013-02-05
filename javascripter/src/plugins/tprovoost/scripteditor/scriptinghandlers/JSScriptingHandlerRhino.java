@@ -269,6 +269,24 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             String foundString = m.group(0);
             String imported = m.group(2);
             scriptDeclaredImportClasses.add(imported);
+
+            PluginDescriptor plugindesc = PluginRepositoryLoader.getPlugin(imported);
+            if (plugindesc != null)
+            {
+                // method is in the exact plugin
+                if (!plugindesc.isInstalled())
+                    PluginInstaller.install(plugindesc, false);
+            }
+            else
+            {
+                // class around plugin
+                for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins())
+                {
+                    if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
+                        PluginInstaller.install(pd, false);
+                }
+            }
+
             try
             {
                 if ((provider.getCompletionByInputText(imported)) == null)
@@ -293,6 +311,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             String foundString = m.group(0);
             String imported = m.group(2);
             scriptDeclaredImports.add(imported);
+
+            for (PluginDescriptor pd : PluginRepositoryLoader.getPlugins())
+            {
+                if (pd.getClassName().startsWith(imported) && !pd.isInstalled())
+                    PluginInstaller.install(pd, false);
+            }
+
             int idxString = s.indexOf(foundString, offset);
             if (idxString == -1)
                 break;
@@ -449,6 +474,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     @Override
     protected void detectVariables(String s, Context context) throws ScriptException
     {
+        currentText = s;
         final CompilerEnvirons comp = new CompilerEnvirons();
         comp.initFromContext(context);
         final Parser parser = new Parser(comp, comp.getErrorReporter());
@@ -481,6 +507,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      */
     private void registerVariables(String text, AstNode n, AstRoot root) throws ScriptException
     {
+        if (n == null)
+            return;
         if (DEBUG)
             System.out.println("current node: " + typeToName(n.getType()));
         // register current
@@ -900,9 +928,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.NEW:
                 NewExpression nexp = (NewExpression) right;
                 AstNode target = nexp.getTarget();
-                String className = generateClassName(target, "");
-                return resolveClassDeclaration(className);
-
+                if (target != null)
+                {
+                    String className = generateClassName(target, "");
+                    return resolveClassDeclaration(className);
+                }
         }
         return null;
     }
@@ -1007,6 +1037,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      */
     private void dumpTree(Node n, AstRoot root, int commandIdx, String decal)
     {
+        if (n == null)
+            return;
         System.out.print(commandIdx + ": " + decal + typeToName(n.getType()));
         switch (n.getType())
         {
@@ -1150,7 +1182,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     if (i != 0)
                         args += ",";
-                    args += getRealType(arg).getName();
+                    Class<?> typeC = getRealType(arg);
+                    if (typeC != null)
+                        args += typeC.getName();
+                    else
+                        args += "unknown";
                     i++;
                 }
                 args += ")";
@@ -1221,6 +1257,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      */
     public Class<?> getRealType(AstNode n) throws ScriptException
     {
+        if (n == null)
+            return null;
         switch (n.getType())
         {
             case Token.NUMBER:

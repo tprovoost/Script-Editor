@@ -161,7 +161,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
 
     /** Turn to true if you need to display more information in the console. */
-    protected static final boolean DEBUG = true;
+    protected static final boolean DEBUG = false;
 
     // Different relevance of items. Simplify code, but integer values can
     // always be used.
@@ -605,7 +605,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     }
 
     @SuppressWarnings("unchecked")
-    private void clearScriptVariables()
+    private synchronized void clearScriptVariables()
     {
         localVariables.clear();
         localFunctions.clear();
@@ -618,7 +618,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 BasicJavaClassCompletion c = new BasicJavaClassCompletion(provider, ClassUtil.findClass(s));
                 s = c.getName();
                 List<Completion> list = provider.getCompletionByInputText(s);
-                for (Completion c2 : list)
+                for (Completion c2 : new ArrayList<Completion>(list))
                 {
                     if (c2 instanceof VariableCompletion)
                     {
@@ -629,7 +629,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             }
             catch (ClassNotFoundException e)
             {
-                e.printStackTrace();
             }
         }
         scriptDeclaredImportClasses.clear();

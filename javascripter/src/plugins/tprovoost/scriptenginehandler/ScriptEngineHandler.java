@@ -2,6 +2,7 @@ package plugins.tprovoost.scriptenginehandler;
 
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
+import icy.plugin.PluginInstaller.PluginInstallerListener;
 import icy.plugin.PluginLoader;
 
 import java.lang.reflect.Method;
@@ -19,7 +20,7 @@ import org.xeustechnologies.jcl.JarClassLoader;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
-public class ScriptEngineHandler
+public class ScriptEngineHandler implements PluginInstallerListener
 {
 
     /*---------------
@@ -51,42 +52,7 @@ public class ScriptEngineHandler
         if (bindingFunctions == null)
         {
             bindingFunctions = new ArrayList<Method>();
-            ProgressFrame frame = new ProgressFrame("Loading functions...");
-            try
-            {
-                if (getClass().getClassLoader() instanceof JarClassLoader)
-                {
-                    Collection<Class<?>> col = PluginLoader.getAllClasses().values();
-                    frame.setLength(col.size());
-                    int i = 0;
-                    for (Class<?> clazz : new ArrayList<Class<?>>(col))
-                    {
-                        if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
-                            continue;
-                        findBindingsMethods(clazz);
-                        ++i;
-                        frame.setPosition(i);
-                    }
-                }
-                else
-                {
-                    ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
-                    frame.setLength(list.size());
-                    int i = 0;
-                    for (PluginDescriptor pd : list)
-                    {
-                        // System.out.println(pd);
-                        findBindingsMethods(pd.getPluginClass());
-                        ++i;
-                        frame.setPosition(i);
-                    }
-                }
-            }
-            finally
-            {
-                // chrono.displayInSeconds();
-                frame.close();
-            }
+            findBindingMethodsPlugins();
         }
     }
 
@@ -166,6 +132,46 @@ public class ScriptEngineHandler
         return factory;
     }
 
+    private void findBindingMethodsPlugins()
+    {
+        ProgressFrame frame = new ProgressFrame("Loading functions...");
+        try
+        {
+            if (getClass().getClassLoader() instanceof JarClassLoader)
+            {
+                Collection<Class<?>> col = PluginLoader.getAllClasses().values();
+                frame.setLength(col.size());
+                int i = 0;
+                for (Class<?> clazz : new ArrayList<Class<?>>(col))
+                {
+                    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
+                        continue;
+                    findBindingsMethods(clazz);
+                    ++i;
+                    frame.setPosition(i);
+                }
+            }
+            else
+            {
+                ArrayList<PluginDescriptor> list = PluginLoader.getPlugins();
+                frame.setLength(list.size());
+                int i = 0;
+                for (PluginDescriptor pd : list)
+                {
+                    // System.out.println(pd);
+                    findBindingsMethods(pd.getPluginClass());
+                    ++i;
+                    frame.setPosition(i);
+                }
+            }
+        }
+        finally
+        {
+            // chrono.displayInSeconds();
+            frame.close();
+        }
+    }
+
     public void findBindingsMethods(Class<?> clazz)
     {
         if (clazz == null)
@@ -239,6 +245,34 @@ public class ScriptEngineHandler
     public ArrayList<Method> getFunctions()
     {
         return bindingFunctions;
+    }
+
+    @Override
+    public void pluginInstalled(PluginDescriptor plugin, boolean success)
+    {
+        if (success)
+        {
+            bindingFunctions.clear();
+            engineFunctions.clear();
+            engineTypesMethod.clear();
+            findBindingMethodsPlugins();
+            // ArrayList<IcyFrame> list = IcyFrame.getAllFrames(ScriptingEditor.class);
+            // if (list != null && !list.isEmpty())
+            // new AnnounceFrame("Binded functions in the current");
+        }
+    }
+
+    @Override
+    public void pluginRemoved(PluginDescriptor plugin, boolean success)
+    {
+        if (success)
+        {
+            bindingFunctions.clear();
+            engineFunctions.clear();
+            engineTypesMethod.clear();
+            findBindingMethodsPlugins();
+        }
+
     }
 
 }
