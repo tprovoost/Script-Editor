@@ -534,7 +534,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 
                     // interpret again, without the faulty line.
-                    // interpret(s);
+                    interpret(s);
                 }
                 else
                 {
@@ -618,6 +618,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 BasicJavaClassCompletion c = new BasicJavaClassCompletion(provider, ClassUtil.findClass(s));
                 s = c.getName();
                 List<Completion> list = provider.getCompletionByInputText(s);
+                if (list == null)
+                    continue;
                 for (Completion c2 : new ArrayList<Completion>(list))
                 {
                     if (c2 instanceof VariableCompletion)

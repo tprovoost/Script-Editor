@@ -530,8 +530,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         // if not : look the type of the function (if declared).
                         int startOffset = getStartOffset(comp) - 1;
                         // System.out.println("offset:" + startOffset);
-                        for (Integer i : localFunctions.keySet())
-                            System.out.println(i);
+                        // for (Integer i : localFunctions.keySet())
+                        // System.out.println(i);
                         IcyFunctionBlock fb = localFunctions.get(startOffset);
                         if (fb != null)
                         {

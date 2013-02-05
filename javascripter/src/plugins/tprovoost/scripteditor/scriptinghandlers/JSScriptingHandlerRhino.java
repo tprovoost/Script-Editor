@@ -578,7 +578,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     Class<?> type = resolveRight(right, text);
                     String typeString = "";
                     if (type != null)
-                        typeString = type.getName();
+                        typeString = IcyCompletionProvider.getType(type, true);
                     VariableCompletion c = new VariableCompletion(provider, left.getString(), typeString);
                     c.setSummary("variable");
                     c.setDefinedIn(fileName);
@@ -933,6 +933,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     String className = generateClassName(target, "");
                     return resolveClassDeclaration(className);
                 }
+            case Token.ARRAYLIT:
+                return Object[].class;
         }
         return null;
     }
@@ -987,14 +989,17 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     private String generateClassName(Node n, String toReturn)
     {
-        if (n.getType() == Token.GETPROP)
+        if (n != null)
         {
-            toReturn += generateClassName(n.getFirstChild(), toReturn) + "."
-                    + generateClassName(n.getLastChild(), toReturn);
-        }
-        else if (n.getType() == Token.NAME)
-        {
-            return n.getString();
+            if (n.getType() == Token.GETPROP)
+            {
+                toReturn += generateClassName(n.getFirstChild(), toReturn) + "."
+                        + generateClassName(n.getLastChild(), toReturn);
+            }
+            else if (n.getType() == Token.NAME)
+            {
+                return n.getString();
+            }
         }
         return toReturn;
     }
