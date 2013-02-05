@@ -1,6 +1,5 @@
 package plugins.tprovoost.scripteditor.main;
 
-import icy.gui.dialog.MessageDialog;
 import icy.gui.frame.IcyFrameAdapter;
 import icy.gui.frame.IcyFrameEvent;
 import icy.gui.frame.progress.FailedAnnounceFrame;
@@ -24,12 +23,12 @@ public class ScriptEditorPlugin extends PluginActionable
     public void run()
     {
         String jv = System.getProperty("java.version");
-        if (!jv.startsWith("1.6."))
-        {
-            MessageDialog
-                    .showDialog("This Plugin is only compatible with Java 6. A version for Java 7 will be released in the future.");
-            return;
-        }
+        // if (!jv.startsWith("1.6."))
+        // {
+        // MessageDialog
+        // .showDialog("This Plugin is only compatible with Java 6. A version for Java 7 will be released in the future.");
+        // return;
+        // }
         if (new ScriptEngineManager().getEngineFactories().isEmpty())
         {
             new FailedAnnounceFrame("No interpreter found. Impossible to compile/run a script.");

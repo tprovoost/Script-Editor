@@ -22,6 +22,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.TreeMap;
 
 import javax.script.Bindings;
@@ -38,6 +39,7 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
+import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
@@ -45,6 +47,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
+import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
@@ -498,10 +501,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             context.setApplicationClassLoader(PluginLoader.getLoader());
             if (gutter != null)
                 updateGutter();
-            localVariables.clear();
-            localFunctions.clear();
-            scriptDeclaredImports.clear();
-            scriptDeclaredImportClasses.clear();
+            clearScriptVariables();
             registerImports();
             if (provider != null && varInterpretation)
                 detectVariables(s, context);
@@ -602,6 +602,37 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             Context.exit();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void clearScriptVariables()
+    {
+        localVariables.clear();
+        localFunctions.clear();
+        scriptDeclaredImports.clear();
+
+        for (String s : scriptDeclaredImportClasses)
+        {
+            try
+            {
+                BasicJavaClassCompletion c = new BasicJavaClassCompletion(provider, ClassUtil.findClass(s));
+                s = c.getName();
+                List<Completion> list = provider.getCompletionByInputText(s);
+                for (Completion c2 : list)
+                {
+                    if (c2 instanceof VariableCompletion)
+                    {
+                        if (((VariableCompletion) c2).getName().contentEquals(s))
+                            provider.removeCompletion(c2);
+                    }
+                }
+            }
+            catch (ClassNotFoundException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        scriptDeclaredImportClasses.clear();
     }
 
     public void run()
@@ -916,7 +947,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         public AutoVerify()
         {
-            timer = new Timer(4000, this);
+            timer = new Timer(2000, this);
             timer.setRepeats(false);
         }
 
@@ -954,17 +985,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void changedUpdate(DocumentEvent e)
         {
             lastChange = true;
-            timer.restart();
-            // ThreadUtil.invokeLater(new Runnable()
-            // {
-            //
-            // @Override
-            // public void run()
-            // {
-            // if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
-            // timer.restart();
-            // }
-            // });
+            if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
+                timer.restart();
         }
 
         @Override
@@ -983,8 +1005,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         @Override
         public void focusGained(FocusEvent e)
         {
-            // if (lastChange)
-            // timer.restart();
+            if (lastChange)
+                timer.restart();
         }
     }
 

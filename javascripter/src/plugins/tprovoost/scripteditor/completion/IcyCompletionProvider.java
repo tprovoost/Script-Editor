@@ -483,16 +483,16 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                 FunctionCompletion fc = new FunctionCompletion(this, m.getName(), m.getReturnType()
                                         .getName());
                                 if (Modifier.isStatic(m.getModifiers()))
-                                    fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
-                                else
                                     fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                                else
+                                    continue;
                                 // TODO relevance on type: void or type? assignment
                                 fc.setDefinedIn(clazz.toString());
                                 ArrayList<Parameter> params = new ArrayList<Parameter>();
                                 int i = 0;
                                 for (Class<?> clazzParam : m.getParameterTypes())
                                 {
-                                    params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
                                     ++i;
                                 }
                                 fc.setParams(params);
@@ -539,7 +539,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                 int i = 0;
                                 for (Class<?> clazzParam : m.getParameterTypes())
                                 {
-                                    params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
                                     ++i;
                                 }
                                 fc.setParams(params);
@@ -590,7 +590,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                     int i = 0;
                                     for (Class<?> clazzParam : m.getParameterTypes())
                                     {
-                                        params.add(new Parameter(clazzParam.getName(), "arg" + i));
+                                        params.add(new Parameter(getType(clazzParam, true), "arg" + i));
                                         ++i;
                                     }
                                     fc.setParams(params);
@@ -781,7 +781,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
      *        : the class the get the type from
      * @return
      */
-    public static Object getType(Class<?> clazz, boolean simpleName)
+    public static String getType(Class<?> clazz, boolean simpleName)
     {
         if (simpleName)
         {

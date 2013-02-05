@@ -60,6 +60,7 @@ import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.StringLiteral;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
+import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
@@ -162,27 +163,27 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException
     {
         // icy important packages
-        engine.eval("importPackage(Packages.icy.main);");
-        engine.eval("importPackage(Packages.icy.plugin);");
-        engine.eval("importPackage(Packages.icy.sequence)\n");
-        engine.eval("importPackage(Packages.icy.image)");
-        engine.eval("importPackage(Packages.icy.file);");
-        engine.eval("importPackage(Packages.icy.file.xls)");
-
-        ArrayList<String> engineDeclaredImports = ScriptEngineHandler.getEngineHandler(engine)
-                .getEngineDeclaredImports();
-        if (!engineDeclaredImports.contains("icy.main"))
-            engineDeclaredImports.add("icy.main");
-        if (!engineDeclaredImports.contains("icy.plugin"))
-            engineDeclaredImports.add("icy.plugin");
-        if (!engineDeclaredImports.contains("icy.sequence"))
-            engineDeclaredImports.add("icy.sequence");
-        if (!engineDeclaredImports.contains("icy.image"))
-            engineDeclaredImports.add("icy.image");
-        if (!engineDeclaredImports.contains("icy.file"))
-            engineDeclaredImports.add("icy.file");
-        if (!engineDeclaredImports.contains("icy.file.xls"))
-            engineDeclaredImports.add("icy.file.xls");
+        // engine.eval("importPackage(Packages.icy.main);");
+        // engine.eval("importPackage(Packages.icy.plugin);");
+        // engine.eval("importPackage(Packages.icy.sequence)\n");
+        // engine.eval("importPackage(Packages.icy.image)");
+        // engine.eval("importPackage(Packages.icy.file);");
+        // engine.eval("importPackage(Packages.icy.file.xls)");
+        //
+        // ArrayList<String> engineDeclaredImports = ScriptEngineHandler.getEngineHandler(engine)
+        // .getEngineDeclaredImports();
+        // if (!engineDeclaredImports.contains("icy.main"))
+        // engineDeclaredImports.add("icy.main");
+        // if (!engineDeclaredImports.contains("icy.plugin"))
+        // engineDeclaredImports.add("icy.plugin");
+        // if (!engineDeclaredImports.contains("icy.sequence"))
+        // engineDeclaredImports.add("icy.sequence");
+        // if (!engineDeclaredImports.contains("icy.image"))
+        // engineDeclaredImports.add("icy.image");
+        // if (!engineDeclaredImports.contains("icy.file"))
+        // engineDeclaredImports.add("icy.file");
+        // if (!engineDeclaredImports.contains("icy.file.xls"))
+        // engineDeclaredImports.add("icy.file.xls");
     }
 
     @Override
@@ -268,6 +269,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             String foundString = m.group(0);
             String imported = m.group(2);
             scriptDeclaredImportClasses.add(imported);
+            try
+            {
+                if ((provider.getCompletionByInputText(imported)) == null)
+                {
+                    provider.addCompletion(new BasicJavaClassCompletion(provider, ClassUtil.findClass(imported)));
+                }
+            }
+            catch (ClassNotFoundException e)
+            {
+            }
             int idxString = s.indexOf(foundString, offset);
             if (idxString == -1)
                 break;
@@ -547,9 +558,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
                     return c;
                 }
+                else if (expression instanceof FunctionCall)
+                {
+                    AstNode target = ((FunctionCall) expression).getTarget();
+                    if (!(target.getType() == Token.NAME && (target.getString().contentEquals("importClass") || target
+                            .getString().contentEquals("importPackage"))))
+                        resolveCallType(expression, text, false);
+                }
             }
                 break;
 
+            case Token.CALL:
+                resolveCallType(n, text, false);
+                break;
         // case Token.VAR:
         // if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME)
         // {
@@ -610,8 +631,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         //
         // // case Token.WITH:
         // // break;
-        // case Token.CALL:
-        // break;
         // default:
         // break;
         }
@@ -877,6 +896,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
             case Token.FUNCTION:
                 return Void.class;
+
+            case Token.NEW:
+                NewExpression nexp = (NewExpression) right;
+                AstNode target = nexp.getTarget();
+                String className = generateClassName(target, "");
+                return resolveClassDeclaration(className);
 
         }
         return null;
@@ -1206,7 +1231,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.FALSE:
                 return boolean.class;
             case Token.NAME:
-                return getVariableDeclaration(n.getString(), n.getLineno());
+                return getVariableDeclaration(n.getString(), n.getAbsolutePosition());
             case Token.CALL:
                 Class<?> res = resolveCallType(n, currentText, false);
                 return res;
@@ -1214,8 +1239,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 // class wanted
                 String className = generateClassName(n, "");
                 return resolveClassDeclaration(className);
-                // case Token.NEW:
-                // return resolveNewType(n, text);
             case Token.ARRAYLIT:
                 return Object[].class;
             case Token.NEW:
