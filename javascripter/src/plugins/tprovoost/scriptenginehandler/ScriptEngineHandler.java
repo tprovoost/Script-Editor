@@ -4,7 +4,9 @@ import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginInstaller.PluginInstallerListener;
 import icy.plugin.PluginLoader;
+import icy.util.ClassUtil;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -46,6 +48,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
     private ArrayList<String> engineDeclaredImports = new ArrayList<String>();
     private ArrayList<String> engineDeclaredImportClasses = new ArrayList<String>();
     private HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();;
+    private ArrayList<String> allClasses = new ArrayList<String>();
 
     private ScriptEngineHandler()
     {
@@ -137,6 +140,13 @@ public class ScriptEngineHandler implements PluginInstallerListener
         ProgressFrame frame = new ProgressFrame("Loading functions...");
         try
         {
+            try
+            {
+                allClasses.addAll(ClassUtil.findClassNamesInPackage("icy", true));
+            }
+            catch (IOException e)
+            {
+            }
             if (getClass().getClassLoader() instanceof JarClassLoader)
             {
                 Collection<Class<?>> col = PluginLoader.getAllClasses().values();
@@ -147,6 +157,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
                     if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
                         continue;
                     findBindingsMethods(clazz);
+                    allClasses.add(clazz.getName());
                     ++i;
                     frame.setPosition(i);
                 }

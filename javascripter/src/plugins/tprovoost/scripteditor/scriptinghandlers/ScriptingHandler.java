@@ -1,6 +1,7 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
+import icy.painter.TextPainter;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
@@ -30,12 +31,14 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
+import javax.swing.text.Style;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -112,7 +115,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * This is where the warning / errors are displayed, contained in this
      * scrollpane.
      */
-    private volatile JTextArea errorOutput;
+    protected JTextPane errorOutput;
 
     /** Reference to the textarea scrollpane gutter. */
     private Gutter gutter;
@@ -142,7 +145,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     @Override
                     public void run()
                     {
-                        errorOutput.append(s);
+                        Document doc = errorOutput.getDocument();
+                        try
+                        {
+                            Style style = errorOutput.getStyle("normal");
+                            if (style == null)
+                                style = errorOutput.addStyle("normal", null);
+                            doc.insertString(doc.getLength(), s, style);
+                        }
+                        catch (BadLocationException e)
+                        {
+                        }
                     }
                 });
             }
@@ -224,7 +237,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         this(provider, engineType, textArea, gutter, forceRun, null);
     }
 
-    public void setOutput(JTextArea errorOutput)
+    public void setOutput(JTextPane errorOutput)
     {
         this.errorOutput = errorOutput;
     }
@@ -471,7 +484,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 }
                 if (errorOutput != null)
                 {
-                    errorOutput.append(textResult);
+                    Document doc = errorOutput.getDocument();
+                    try
+                    {
+                        Style style = errorOutput.getStyle("normal");
+                        if (style == null)
+                            style = errorOutput.addStyle("normal", null);
+                        doc.insertString(doc.getLength(), textResult, style);
+                    }
+                    catch (BadLocationException e)
+                    {
+                    }
                 }
                 else
                     System.out.print(textResult);
@@ -543,7 +566,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     // lineError);
                     ee.printStackTrace();
                     if (errorOutput != null)
-                        errorOutput.append(ee.getMessage() + "\n");
+                    {
+                        Document doc = errorOutput.getDocument();
+                        try
+                        {
+                            Style style = errorOutput.getStyle("normal");
+                            if (style == null)
+                                style = errorOutput.addStyle("normal", null);
+                            doc.insertString(doc.getLength(), ee.getMessage() + "\n", style);
+                        }
+                        catch (BadLocationException e)
+                        {
+                        }
+                    }
                     else
                         System.out.println(ee.getMessage());
                 }
@@ -586,7 +621,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     System.out.println("error at unknown line: " + lineError);
                     se.printStackTrace();
                     if (errorOutput != null)
-                        errorOutput.append(se.getMessage() + "\n");
+                    {
+                        Document doc = errorOutput.getDocument();
+                        try
+                        {
+                            Style style = errorOutput.getStyle("normal");
+                            if (style == null)
+                                style = errorOutput.addStyle("normal", null);
+                            doc.insertString(doc.getLength(), se.getMessage() + "\n", style);
+                        }
+                        catch (BadLocationException e)
+                        {
+                        }
+                    }
                 }
             }
             catch (BadLocationException e1)
@@ -651,7 +698,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     str += '-';
                 // errorOutput.append(str + "\n");
                 // errorOutput.append("New Engine created" + "\n");
-                errorOutput.append(str + "\n");
+                // errorOutput.append(str + "\n");
+                errorOutput.setText("");
                 g.dispose();
             }
             ScriptEngine engine = createNewEngine();
@@ -1147,8 +1195,21 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                             }
                             else
                             {
-                                errorOutput.append(se.getLocalizedMessage() + "\n");
-                                errorOutput.repaint();
+                                if (errorOutput != null)
+                                {
+                                    Document doc = errorOutput.getDocument();
+                                    try
+                                    {
+                                        Style style = errorOutput.getStyle("normal");
+                                        if (style == null)
+                                            style = errorOutput.addStyle("normal", null);
+                                        doc.insertString(doc.getLength(), se.getLocalizedMessage() + "\n", style);
+                                    }
+                                    catch (BadLocationException e)
+                                    {
+                                    }
+                                    errorOutput.repaint();
+                                }
                             }
                         }
                         catch (BadLocationException e1)

@@ -23,6 +23,10 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Style;
 
 import org.fife.ui.autocomplete.Completion;
 
@@ -46,7 +50,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
     protected ScriptingHandler scriptHandler;
     protected ArrayList<String> history = new ArrayList<String>();
     protected int posInHistory = 0;
-    protected JTextArea output;
+    protected JTextPane output;
 
     public Scriptingconsole()
     {
@@ -136,7 +140,17 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                     }
                     if (!s.endsWith("\n"))
                         s += "\n";
-                    output.append(s);
+                    Document doc = output.getDocument();
+                    try
+                    {
+                        Style style = output.getStyle("normal");
+                        if (style == null)
+                            style = output.addStyle("normal", null);
+                        doc.insertString(doc.getLength(), s, style);
+                    }
+                    catch (BadLocationException e2)
+                    {
+                    }
                     System.out.println(s);
                 }
                 break;
@@ -163,7 +177,19 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                 {
                     String time = DateUtil.now("HH:mm:ss");
                     if (output != null)
-                        output.append("> " + text + "\n");
+                    {
+                        Document doc = output.getDocument();
+                        try
+                        {
+                            Style style = output.getStyle("normal");
+                            if (style == null)
+                                style = output.addStyle("normal", null);
+                            doc.insertString(doc.getLength(), "> " + text + "\n", style);
+                        }
+                        catch (BadLocationException e2)
+                        {
+                        }
+                    }
                     else
                         System.out.println(time + ": " + text);
                     scriptHandler.interpret(true);
@@ -200,7 +226,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         return languageName;
     }
 
-    public void setOutput(JTextArea output)
+    public void setOutput(JTextPane output)
     {
         this.output = output;
         if (scriptHandler != null)

@@ -58,6 +58,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
@@ -110,7 +111,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Provider used for autocompletion. */
     private IcyCompletionProvider provider;
     private JScrollPane scrollpane;
-    private JTextArea consoleOutput;
+    private JTextPane consoleOutput;
     private Scriptingconsole console;
     private JButton btnClearConsole;
 
@@ -143,9 +144,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         this.integrated = integrated;
         setLayout(new BorderLayout());
 
-        consoleOutput = new JTextArea(5, 40);
+        consoleOutput = new JTextPane();
         consoleOutput.setEditable(false);
-        consoleOutput.setLineWrap(true);
         consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
         consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 

@@ -8,6 +8,7 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
 import icy.util.ClassUtil;
 
+import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,12 +25,17 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
+import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -39,11 +45,16 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ErrorReporter;
+import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ImporterTopLevel;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Parser;
+import org.mozilla.javascript.RhinoException;
+import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
@@ -73,6 +84,56 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     /** Contains all functions created in {@link #resolveCallType(AstNode, String, boolean)}. */
     private LinkedList<IcyFunctionBlock> functionBlocksToResolve = new LinkedList<IcyFunctionBlock>();
+    private ErrorReporter errorReporter = new ErrorReporter()
+    {
+
+        @Override
+        public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
+        {
+            Document doc = errorOutput.getDocument();
+            try
+            {
+                Style style = errorOutput.getStyle("error");
+                if (style == null)
+                    style = errorOutput.addStyle("error", null);
+                StyleConstants.setForeground(style, Color.red);
+                String text = message + sourceName + ":" + line + " at" + lineSource + " at " + lineOffset;
+                doc.insertString(doc.getLength(), text, style);
+            }
+            catch (BadLocationException e)
+            {
+            }
+        }
+
+        @Override
+        public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource,
+                int lineOffset)
+        {
+            return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
+        }
+
+        @Override
+        public void error(String message, String sourceName, int line, String lineSource, int lineOffset)
+        {
+            if (errorOutput != null)
+            {
+                Document doc = errorOutput.getDocument();
+                try
+                {
+
+                    Style style = errorOutput.getStyle("error");
+                    if (style == null)
+                        style = errorOutput.addStyle("error", null);
+                    StyleConstants.setForeground(style, Color.red);
+                    String text = message + " at " + line + " in " + lineSource + " (" + lineOffset + ")";
+                    doc.insertString(doc.getLength(), text, style);
+                }
+                catch (BadLocationException e)
+                {
+                }
+            }
+        }
+    };
 
     public JSScriptingHandlerRhino(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
             boolean autocompilation)
@@ -85,13 +146,118 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     {
         Context context = Context.enter();
         context.setApplicationClassLoader(PluginLoader.getLoader());
+        context.setErrorReporter(errorReporter);
         try
         {
-            engine.eval(s);
+            ScriptableObject scriptable = new ImporterTopLevel(context);
+            for (Object o : scriptable.getAllIds())
+                System.out.println(o);
+            Bindings bs = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+
+            // install the methods
+            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+            ArrayList<Method> functions = engineHandler.getFunctions();
+            installMethods(context, scriptable, functions);
+            for (String key : bs.keySet())
+            {
+                Object o = bs.get(key);
+                if (!(o instanceof sun.org.mozilla.javascript.internal.BaseFunction))
+                {
+                    scriptable.put(key, scriptable, o);
+                }
+            }
+            Script script = context.compileString(s, "script", 0, null);
+            script.exec(context, scriptable);
+            for (Object o : scriptable.getIds())
+            {
+                String key = (String) o;
+                bs.put(key, scriptable.get(key, scriptable));
+            }
+        }
+        catch (RhinoException e)
+        {
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
         }
         finally
         {
             Context.exit();
+        }
+    }
+
+    public void installMethods(Context cx, ScriptableObject scriptable, ArrayList<Method> methods)
+            throws ScriptException
+    {
+        try
+        {
+            // hardcoded functions, to remove in the future
+            String s = "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }";
+            Script script = cx.compileString(s, "script", 0, null);
+            script.exec(cx, scriptable);
+        }
+        catch (RhinoException e)
+        {
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+        }
+
+        try
+        {
+            String s = "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage() }";
+            Script script = cx.compileString(s, "script", 0, null);
+            script.exec(cx, scriptable);
+        }
+        catch (RhinoException e)
+        {
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+        }
+        for (Method method : methods)
+        {
+            // is it an annotated with BindingFunction?
+            BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
+            if (blockFunction == null)
+                continue;
+            // Generate the function for the provider
+            ArrayList<Parameter> fParams = new ArrayList<Parameter>();
+            Class<?>[] paramTypes = method.getParameterTypes();
+
+            // get the parameters
+            String params = "";
+            String functionName = blockFunction.value();
+            // get the parameters
+            for (int i = 0; i < paramTypes.length; ++i)
+            {
+                fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
+                params += ",arg" + i;
+            }
+            if (params.length() > 0)
+                params = params.substring(1);
+
+            // the object for the provider
+            ScriptFunctionCompletion sfc;
+            if (Modifier.isStatic(method.getModifiers()))
+                sfc = new ScriptFunctionCompletion(null, functionName, method);
+            else
+                sfc = new ScriptFunctionCompletion(null, method.getName(), method);
+
+            try
+            {
+                if (method.getReturnType() == void.class)
+                {
+                    String s = "function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}";
+                    Script script = cx.compileString(s, "script", 0, null);
+                    script.exec(cx, scriptable);
+                }
+                else
+                {
+                    String s = "function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall()
+                            + "\n}";
+                    Script script = cx.compileString(s, "script", 0, null);
+                    script.exec(cx, scriptable);
+                }
+            }
+            catch (RhinoException e)
+            {
+                throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+            }
         }
     }
 
@@ -520,11 +686,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             {
                 if (variableCompletions.get(i).compareTo(c) == 0)
                 {
-                    // FIXME
-                    // if (textArea.getCaret().getDot() > commandStartOffset)
-                    // variableCompletions.remove(i);
-                    // else
-                    // alreadyExists = true;
+                    if (textArea.getCaret().getDot() > n.getAbsolutePosition())
+                        variableCompletions.remove(i);
+                    else
+                        alreadyExists = true;
                 }
             }
             if (!alreadyExists)
@@ -717,6 +882,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     clazz = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions()
                             .get(classNameOrFunctionNameOrVariable);
+                    if (classNameOrFunctionNameOrVariable.contentEquals("println")
+                            || classNameOrFunctionNameOrVariable.contentEquals("print"))
+                        clazz = void.class;
                 }
 
                 // -------------------------------------------
@@ -836,7 +1004,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     }
 
     /**
-     * FIXME : issue with same name functions, will always use the first one.
+     * Fix: Issue with same name functions, will always use the first one.
      * 
      * @param clazz
      * @param function
@@ -868,7 +1036,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         if (args.length != argsClazzes.length)
             return argsClazzes;
 
-        // FIXME
+        // FIXME here
         boolean hasNumber = false;
         for (int i = 0; i < argsClazzes.length; ++i)
         {
