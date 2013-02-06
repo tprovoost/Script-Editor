@@ -11,6 +11,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
+import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 
 public class JSAutoCompletion extends IcyAutoCompletion
@@ -46,12 +47,43 @@ public class JSAutoCompletion extends IcyAutoCompletion
         }
         else if (c instanceof BasicJavaClassCompletion)
         {
+            // get the current text
             JTextComponent tc = getTextComponent();
+
+            // get the caret position
+            int caretPos = tc.getCaretPosition();
             Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
             String neededClass = clazz.getName();
 
             if (!classAlreadyImported(neededClass))
-                addImport(tc, neededClass, true);
+            {
+                // import the needed class + movement
+                caretPos += addImport(tc, neededClass, true).length();
+
+                // put the caret in the right position
+                tc.getCaret().setDot(caretPos);
+            }
+        }
+        else if (c instanceof NewInstanceCompletion)
+        {
+            // get the current text
+            JTextComponent tc = getTextComponent();
+
+            // get the caret position
+            int caretPos = tc.getCaretPosition();
+
+            // class to import
+            Class<?> clazz = ((NewInstanceCompletion) c).getConstructor().getDeclaringClass();
+            String neededClass = clazz.getName();
+
+            if (!classAlreadyImported(neededClass))
+            {
+                // import the needed class + movement
+                caretPos += addImport(tc, neededClass, true).length();
+
+                // put the caret in the right position
+                tc.getCaret().setDot(caretPos);
+            }
         }
         // do insertion
         super.insertCompletion(c, typedParamListStartChar);

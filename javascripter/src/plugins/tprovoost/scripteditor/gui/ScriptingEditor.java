@@ -119,6 +119,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                     super.setSelectedIndex(index);
             }
         };
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.addChangeListener(new ChangeListener()
         {
 

@@ -6,6 +6,7 @@ import icy.util.ClassUtil;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -37,6 +38,7 @@ import org.fife.ui.autocomplete.Util;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
+import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
@@ -104,7 +106,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 sfc = new ScriptFunctionCompletion(this, functionName, method);
             else
                 sfc = new ScriptFunctionCompletion(this, method.getName(), method);
-            sfc.setDefinedIn(clazz.getName());
+            sfc.setDefinedIn(clazz.getName().replace('$', '.'));
             sfc.setParams(fParams);
             sfc.setRelevance(2);
 
@@ -176,7 +178,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     }
 
                     ScriptFunctionCompletion sfc = new ScriptFunctionCompletion(this, method.getName(), method);
-                    sfc.setDefinedIn(clazz.getName());
+                    sfc.setDefinedIn(clazz.getName().replace('$', '.'));
                     sfc.setParams(fParams);
                     BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
                     if (blockFunction == null)
@@ -347,9 +349,24 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
     protected boolean isValidCharStrict(char ch)
     {
-        return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
+        return isValidCharStrict(ch, false);
     }
 
+    protected boolean isValidCharStrict(char ch, boolean weirdChars)
+    {
+        if (weirdChars)
+            return super.isValidChar(ch) || ch == '.' || ch == '(' || ch == ')' || ch == ',' || ch == '\"';
+        else
+            return super.isValidChar(ch) || ch == '.';
+    }
+
+    /**
+     * Returns is a completion c exists in the given list of completions.
+     * 
+     * @param c
+     * @param list
+     * @return
+     */
     public static boolean exists(Completion c, List<Completion> list)
     {
         boolean found = false;
@@ -410,6 +427,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         // return completions;
         List<Completion> retVal = new ArrayList<Completion>();
         String text = getAlreadyEnteredTextWithFunc(comp);
+        boolean containsNew = text.contains("new ");
         int lastIdx = text.lastIndexOf('.');
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
@@ -451,7 +469,59 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     lastIdx = text.lastIndexOf('.');
                 }
             }
-            if (text.isEmpty() || text.startsWith("Math.") || lastIdx == -1)
+            if (containsNew)
+            {
+                text = text.substring("new ".length());
+                // add the classes
+                if (text.length() > 0 && Character.isUpperCase(text.charAt(0)))
+                {
+                    ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
+                    for (String s : classes)
+                    {
+                        String name = ClassUtil.getSimpleClassName(s).toLowerCase();
+                        int idxD = name.indexOf('$');
+                        if (idxD != -1)
+                        {
+                            name = name.substring(idxD + 1, name.length());
+                        }
+                        if (name.startsWith(text.toLowerCase()))
+                        {
+                            try
+                            {
+                                Class<?> clazz = ClassUtil.findClass(s);
+                                if (Modifier.isStatic(clazz.getModifiers()))
+                                    continue;
+                                for (Constructor<?> c : clazz.getConstructors())
+                                {
+                                    int mod = c.getModifiers();
+                                    if (Modifier.isPublic(mod))
+                                    {
+                                        NewInstanceCompletion fc = new NewInstanceCompletion(this,
+                                                ClassUtil.getSimpleClassName(s), c);
+                                        fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+
+                                        // TODO relevance assignment = type / expr = void
+                                        fc.setDefinedIn(clazz.toString().replace('$', '.'));
+                                        ArrayList<Parameter> params = new ArrayList<Parameter>();
+                                        int i = 0;
+                                        for (Class<?> clazzParam : c.getParameterTypes())
+                                        {
+                                            params.add(new Parameter(getType(clazzParam, true), "arg" + i));
+                                            ++i;
+                                        }
+                                        fc.setParams(params);
+                                        retVal.add(fc);
+                                    }
+                                }
+                            }
+                            catch (ClassNotFoundException e)
+                            {
+                            }
+                        }
+                    }
+                }
+            }
+            else if (text.isEmpty() || lastIdx == -1)
             {
                 doClassicCompletion(text, retVal);
             }
@@ -466,18 +536,31 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
                     for (String s : classes)
                     {
+                        s = s.replace('$', '.');
                         if (s.toLowerCase().startsWith(clazzWanted.toLowerCase()))
                         {
-                            try
+                            int startOffset = clazzWanted.lastIndexOf('.');
+                            int endOffset;
+                            BasicCompletion c;
+                            if (startOffset != -1)
                             {
-                                BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, ClassUtil.findClass(s));
-                                c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
-                                c.setDefinedIn(s);
+                                endOffset = s.indexOf('.', startOffset + 1);
+                                if (endOffset != -1)
+                                    c = new BasicCompletion(this, s.substring(startOffset + 1, endOffset));
+                                else
+                                    c = new BasicCompletion(this, s.substring(startOffset + 1, s.length()));
+                            }
+                            else
+                            {
+                                endOffset = s.indexOf('.', 0);
+                                if (endOffset != -1)
+                                    c = new BasicCompletion(this, s.substring(0, endOffset));
+                                else
+                                    c = new BasicCompletion(this, s);
+                            }
+                            c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
+                            if (!exists(c, retVal))
                                 retVal.add(c);
-                            }
-                            catch (ClassNotFoundException e)
-                            {
-                            }
                         }
                     }
                 }
@@ -502,7 +585,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         // ----------------------------
                         // STATIC ACCESS
                         // ----------------------------
-                        if ((methods = engineTypesMethod.get(clazz)) != null && !advanced)
+                        if (containsNew)
+                        {
+                            populateWithConstructors(clazz, retVal);
+                        }
+                        else if ((methods = engineTypesMethod.get(clazz)) != null && !advanced)
                         {
                             for (ScriptFunctionCompletion complete : methods)
                             {
@@ -590,6 +677,31 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return retVal;
     }
 
+    private void populateWithConstructors(Class<?> clazz, List<Completion> retVal)
+    {
+        for (Constructor<?> c : clazz.getConstructors())
+        {
+            int mod = c.getModifiers();
+            if (Modifier.isPublic(mod))
+            {
+                NewInstanceCompletion fc = new NewInstanceCompletion(this, clazz.getName(), c);
+                fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+
+                // TODO relevance assignment = type / expr = void
+                fc.setDefinedIn(clazz.toString().replace('$', '.'));
+                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                int i = 0;
+                for (Class<?> clazzParam : c.getParameterTypes())
+                {
+                    params.add(new Parameter(getType(clazzParam, true), "arg" + i));
+                    ++i;
+                }
+                fc.setParams(params);
+                retVal.add(fc);
+            }
+        }
+    }
+
     private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal)
     {
         populateWithClassTypes(clazz, text, retVal, false);
@@ -638,7 +750,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                 // TODO relevance assignment = type / expr = void
-                fc.setDefinedIn(clazz.toString());
+                fc.setDefinedIn(clazz.toString().replace('$', '.'));
                 ArrayList<Parameter> params = new ArrayList<Parameter>();
                 int i = 0;
                 for (Class<?> clazzParam : m.getParameterTypes())
@@ -655,7 +767,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                 // TODO relevance assignment = type / expr = void
-                fc.setDefinedIn(clazz.toString());
+                fc.setDefinedIn(clazz.toString().replace('$', '.'));
                 ArrayList<Parameter> params = new ArrayList<Parameter>();
                 int i = 0;
                 for (Class<?> clazzParam : m.getParameterTypes())
@@ -698,19 +810,24 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     protected void doClassicCompletion(String text, List<Completion> retVal)
     {
         // add the classes
-        if (text.length() > 0)
+        if (text.length() > 0 && Character.isUpperCase(text.charAt(0)))
         {
             ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
             for (String s : classes)
             {
-                String name = ClassUtil.getSimpleClassName(s).toLowerCase().replace('$', '.');
+                String name = ClassUtil.getSimpleClassName(s).toLowerCase();
+                int idxD = name.indexOf('$');
+                if (idxD != -1)
+                {
+                    name = name.substring(idxD + 1, name.length());
+                }
                 if (name.startsWith(text.toLowerCase()))
                 {
                     try
                     {
                         BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, ClassUtil.findClass(s));
                         c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
-                        c.setDefinedIn(s);
+                        c.setDefinedIn(s.replace('$', '.'));
                         retVal.add(c);
                     }
                     catch (ClassNotFoundException e)
@@ -820,9 +937,18 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
         int segEnd = seg.offset + len;
         start = segEnd - 1;
-        while (start >= seg.offset && isValidCharStrict(seg.array[start]))
+        while (start >= seg.offset && isValidCharStrict(seg.array[start], start != segEnd - 1)
+                && (start != segEnd - 1 || seg.array[start] != ','))
         {
             start--;
+        }
+        if (start >= seg.offset + 3 && seg.toString().contains("new"))
+        {
+            if (seg.array[start] == ' ' && seg.array[start - 1] == 'w' && seg.array[start - 2] == 'e'
+                    && seg.array[start - 3] == 'n')
+            {
+                start -= 4;
+            }
         }
         start++;
 

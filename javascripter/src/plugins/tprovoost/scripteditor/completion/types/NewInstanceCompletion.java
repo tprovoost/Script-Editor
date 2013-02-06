@@ -1,10 +1,10 @@
-package plugins.tprovoost.scriptenginehandler;
+package plugins.tprovoost.scripteditor.completion.types;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 
 import javax.swing.text.BadLocationException;
@@ -16,10 +16,10 @@ import javax.swing.text.Segment;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
 
-public class ScriptFunctionCompletion extends FunctionCompletion
+public class NewInstanceCompletion extends FunctionCompletion
 {
 
-    private Method method;
+    private Constructor<?> constructor;
     private boolean isStatic;
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -29,15 +29,15 @@ public class ScriptFunctionCompletion extends FunctionCompletion
         String value();
     }
 
-    public ScriptFunctionCompletion()
+    public NewInstanceCompletion()
     {
         super(null, "", "");
     }
 
-    public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method)
+    public NewInstanceCompletion(CompletionProvider provider, String name, Constructor<?> constructor)
     {
-        super(provider, name, method.getReturnType().getName());
-        this.method = method;
+        super(provider, name, constructor.getDeclaringClass().getName());
+        this.constructor = constructor;
     }
 
     /**
@@ -48,7 +48,7 @@ public class ScriptFunctionCompletion extends FunctionCompletion
     public String getMethodCall()
     {
         String parametersAsString = "";
-        Class<?>[] paramTypes = method.getParameterTypes();
+        Class<?>[] paramTypes = constructor.getParameterTypes();
         for (int i = 0; i < paramTypes.length; ++i)
         {
             if (i != 0)
@@ -56,8 +56,8 @@ public class ScriptFunctionCompletion extends FunctionCompletion
             else
                 parametersAsString += "arg" + i;
         }
-        return "Packages." + method.getDeclaringClass().getName() + "." + method.getName() + "(" + parametersAsString
-                + ");";
+        return "Packages." + constructor.getDeclaringClass().getName() + "." + constructor.getName() + "("
+                + parametersAsString + ");";
     }
 
     /**
@@ -67,8 +67,8 @@ public class ScriptFunctionCompletion extends FunctionCompletion
      */
     public boolean isStatic()
     {
-        if (method != null)
-            return Modifier.isStatic(method.getModifiers());
+        if (constructor != null)
+            return Modifier.isStatic(constructor.getModifiers());
         return false;
     }
 
@@ -79,20 +79,20 @@ public class ScriptFunctionCompletion extends FunctionCompletion
     {
         if (isStatic)
             return null;
-        return method.getDeclaringClass();
+        return constructor.getDeclaringClass();
     }
 
-    public Method getMethod()
+    public Constructor<?> getConstructor()
     {
-        return method;
+        return constructor;
     }
 
     @Override
     public boolean equals(Object arg0)
     {
-        if (!(arg0 instanceof ScriptFunctionCompletion))
+        if (!(arg0 instanceof NewInstanceCompletion))
             return false;
-        return ((ScriptFunctionCompletion) arg0).getName().contentEquals(getName());
+        return ((NewInstanceCompletion) arg0).getName().contentEquals(getName());
     }
 
     @Override

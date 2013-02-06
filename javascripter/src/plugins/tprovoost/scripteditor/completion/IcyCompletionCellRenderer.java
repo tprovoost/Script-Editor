@@ -14,6 +14,7 @@ import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
+import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 
 public class IcyCompletionCellRenderer extends CompletionCellRenderer
@@ -52,6 +53,10 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
             }
             else
                 setIcon(iconFunctions);
+        }
+        else if (fc instanceof NewInstanceCompletion)
+        {
+            setIcon(iconClass);
         }
         else
             setIcon(iconFunctions);
