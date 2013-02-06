@@ -457,6 +457,30 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             }
             else
             {
+                // -----------------
+                // Generate classes
+                // -----------------
+                if (text.startsWith("Packages."))
+                {
+                    String clazzWanted = text.substring("Packages.".length());
+                    ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
+                    for (String s : classes)
+                    {
+                        if (s.toLowerCase().startsWith(clazzWanted.toLowerCase()))
+                        {
+                            try
+                            {
+                                BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, ClassUtil.findClass(s));
+                                c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
+                                c.setDefinedIn(s);
+                                retVal.add(c);
+                            }
+                            catch (ClassNotFoundException e)
+                            {
+                            }
+                        }
+                    }
+                }
                 if (handler != null)
                 {
                     String command;
@@ -673,6 +697,29 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     @SuppressWarnings("unchecked")
     protected void doClassicCompletion(String text, List<Completion> retVal)
     {
+        // add the classes
+        if (text.length() > 0)
+        {
+            ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
+            for (String s : classes)
+            {
+                String name = ClassUtil.getSimpleClassName(s).toLowerCase().replace('$', '.');
+                if (name.startsWith(text.toLowerCase()))
+                {
+                    try
+                    {
+                        BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, ClassUtil.findClass(s));
+                        c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
+                        c.setDefinedIn(s);
+                        retVal.add(c);
+                    }
+                    catch (ClassNotFoundException e)
+                    {
+                    }
+                }
+            }
+        }
+
         // nothing worked, display normal
         int index = Collections.binarySearch(completions, text, comparator);
         if (index < 0)

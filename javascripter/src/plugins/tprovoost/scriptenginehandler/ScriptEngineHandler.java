@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 
 import javax.script.ScriptEngine;
@@ -39,6 +40,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
     private static HashMap<ScriptEngine, ScriptEngineHandler> engineHandlers = new HashMap<ScriptEngine, ScriptEngineHandler>();
     private static ScriptEngineHandler lastEngineHandler = null;
     private static ArrayList<Method> bindingFunctions;
+    private static ArrayList<String> allClasses = new ArrayList<String>();
 
     /*
      * ------------ non static ------------
@@ -48,7 +50,6 @@ public class ScriptEngineHandler implements PluginInstallerListener
     private ArrayList<String> engineDeclaredImports = new ArrayList<String>();
     private ArrayList<String> engineDeclaredImportClasses = new ArrayList<String>();
     private HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();;
-    private ArrayList<String> allClasses = new ArrayList<String>();
 
     private ScriptEngineHandler()
     {
@@ -175,6 +176,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
                     frame.setPosition(i);
                 }
             }
+            Collections.sort(allClasses);
         }
         finally
         {
@@ -281,9 +283,20 @@ public class ScriptEngineHandler implements PluginInstallerListener
             bindingFunctions.clear();
             engineFunctions.clear();
             engineTypesMethod.clear();
+            allClasses.clear();
             findBindingMethodsPlugins();
         }
 
+    }
+
+    /**
+     * Get all classes declared in plugins and icy. Language independant.
+     * 
+     * @return
+     */
+    public static ArrayList<String> getAllClasses()
+    {
+        return allClasses;
     }
 
 }

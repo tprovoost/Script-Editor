@@ -15,6 +15,7 @@ import icy.util.StringUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
@@ -63,6 +64,7 @@ import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.Document;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -145,6 +147,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         setLayout(new BorderLayout());
 
         consoleOutput = new JTextPane();
+        consoleOutput.setPreferredSize(new Dimension(400, 200));
         consoleOutput.setEditable(false);
         consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
         consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
@@ -201,7 +204,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 }
                 if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
                 {
-                    consoleOutput.setCaretPosition(consoleOutput.getText().length() - 1);
+                    Document doc = consoleOutput.getDocument();
+                    consoleOutput.setCaretPosition(doc.getLength() - 1);
                 }
             }
 

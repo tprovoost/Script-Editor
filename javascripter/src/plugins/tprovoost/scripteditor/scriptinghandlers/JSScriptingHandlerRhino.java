@@ -92,12 +92,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             Document doc = errorOutput.getDocument();
             try
             {
-                Style style = errorOutput.getStyle("error");
+                Style style = errorOutput.getStyle("warning");
                 if (style == null)
-                    style = errorOutput.addStyle("error", null);
-                StyleConstants.setForeground(style, Color.red);
-                String text = message + sourceName + ":" + line + " at" + lineSource + " at " + lineOffset;
-                doc.insertString(doc.getLength(), text, style);
+                    style = errorOutput.addStyle("warning", null);
+                StyleConstants.setForeground(style, Color.blue);
+                String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                        + lineOffset + ")";
+                doc.insertString(doc.getLength(), text + "\n", style);
             }
             catch (BadLocationException e)
             {
@@ -108,7 +109,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource,
                 int lineOffset)
         {
-            return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
+            return new EvaluatorException(message, sourceName, line + 1, lineSource, lineOffset);
         }
 
         @Override
@@ -124,8 +125,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     if (style == null)
                         style = errorOutput.addStyle("error", null);
                     StyleConstants.setForeground(style, Color.red);
-                    String text = message + " at " + line + " in " + lineSource + " (" + lineOffset + ")";
-                    doc.insertString(doc.getLength(), text, style);
+                    String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                            + lineOffset + ")";
+                    doc.insertString(doc.getLength(), text + "\n", style);
                 }
                 catch (BadLocationException e)
                 {
@@ -167,7 +169,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
         catch (RhinoException e)
         {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber());
+            // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
         }
         finally
         {

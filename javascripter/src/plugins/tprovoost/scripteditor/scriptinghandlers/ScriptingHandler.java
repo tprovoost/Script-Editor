@@ -1200,9 +1200,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                                     Document doc = errorOutput.getDocument();
                                     try
                                     {
-                                        Style style = errorOutput.getStyle("normal");
+                                        Style style = errorOutput.getStyle("error");
                                         if (style == null)
-                                            style = errorOutput.addStyle("normal", null);
+                                            style = errorOutput.addStyle("error", null);
                                         doc.insertString(doc.getLength(), se.getLocalizedMessage() + "\n", style);
                                     }
                                     catch (BadLocationException e)
