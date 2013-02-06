@@ -45,17 +45,11 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ErrorReporter;
-import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ImporterTopLevel;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Parser;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Script;
-import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
@@ -75,6 +69,11 @@ import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+import sun.org.mozilla.javascript.internal.ErrorReporter;
+import sun.org.mozilla.javascript.internal.EvaluatorException;
+import sun.org.mozilla.javascript.internal.ImporterTopLevel;
+import sun.org.mozilla.javascript.internal.RhinoException;
+import sun.org.mozilla.javascript.internal.ScriptableObject;
 
 import com.sun.script.javascript.RhinoScriptEngine;
 
@@ -144,29 +143,21 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     @Override
     public void eval(ScriptEngine engine, String s) throws ScriptException
     {
-        Context context = Context.enter();
+        // uses Context from Rhino integrated in JRE or impossibility
+        // to use already defined methods in ScriptEngine, such as println or getImage
+        sun.org.mozilla.javascript.internal.Context context = sun.org.mozilla.javascript.internal.Context.enter();
         context.setApplicationClassLoader(PluginLoader.getLoader());
         context.setErrorReporter(errorReporter);
         try
         {
             ScriptableObject scriptable = new ImporterTopLevel(context);
-            for (Object o : scriptable.getAllIds())
-                System.out.println(o);
             Bindings bs = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-
-            // install the methods
-            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
-            ArrayList<Method> functions = engineHandler.getFunctions();
-            installMethods(context, scriptable, functions);
             for (String key : bs.keySet())
             {
                 Object o = bs.get(key);
-                if (!(o instanceof sun.org.mozilla.javascript.internal.BaseFunction))
-                {
-                    scriptable.put(key, scriptable, o);
-                }
+                scriptable.put(key, scriptable, o);
             }
-            Script script = context.compileString(s, "script", 0, null);
+            sun.org.mozilla.javascript.internal.Script script = context.compileString(s, "script", 0, null);
             script.exec(context, scriptable);
             for (Object o : scriptable.getIds())
             {
@@ -176,90 +167,95 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
         catch (RhinoException e)
         {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber());
         }
         finally
         {
-            Context.exit();
+            sun.org.mozilla.javascript.internal.Context.exit();
         }
     }
 
-    public void installMethods(Context cx, ScriptableObject scriptable, ArrayList<Method> methods)
-            throws ScriptException
-    {
-        try
-        {
-            // hardcoded functions, to remove in the future
-            String s = "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }";
-            Script script = cx.compileString(s, "script", 0, null);
-            script.exec(cx, scriptable);
-        }
-        catch (RhinoException e)
-        {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-        }
-
-        try
-        {
-            String s = "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage() }";
-            Script script = cx.compileString(s, "script", 0, null);
-            script.exec(cx, scriptable);
-        }
-        catch (RhinoException e)
-        {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-        }
-        for (Method method : methods)
-        {
-            // is it an annotated with BindingFunction?
-            BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
-            if (blockFunction == null)
-                continue;
-            // Generate the function for the provider
-            ArrayList<Parameter> fParams = new ArrayList<Parameter>();
-            Class<?>[] paramTypes = method.getParameterTypes();
-
-            // get the parameters
-            String params = "";
-            String functionName = blockFunction.value();
-            // get the parameters
-            for (int i = 0; i < paramTypes.length; ++i)
-            {
-                fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
-                params += ",arg" + i;
-            }
-            if (params.length() > 0)
-                params = params.substring(1);
-
-            // the object for the provider
-            ScriptFunctionCompletion sfc;
-            if (Modifier.isStatic(method.getModifiers()))
-                sfc = new ScriptFunctionCompletion(null, functionName, method);
-            else
-                sfc = new ScriptFunctionCompletion(null, method.getName(), method);
-
-            try
-            {
-                if (method.getReturnType() == void.class)
-                {
-                    String s = "function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}";
-                    Script script = cx.compileString(s, "script", 0, null);
-                    script.exec(cx, scriptable);
-                }
-                else
-                {
-                    String s = "function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall()
-                            + "\n}";
-                    Script script = cx.compileString(s, "script", 0, null);
-                    script.exec(cx, scriptable);
-                }
-            }
-            catch (RhinoException e)
-            {
-                throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-            }
-        }
-    }
+    // public void installMethods(Context cx, ScriptableObject scriptable, ArrayList<Method>
+    // methods)
+    // throws ScriptException
+    // {
+    // try
+    // {
+    // // hardcoded functions, to remove in the future
+    // String s =
+    // "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }";
+    // Script script = cx.compileString(s, "script", 0, null);
+    // script.exec(cx, scriptable);
+    // }
+    // catch (RhinoException e)
+    // {
+    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+    // }
+    //
+    // try
+    // {
+    // String s =
+    // "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage() }";
+    // Script script = cx.compileString(s, "script", 0, null);
+    // script.exec(cx, scriptable);
+    // }
+    // catch (RhinoException e)
+    // {
+    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+    // }
+    // for (Method method : methods)
+    // {
+    // // is it an annotated with BindingFunction?
+    // BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
+    // if (blockFunction == null)
+    // continue;
+    // // Generate the function for the provider
+    // ArrayList<Parameter> fParams = new ArrayList<Parameter>();
+    // Class<?>[] paramTypes = method.getParameterTypes();
+    //
+    // // get the parameters
+    // String params = "";
+    // String functionName = blockFunction.value();
+    // // get the parameters
+    // for (int i = 0; i < paramTypes.length; ++i)
+    // {
+    // fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
+    // params += ",arg" + i;
+    // }
+    // if (params.length() > 0)
+    // params = params.substring(1);
+    //
+    // // the object for the provider
+    // ScriptFunctionCompletion sfc;
+    // if (Modifier.isStatic(method.getModifiers()))
+    // sfc = new ScriptFunctionCompletion(null, functionName, method);
+    // else
+    // sfc = new ScriptFunctionCompletion(null, method.getName(), method);
+    //
+    // try
+    // {
+    // if (method.getReturnType() == void.class)
+    // {
+    // String s = "function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() +
+    // "\n}";
+    // Script script = cx.compileString(s, "script", 0, null);
+    // script.exec(cx, scriptable);
+    // }
+    // else
+    // {
+    // String s = "function " + functionName + " (" + params + ") {\n\treturn " +
+    // sfc.getMethodCall()
+    // + "\n}";
+    // Script script = cx.compileString(s, "script", 0, null);
+    // script.exec(cx, scriptable);
+    // }
+    // }
+    // catch (RhinoException e)
+    // {
+    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+    // }
+    // }
+    // }
 
     @Override
     public void installDefaultLanguageCompletions(String language)
@@ -1860,7 +1856,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         Reader reader = new BufferedReader(new InputStreamReader(is));
         Context context = Context.enter();
         context.setLanguageVersion(Context.VERSION_1_6);
-        ScriptableObject scope = context.initStandardObjects();
+        org.mozilla.javascript.ScriptableObject scope = context.initStandardObjects();
 
         try
         {
