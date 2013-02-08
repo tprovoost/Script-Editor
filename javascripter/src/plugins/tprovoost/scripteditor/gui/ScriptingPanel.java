@@ -225,6 +225,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         // creates the text area and set it up
         textArea = new RSyntaxTextArea(20, 60);
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+        // textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
         textArea.setCodeFoldingEnabled(true);
         textArea.setAntiAliasingEnabled(true);
         textArea.setAutoIndentEnabled(true);
@@ -236,7 +237,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.setPaintMatchedBracketPair(true);
         textArea.setPaintTabLines(true);
         textArea.setTabsEmulated(false);
-        // textArea.setTabSize(8);
 
         pane = new RTextScrollPane(textArea);
         pane.setIconRowHeaderEnabled(true);
@@ -484,6 +484,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         // set the syntax
         if (language.contentEquals("javascript"))
         {
+            // setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVA);
             setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
             ac = new JSAutoCompletion(provider);
         }

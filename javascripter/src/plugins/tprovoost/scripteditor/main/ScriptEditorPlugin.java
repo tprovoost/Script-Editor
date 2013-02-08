@@ -22,7 +22,7 @@ public class ScriptEditorPlugin extends PluginActionable
     @Override
     public void run()
     {
-        String jv = System.getProperty("java.version");
+        // String jv = System.getProperty("java.version");
         // if (!jv.startsWith("1.6."))
         // {
         // MessageDialog
@@ -53,29 +53,29 @@ public class ScriptEditorPlugin extends PluginActionable
         });
     }
 
-    @BindingFunction(value = "displayHelloString")
-    public static void displayHello(String h)
-    {
-        System.out.println("Hello " + h + "!");
-    }
-
-    @BindingFunction(value = "displayHelloInt")
-    public void displayHello(Object a)
-    {
-        System.out.println("Hello " + a + "!");
-    }
-
-    @BindingFunction(value = "getThisSEP")
-    public ScriptEditorPlugin getThis(String lol)
-    {
-        return this;
-    }
-
-    @BindingFunction(value = "fnTest")
-    public static int testFuncStatic()
-    {
-        return 42;
-    }
+    // @BindingFunction(value = "displayHelloString")
+    // public static void displayHello(String h)
+    // {
+    // System.out.println("Hello " + h + "!");
+    // }
+    //
+    // @BindingFunction(value = "displayHelloInt")
+    // public void displayHello(Object a)
+    // {
+    // System.out.println("Hello " + a + "!");
+    // }
+    //
+    // @BindingFunction(value = "getThisSEP")
+    // public ScriptEditorPlugin getThis(String lol)
+    // {
+    // return this;
+    // }
+    //
+    // @BindingFunction(value = "fnTest")
+    // public static int testFuncStatic()
+    // {
+    // return 42;
+    // }
 
     // TODO test
     public static void openInScriptEditor(final String text)

@@ -40,6 +40,7 @@ public class PreferencesWindow extends IcyFrame
     private JCheckBox cboxStrict;
     private JCheckBox cboxSoft;
     private boolean release = false;
+    private JCheckBox cboxAdvanced;
 
     private PreferencesWindow()
     {
@@ -165,6 +166,21 @@ public class PreferencesWindow extends IcyFrame
         cboxAutoVerif = new JCheckBox("");
         panelAutoVerif.add(cboxAutoVerif);
         panelAutoVerif.add(Box.createHorizontalGlue());
+
+        // ------------
+        // Strict mode
+        // ------------
+        JPanel panelAdvancedMode = new JPanel();
+        if (!release)
+            panel.add(panelAdvancedMode);
+        panelAdvancedMode.setLayout(new BoxLayout(panelAdvancedMode, BoxLayout.X_AXIS));
+
+        JLabel lblAdvancedMode = new JLabel("Enable methods (javascript/beta)*");
+        panelAdvancedMode.add(lblAdvancedMode);
+
+        cboxAdvanced = new JCheckBox("");
+        panelAdvancedMode.add(cboxAdvanced);
+        panelAdvancedMode.add(Box.createHorizontalGlue());
 
         // ------------
         // Strict mode

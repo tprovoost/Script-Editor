@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
+import icy.gui.main.MainInterface;
 import icy.image.IcyBufferedImage;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginInstaller;
@@ -169,7 +170,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
         catch (RhinoException e)
         {
-            // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
         }
         finally
         {
@@ -264,6 +265,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     {
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
+        HashMap<String, Class<?>> engineVariables = engineHandler.getEngineVariables();
 
         // IMPORT PACKAGES
         try
@@ -274,15 +276,18 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         {
         }
 
-        // IMPORT A FEW IMPORTANT SEQUENCES, TO BE REMOVED
-        FunctionCompletion c;
         // ArrayList<Parameter> params = new ArrayList<Parameter>();
+        ScriptEngine engine = getEngine();
+        if (engine == null)
+            return;
+
+        // HARDCODED ITEMS, TO BE REMOVED OR ADDED IN AN XML
+        String mainInterface = MainInterface.class.getName();
         try
         {
-            getEngine().eval(
-                    "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
-            c = new FunctionCompletion(provider, "getSequence", "Sequence");
-            c.setDefinedIn("MainInterface");
+            engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
+            FunctionCompletion c = new FunctionCompletion(provider, "getSequence", Sequence.class.getName());
+            c.setDefinedIn(mainInterface);
             c.setReturnValueDescription("The focused sequence is returned.");
             c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
             provider.addCompletion(c);
@@ -295,14 +300,27 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
         try
         {
-            getEngine().eval(
-                    "function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
-            c = new FunctionCompletion(provider, "getImage", "IcyBufferedImage");
-            c.setDefinedIn("MainInterface");
+            engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
+            FunctionCompletion c = new FunctionCompletion(provider, "getImage", IcyBufferedImage.class.getName());
+            c.setDefinedIn(mainInterface);
             c.setShortDescription("Returns the current image viewed in the focused sequence.");
             c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
             provider.addCompletion(c);
             engineFunctions.put("getImage", IcyBufferedImage.class);
+        }
+        catch (ScriptException e)
+        {
+            System.out.println(e.getMessage());
+        }
+
+        try
+        {
+            engine.eval("gui = Packages.icy.main.Icy.getMainInterface()");
+            VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
+            vc.setDefinedIn(mainInterface);
+            vc.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+            provider.addCompletion(vc);
+            engineVariables.put("gui", MainInterface.class);
         }
         catch (ScriptException e)
         {
@@ -364,6 +382,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         try
         {
             engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
+        }
+        catch (ScriptException e1)
+        {
+        }
+        try
+        {
+            engine.eval("gui = Packages.icy.main.Icy.getMainInterface()");
         }
         catch (ScriptException e1)
         {
@@ -828,7 +853,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return null;
     }
 
-    private Class<?> resolveCallType(AstNode n, String text, boolean noerror) throws ScriptException
+    private Class<?> resolveCallType(AstNode n, String text, boolean noerror)
     {
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         int offset = n.getAbsolutePosition();
@@ -905,7 +930,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
                 // unknown type
                 if (clazz == null)
-                    throw new ScriptException("Unknown: " + classNameOrFunctionNameOrVariable, null, n.getLineno());
+                {
+                    System.out.println("Unknown: " + classNameOrFunctionNameOrVariable + " at line: " + n.getLineno());
+                    return null;
+                }
 
                 // generate the Class<?> arguments
                 Class<?> clazzes[];
@@ -928,7 +956,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 if (lastDot != -1)
                 {
                     // Static access to a class
-                    Method m = clazz.getMethod(call, clazzes);
+                    Method m = resolveMethod(clazz, call, clazzes);
                     returnType = m.getReturnType();
                 }
                 IcyFunctionBlock fb = functionBlocksToResolve.pop();
@@ -941,8 +969,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 while (match.find(decal) && !(firstCall = match.group()).isEmpty())
                 {
                     if (returnType == void.class)
-                        throw new ScriptException("Void return, impossible to call something else on it.", null,
-                                n.getLineno());
+                    {
+                        System.out.println("Void return, impossible to call something else on it. at line:"
+                                + +n.getLineno());
+                    }
                     idxP1 = firstCall.indexOf('(');
                     idxP2 = firstCall.indexOf(')');
                     decal += idxP2 + 2; // account for ) and .
@@ -976,7 +1006,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     }
                     else
                     {
-                        Method m = returnType.getMethod(firstCall.substring(0, idxP1), clazzes);
+                        Method m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
                         returnType = m.getReturnType();
                     }
 
@@ -994,8 +1024,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
             catch (NoSuchMethodException e)
             {
-                throw new ScriptException("Var Detection: No such method: " + e.getLocalizedMessage(), null,
-                        n.getLineno());
+                System.out.println("Var Detection: no such method: " + e.getLocalizedMessage() + " at line "
+                        + n.getLineno());
             }
         }
         return null;
@@ -1101,8 +1131,51 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 }
             case Token.ARRAYLIT:
                 return Object[].class;
+            case Token.GETPROP:
+                String className = generateClassName(right, "");
+                Class<?> clazz = resolveClassDeclaration(className);
+                if (clazz != null)
+                    return clazz;
+                // try if it is an enum
+                int idx = className.lastIndexOf('.');
+                if (idx != -1)
+                {
+                    clazz = resolveClassDeclaration(className.substring(0, idx));
+                    return clazz;
+                }
+                break;
         }
         return null;
+    }
+
+    private Method resolveMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws SecurityException,
+            NoSuchMethodException
+    {
+        try
+        {
+            return clazz.getMethod(name, parameterTypes);
+        }
+        catch (SecurityException e)
+        {
+        }
+        catch (NoSuchMethodException e)
+        {
+        }
+        L1: for (Method m : clazz.getMethods())
+        {
+            Class<?>[] types = m.getParameterTypes();
+            if (m.getName().contentEquals(name) && types.length == parameterTypes.length)
+            {
+                // check types super etc
+                for (int i = 0; i < types.length; ++i)
+                {
+                    if (types[i] == null || parameterTypes[i] == null || !types[i].isAssignableFrom(parameterTypes[i]))
+                        continue L1;
+                }
+                return m;
+            }
+        }
+        return clazz.getMethod(name, parameterTypes);
     }
 
     protected void addVariableDeclaration(String name, Class<?> type, int offset)
@@ -1159,8 +1232,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         {
             if (n.getType() == Token.GETPROP)
             {
-                toReturn += generateClassName(n.getFirstChild(), toReturn) + "."
-                        + generateClassName(n.getLastChild(), toReturn);
+                toReturn += generateClassName(((PropertyGet) n).getLeft(), toReturn) + "."
+                        + generateClassName(((PropertyGet) n).getRight(), toReturn);
             }
             else if (n.getType() == Token.NAME)
             {
@@ -1304,7 +1377,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
     }
 
-    private String buildFunction2(AstNode n) throws ScriptException
+    private String buildFunction2(AstNode n)
     {
         String callName = "";
 
@@ -1329,7 +1402,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * 
      * @throws ScriptException
      */
-    private String buildFunctionRecursive(String elem, AstNode n) throws ScriptException
+    private String buildFunctionRecursive(String elem, AstNode n)
     {
         if (n != null)
         {
@@ -1426,7 +1499,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @return
      * @throws ScriptException
      */
-    public Class<?> getRealType(AstNode n) throws ScriptException
+    public Class<?> getRealType(AstNode n)
     {
         if (n == null)
             return null;
@@ -1447,7 +1520,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.GETPROP:
                 // class wanted
                 String className = generateClassName(n, "");
-                return resolveClassDeclaration(className);
+                Class<?> clazz = resolveClassDeclaration(className);
+                if (clazz != null)
+                    return clazz;
+                // try if it is an enum
+                int idx = className.lastIndexOf('.');
+                if (idx != -1)
+                {
+                    clazz = resolveClassDeclaration(className.substring(0, idx));
+                    return clazz;
+                }
             case Token.ARRAYLIT:
                 return Object[].class;
             case Token.NEW:

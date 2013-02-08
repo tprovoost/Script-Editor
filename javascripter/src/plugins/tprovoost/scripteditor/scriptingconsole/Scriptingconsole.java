@@ -21,7 +21,6 @@ import java.util.List;
 import javax.script.ScriptEngineFactory;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;

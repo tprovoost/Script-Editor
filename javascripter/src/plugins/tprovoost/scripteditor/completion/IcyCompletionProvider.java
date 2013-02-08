@@ -107,6 +107,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             else
                 sfc = new ScriptFunctionCompletion(this, method.getName(), method);
             sfc.setDefinedIn(clazz.getName().replace('$', '.'));
+            if (method.getAnnotation(Deprecated.class) != null)
+            {
+                sfc.setShortDescription("deprecated");
+            }
             sfc.setParams(fParams);
             sfc.setRelevance(2);
 
@@ -427,7 +431,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         // return completions;
         List<Completion> retVal = new ArrayList<Completion>();
         String text = getAlreadyEnteredTextWithFunc(comp);
-        boolean containsNew = text.contains("new ");
         int lastIdx = text.lastIndexOf('.');
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
@@ -469,6 +472,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     lastIdx = text.lastIndexOf('.');
                 }
             }
+            boolean containsNew = text.contains("new ");
             if (containsNew)
             {
                 text = text.substring("new ".length());
@@ -500,7 +504,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                                 ClassUtil.getSimpleClassName(s), c);
                                         fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
-                                        // TODO relevance assignment = type / expr = void
+                                        // TODO relevance assignment = type / expression = void
                                         fc.setDefinedIn(clazz.toString().replace('$', '.'));
                                         ArrayList<Parameter> params = new ArrayList<Parameter>();
                                         int i = 0;
@@ -696,6 +700,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     params.add(new Parameter(getType(clazzParam, true), "arg" + i));
                     ++i;
                 }
+                if (c.getAnnotation(Deprecated.class) != null)
+                {
+                    fc.setSummary("Deprecated");
+                    fc.setShortDescription("Deprecated");
+                }
                 fc.setParams(params);
                 retVal.add(fc);
             }
@@ -732,6 +741,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 {
                     VariableCompletion vc = new VariableCompletion(this, name, getType(f.getType(), true));
                     vc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                    if (f.getAnnotation(Deprecated.class) != null)
+                    {
+                        vc.setSummary("deprecated");
+                    }
                     listFields.add(vc);
                 }
             }
@@ -759,6 +772,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     ++i;
                 }
                 fc.setParams(params);
+                if (m.getAnnotation(Deprecated.class) != null)
+                {
+                    fc.setSummary("deprecated");
+                    fc.setShortDescription("Deprecated");
+                }
                 listMethods.add(fc);
             }
             else if (Modifier.isStatic(mod))
@@ -774,6 +792,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 {
                     params.add(new Parameter(getType(clazzParam, true), "arg" + i));
                     ++i;
+                }
+                if (m.getAnnotation(Deprecated.class) != null)
+                {
+                    fc.setSummary("deprecated");
+                    fc.setShortDescription("Deprecated");
                 }
                 fc.setParams(params);
                 listMethods.add(fc);

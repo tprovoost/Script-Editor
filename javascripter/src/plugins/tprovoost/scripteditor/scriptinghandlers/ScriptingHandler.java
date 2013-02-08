@@ -1,7 +1,6 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
-import icy.painter.TextPainter;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
@@ -11,7 +10,6 @@ import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 
 import java.awt.EventQueue;
-import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -195,8 +193,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
 
-        getEngine().getContext().setWriter(pw);
-        getEngine().getContext().setErrorWriter(pw);
+        ScriptEngine engine = getEngine();
+        if (engine == null) {
+            return;
+        }
+        engine.getContext().setWriter(pw);
+        engine.getContext().setErrorWriter(pw);
     }
 
     /**
@@ -336,6 +338,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             ThreadUtil.bgRun(new Runnable()
             {
 
+                @SuppressWarnings("deprecation")
                 @Override
                 public void run()
                 {
@@ -689,18 +692,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             if (errorOutput != null)
             {
-                Graphics2D g = (Graphics2D) errorOutput.getGraphics();
-                int chW = g.getFontMetrics().charWidth('_');
-                int w = errorOutput.getWidth();
-                int charCount = w / chW;
-                String str = "";
-                for (int i = 0; i < charCount - 1; ++i)
-                    str += '-';
+                // Graphics2D g = (Graphics2D) errorOutput.getGraphics();
+                // int chW = g.getFontMetrics().charWidth('_');
+                // int w = errorOutput.getWidth();
+                // int charCount = w / chW;
+                // String str = "";
+                // for (int i = 0; i < charCount - 1; ++i)
+                // str += '-';
                 // errorOutput.append(str + "\n");
                 // errorOutput.append("New Engine created" + "\n");
                 // errorOutput.append(str + "\n");
                 errorOutput.setText("");
-                g.dispose();
+                // g.dispose();
             }
             ScriptEngine engine = createNewEngine();
             thread = new EvalThread(engine, textArea.getText());

@@ -1,5 +1,6 @@
 package plugins.tprovoost.scripteditor.completion;
 
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 
 import icy.image.ImageUtil;
@@ -28,12 +29,13 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
             .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/static_co.gif"));
     public static final BufferedImage imgFunction = ImageUtil.load(PluginLoader
             .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/methpub_obj.gif"));
+    public static final BufferedImage imgDeprecated = ImageUtil.load(PluginLoader
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/deprecated.gif"));
 
     // icons
-    public static final ImageIcon iconStaticFunctions = new ImageIcon(imgStatic);
     public static final ImageIcon iconFunctions = new ImageIcon(imgFunction);
     public static final ImageIcon iconVariables = new ImageIcon(ImageUtil.load(PluginLoader
-            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/field_default_obj.gif")));
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/field_public_obj.gif")));
     public static final ImageIcon iconOther = new ImageIcon(ImageUtil.load(PluginLoader
             .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/constant_co.gif")));
     public static final ImageIcon iconClass = new ImageIcon(ImageUtil.load(PluginLoader
@@ -45,14 +47,24 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
     {
         if (fc instanceof ScriptFunctionCompletion)
         {
+            ImageIcon icon = iconFunctions;
+            BufferedImage img = null;
             if (((ScriptFunctionCompletion) fc).isStatic())
             {
                 BufferedImage func2 = ImageUtil.getCopy(imgFunction);
                 func2.getGraphics().drawImage(imgStatic, 0, 0, null);
-                setIcon(new ImageIcon(func2));
+                img = func2;
             }
+            if (((ScriptFunctionCompletion) fc).getMethod().getAnnotation(Deprecated.class) != null)
+            {
+                if (img == null)
+                    img = ImageUtil.getCopy(imgFunction);
+                img.getGraphics().drawImage(imgDeprecated, 0, 0, null);
+            }
+            if (img != null)
+                setIcon(new ImageIcon(img));
             else
-                setIcon(iconFunctions);
+                setIcon(icon);
         }
         else if (fc instanceof NewInstanceCompletion)
         {
@@ -67,10 +79,20 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
     protected void prepareForVariableCompletion(JList list, VariableCompletion vc, int index, boolean selected,
             boolean hasFocus)
     {
+        ImageIcon icon;
         if (vc instanceof BasicJavaClassCompletion)
-            setIcon(iconClass);
+            icon = iconClass;
         else
-            setIcon(iconVariables);
+            icon = iconVariables;
+
+        if (vc.getSummary().startsWith("Deprecated"))
+        {
+            Image img = ImageUtil.getCopy(icon.getImage());
+            img.getGraphics().drawImage(imgDeprecated, 0, 0, null);
+            setIcon(new ImageIcon(img));
+        }
+        else
+            setIcon(icon);
         super.prepareForVariableCompletion(list, vc, index, selected, hasFocus);
     }
 
@@ -80,4 +102,5 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
         setIcon(iconOther);
         super.prepareForOtherCompletion(list, c, index, selected, hasFocus);
     }
+
 }

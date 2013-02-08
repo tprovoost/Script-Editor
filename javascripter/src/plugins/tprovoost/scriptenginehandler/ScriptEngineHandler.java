@@ -170,8 +170,10 @@ public class ScriptEngineHandler implements PluginInstallerListener
                 int i = 0;
                 for (PluginDescriptor pd : list)
                 {
+                    Class<?> clazz = pd.getPluginClass();
                     // System.out.println(pd);
-                    findBindingsMethods(pd.getPluginClass());
+                    findBindingsMethods(clazz);
+                    allClasses.add(clazz.getName());
                     ++i;
                     frame.setPosition(i);
                 }

@@ -41,7 +41,13 @@ public class JSAutoCompletion extends IcyAutoCompletion
                 // test eventual needed importClasses
                 if (!sfc.isStatic() && !classAlreadyImported(neededClass))
                 {
-                    addImport(tc, neededClass, true).length();
+                    int caretPos = tc.getCaretPosition();
+
+                    // import the needed class + movement
+                    caretPos += addImport(tc, neededClass, true).length();
+
+                    // put the caret in the right position
+                    tc.getCaret().setDot(caretPos);
                 }
             }
         }

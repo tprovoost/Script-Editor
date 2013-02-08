@@ -9,7 +9,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import javax.script.ScriptEngineFactory;
-import javax.swing.JTextArea;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
