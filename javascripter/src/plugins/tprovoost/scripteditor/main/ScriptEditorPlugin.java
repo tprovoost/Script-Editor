@@ -12,7 +12,6 @@ import javax.script.ScriptEngineManager;
 
 import plugins.tprovoost.scripteditor.gui.ScriptingEditor;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
 public class ScriptEditorPlugin extends PluginActionable
 {
