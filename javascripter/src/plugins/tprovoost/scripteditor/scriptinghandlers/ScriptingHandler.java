@@ -194,7 +194,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
 
         ScriptEngine engine = getEngine();
-        if (engine == null) {
+        if (engine == null)
+        {
             return;
         }
         engine.getContext().setWriter(pw);
@@ -309,6 +310,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      */
     public Class<?> getVariableDeclaration(String name, int offset)
     {
+        boolean isArray = name.contains("[");
+        String originalName = name;
+        if (isArray)
+        {
+            name = name.substring(0, name.indexOf('['));
+        }
         TreeMap<Integer, Class<?>> list = localVariables.get(name);
         if (list == null)
             return null;
@@ -317,6 +324,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             if (offset > i)
                 type = list.get(i);
+        }
+        if (type == null)
+        {
+            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+            type = engineHandler.getEngineVariables().get(name);
+        }
+        if (type != null && isArray)
+        {
+            int occ = originalName.split("\\[").length - 1;
+            for (int i = 0; i < occ; ++i)
+            {
+                type = type.getComponentType();
+            }
         }
         return type;
     }

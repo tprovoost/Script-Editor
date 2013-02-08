@@ -178,88 +178,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
     }
 
-    // public void installMethods(Context cx, ScriptableObject scriptable, ArrayList<Method>
-    // methods)
-    // throws ScriptException
-    // {
-    // try
-    // {
-    // // hardcoded functions, to remove in the future
-    // String s =
-    // "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }";
-    // Script script = cx.compileString(s, "script", 0, null);
-    // script.exec(cx, scriptable);
-    // }
-    // catch (RhinoException e)
-    // {
-    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-    // }
-    //
-    // try
-    // {
-    // String s =
-    // "function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage() }";
-    // Script script = cx.compileString(s, "script", 0, null);
-    // script.exec(cx, scriptable);
-    // }
-    // catch (RhinoException e)
-    // {
-    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-    // }
-    // for (Method method : methods)
-    // {
-    // // is it an annotated with BindingFunction?
-    // BindingFunction blockFunction = method.getAnnotation(BindingFunction.class);
-    // if (blockFunction == null)
-    // continue;
-    // // Generate the function for the provider
-    // ArrayList<Parameter> fParams = new ArrayList<Parameter>();
-    // Class<?>[] paramTypes = method.getParameterTypes();
-    //
-    // // get the parameters
-    // String params = "";
-    // String functionName = blockFunction.value();
-    // // get the parameters
-    // for (int i = 0; i < paramTypes.length; ++i)
-    // {
-    // fParams.add(new Parameter(IcyCompletionProvider.getType(paramTypes[i], true), "arg" + i));
-    // params += ",arg" + i;
-    // }
-    // if (params.length() > 0)
-    // params = params.substring(1);
-    //
-    // // the object for the provider
-    // ScriptFunctionCompletion sfc;
-    // if (Modifier.isStatic(method.getModifiers()))
-    // sfc = new ScriptFunctionCompletion(null, functionName, method);
-    // else
-    // sfc = new ScriptFunctionCompletion(null, method.getName(), method);
-    //
-    // try
-    // {
-    // if (method.getReturnType() == void.class)
-    // {
-    // String s = "function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() +
-    // "\n}";
-    // Script script = cx.compileString(s, "script", 0, null);
-    // script.exec(cx, scriptable);
-    // }
-    // else
-    // {
-    // String s = "function " + functionName + " (" + params + ") {\n\treturn " +
-    // sfc.getMethodCall()
-    // + "\n}";
-    // Script script = cx.compileString(s, "script", 0, null);
-    // script.exec(cx, scriptable);
-    // }
-    // }
-    // catch (RhinoException e)
-    // {
-    // throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
-    // }
-    // }
-    // }
-
     @Override
     public void installDefaultLanguageCompletions(String language)
     {
@@ -344,28 +262,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     public void importJavaScriptPackages(ScriptEngine engine) throws ScriptException
     {
-        // icy important packages
-        // engine.eval("importPackage(Packages.icy.main);");
-        // engine.eval("importPackage(Packages.icy.plugin);");
-        // engine.eval("importPackage(Packages.icy.sequence)\n");
-        // engine.eval("importPackage(Packages.icy.image)");
-        // engine.eval("importPackage(Packages.icy.file);");
-        // engine.eval("importPackage(Packages.icy.file.xls)");
-        //
-        // ArrayList<String> engineDeclaredImports = ScriptEngineHandler.getEngineHandler(engine)
-        // .getEngineDeclaredImports();
-        // if (!engineDeclaredImports.contains("icy.main"))
-        // engineDeclaredImports.add("icy.main");
-        // if (!engineDeclaredImports.contains("icy.plugin"))
-        // engineDeclaredImports.add("icy.plugin");
-        // if (!engineDeclaredImports.contains("icy.sequence"))
-        // engineDeclaredImports.add("icy.sequence");
-        // if (!engineDeclaredImports.contains("icy.image"))
-        // engineDeclaredImports.add("icy.image");
-        // if (!engineDeclaredImports.contains("icy.file"))
-        // engineDeclaredImports.add("icy.file");
-        // if (!engineDeclaredImports.contains("icy.file.xls"))
-        // engineDeclaredImports.add("icy.file.xls");
     }
 
     @Override
@@ -769,7 +665,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         typeString = IcyCompletionProvider.getType(type, true);
                     VariableCompletion c = new VariableCompletion(provider, left.getString(), typeString);
                     c.setSummary("variable");
-                    c.setDefinedIn(fileName);
+                    c.setDefinedIn("script");
                     c.setRelevance(RELEVANCE_HIGH);
                     addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
                     return c;
@@ -781,74 +677,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                             .getString().contentEquals("importPackage"))))
                         resolveCallType(expression, text, false);
                 }
+                else if (expression instanceof PropertyGet)
+                {
+                    // Do nothing
+                }
             }
                 break;
 
             case Token.CALL:
                 resolveCallType(n, text, false);
                 break;
-        // case Token.VAR:
-        // if (n.getFirstChild() != null && n.getFirstChild().getType() == Token.NAME)
-        // {
-        // Node resNode = n.getFirstChild().getFirstChild();
-        // String typeStr = "";
-        // VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(),
-        // typeStr);
-        // c.setSummary("variable");
-        // c.setDefinedIn(fileName);
-        // c.setRelevance(RELEVANCE_HIGH);
-        // return c;
-        // }
-        // break;
-        // case Token.SETNAME:
-        // {
-        // Node resNode = n.getFirstChild().getNext();
-        // String type = "";
-        // VariableCompletion c = new VariableCompletion(provider, n.getFirstChild().getString(),
-        // type);
-        // c.setSummary("Variable");
-        // c.setDefinedIn(fileName);
-        // c.setRelevance(RELEVANCE_HIGH);
-        // return c;
-        // }
-        // case Token.FUNCTION:
-        // {
-        // // String type = getVariableTypeAsString(n, text,
-        // // commandStartOffset, commandEndOffset);
-        // // String funcName = fn.getName();
-        // // ArrayList<Parameter> params = new ArrayList<Parameter>();
-        // // for (int i = 0; i < fn.getParamAndVarCount(); ++i)
-        // // {
-        // // String s = fn.getParamOrVarName(i);
-        // // if (s == null || s == "" || s.contentEquals(funcName))
-        // // continue;
-        // // params.add(new Parameter("", s));
-        // // }
-        // // FunctionCompletion fc = new FunctionCompletion(provider, funcName, "");
-        // // fc.setParams(params);
-        // // fc.setRelevance(RELEVANCE_HIGH);
-        // // return fc;
-        // }
-        // case Token.IF:
-        // case Token.IFEQ:
-        // case Token.IFNE:
-        // case Token.SWITCH:
-        // case Token.TRY:
-        // case Token.CATCH:
-        // case Token.WITH:
-        // case Token.FOR:
-        // case Token.ELSE:
-        // case Token.DO:
-        // case Token.FINALLY:
-        // case Token.WHILE:
-        // {
-        // }
-        // break;
-        //
-        // // case Token.WITH:
-        // // break;
-        // default:
-        // break;
         }
         return null;
     }
@@ -866,7 +704,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         // create a regex pattern
-        Pattern p = Pattern.compile("\\w(\\w|\\.)*\\((\\w|\\.|\\[|,|\\]|\\(|\\)| )*\\)");
+        Pattern p = Pattern.compile("\\w(\\w|\\.|\\[|\\])*\\((\\w|\\.|\\[|,|\\]|\\(|\\)| )*\\)");
         Matcher match = p.matcher(s);
 
         int idxP1 = 0;
@@ -1122,6 +960,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 return Void.class;
 
             case Token.NEW:
+            {
                 NewExpression nexp = (NewExpression) right;
                 AstNode target = nexp.getTarget();
                 if (target != null)
@@ -1129,23 +968,79 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     String className = generateClassName(target, "");
                     return resolveClassDeclaration(className);
                 }
+            }
             case Token.ARRAYLIT:
                 return Object[].class;
             case Token.GETPROP:
-                String className = generateClassName(right, "");
-                Class<?> clazz = resolveClassDeclaration(className);
-                if (clazz != null)
-                    return clazz;
-                // try if it is an enum
-                int idx = className.lastIndexOf('.');
-                if (idx != -1)
+            {
+                AstNode target = ((PropertyGet) right).getTarget();
+                if (target.getType() == Token.GETELEM)
                 {
-                    clazz = resolveClassDeclaration(className.substring(0, idx));
-                    return clazz;
+                    // array
+                    String rightStr = generateClassName(right, "");
+                    // Class<?> clazz = resolveArrayItemTypeComponent(target);
+                    // clazz = createArrayItemType(clazz, target);
+                    if (rightStr.contentEquals("length"))
+                        return int.class;
+                }
+                else
+                {
+                    // class
+                    String className = generateClassName(right, "");
+                    Class<?> clazz = resolveClassDeclaration(className);
+                    if (clazz != null)
+                        return clazz;
+                    // try if it is an enum
+                    int idx = className.lastIndexOf('.');
+                    if (idx != -1)
+                    {
+                        clazz = resolveClassDeclaration(className.substring(0, idx));
+                        return clazz;
+                    }
                 }
                 break;
+            }
+            case Token.GETELEM:
+            {
+                // access a table
+                ElementGet get = (ElementGet) right;
+                AstNode index = get.getElement();
+                AstNode target = get.getTarget();
+                Class<?> clazz = resolveArrayItemTypeComponent(target);
+                clazz = createArrayItemType(clazz, target);
+                return clazz;
+            }
         }
         return null;
+    }
+
+    private Class<?> resolveArrayItemTypeComponent(AstNode node)
+    {
+        int type = node.getType();
+        if (type == Token.NAME)
+        {
+            String varname = node.getString();
+            return getVariableDeclaration(varname, node.getAbsolutePosition());
+        }
+        else if (type == Token.GETELEM)
+        {
+            return resolveArrayItemTypeComponent(((ElementGet) node).getTarget());
+        }
+        return null;
+    }
+
+    private Class<?> createArrayItemType(Class<?> clazz, AstNode node)
+    {
+        int type = node.getType();
+        if (type == Token.GETELEM)
+        {
+            return createArrayItemType(clazz.getComponentType(), ((ElementGet) node).getTarget());
+        }
+        else if (type == Token.NAME)
+        {
+            clazz = clazz.getComponentType();
+        }
+        return clazz;
     }
 
     private Method resolveMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws SecurityException,
@@ -1232,8 +1127,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         {
             if (n.getType() == Token.GETPROP)
             {
-                toReturn += generateClassName(((PropertyGet) n).getLeft(), toReturn) + "."
-                        + generateClassName(((PropertyGet) n).getRight(), toReturn);
+                String left = generateClassName(((PropertyGet) n).getLeft(), toReturn);
+                String right = generateClassName(((PropertyGet) n).getRight(), toReturn);
+                toReturn += left + (left.contentEquals("") ? "" : ".") + right;
             }
             else if (n.getType() == Token.NAME)
             {
@@ -1485,6 +1381,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             else if (type == Token.STRING)
             {
                 return ((StringLiteral) n).getValue();
+            }
+            else if (type == Token.GETELEM)
+            {
+                Class<?> clazz = resolveArrayItemTypeComponent(n);
+                return clazz.getCanonicalName();
             }
         }
         return elem;

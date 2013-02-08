@@ -76,10 +76,9 @@ public class ScriptEditorPlugin extends PluginActionable
     // return 42;
     // }
 
-    // TODO test
     public static void openInScriptEditor(final String text)
     {
-        if (editors.isEmpty())
+        if (!editors.isEmpty())
         {
             ThreadUtil.bgRun(new Runnable()
             {
@@ -87,8 +86,7 @@ public class ScriptEditorPlugin extends PluginActionable
                 @Override
                 public void run()
                 {
-                    new ScriptEditorPlugin().run();
-                    ScriptingPanel panel = editors.get(0).createNewPane("editor");
+                    ScriptingPanel panel = editors.get(0).createNewPane("Untitled*");
                     panel.getTextArea().setText(text);
                 }
             });
@@ -96,9 +94,17 @@ public class ScriptEditorPlugin extends PluginActionable
         }
         else
         {
-            new ScriptEditorPlugin().run();
-            ScriptingPanel panel = editors.get(0).createNewPane("editor");
-            panel.getTextArea().setText(text);
+            ThreadUtil.invokeLater(new Runnable()
+            {
+
+                @Override
+                public void run()
+                {
+                    new ScriptEditorPlugin().run();
+                    ScriptingPanel panel = editors.get(0).createNewPane("Untitled*");
+                    panel.getTextArea().setText(text);
+                }
+            });
         }
     }
 }

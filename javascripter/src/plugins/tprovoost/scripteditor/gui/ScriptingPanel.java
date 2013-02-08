@@ -244,7 +244,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         // creates the options panel
         options = new PanelOptions(language);
         installLanguage(options.combo.getSelectedItem().toString());
-        rebuildGUI();
 
         // set the default theme: eclipse.
         setTheme("eclipse");

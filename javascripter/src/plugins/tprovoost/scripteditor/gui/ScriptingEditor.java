@@ -378,9 +378,12 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
      */
     public void openStream(String name, InputStream stream) throws IOException
     {
-
-        if (tabbedPane.getTabCount() == 2 && !((ScriptingPanel) tabbedPane.getComponentAt(0)).isDirty())
-            tabbedPane.removeTabAt(0);
+        if (tabbedPane.getTabCount() == 2)
+        {
+            ScriptingPanel panel = (ScriptingPanel) tabbedPane.getComponentAt(0);
+            if (!panel.isDirty() && panel.getPanelName().contentEquals("Untitled"))
+                tabbedPane.removeTabAt(0);
+        }
         ScriptingPanel panel = createNewPane(name);
         panel.openStream(stream);
     }
@@ -661,7 +664,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
         itemJSDuplicateSequence.addActionListener(new ActionListener()
         {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {
@@ -673,7 +675,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         JMenuItem itemThreshold = new JMenuItem("Threshold");
         itemThreshold.addActionListener(new ActionListener()
         {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {

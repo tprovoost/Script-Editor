@@ -40,6 +40,8 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
             .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/constant_co.gif")));
     public static final ImageIcon iconClass = new ImageIcon(ImageUtil.load(PluginLoader
             .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/class_obj.gif")));
+    public static final ImageIcon iconInterface = new ImageIcon(ImageUtil.load(PluginLoader
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/int_obj.gif")));
 
     @Override
     protected void prepareForFunctionCompletion(JList list, FunctionCompletion fc, int index, boolean selected,
@@ -81,7 +83,12 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
     {
         ImageIcon icon;
         if (vc instanceof BasicJavaClassCompletion)
-            icon = iconClass;
+        {
+            if (((BasicJavaClassCompletion) vc).getClazz().isInterface())
+                icon = iconInterface;
+            else
+                icon = iconClass;
+        }
         else
             icon = iconVariables;
 
