@@ -7,6 +7,7 @@ import icy.plugin.PluginInstaller;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
+import icy.sequence.SequenceUtil;
 import icy.util.ClassUtil;
 
 import java.awt.Color;
@@ -917,19 +918,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 if (m.getName().contentEquals(function))
                 {
                     Class<?> params[] = m.getParameterTypes();
-                    boolean ok = true;
                     if (params.length == argsClazzes.length)
                     {
-                        for (int i = 0; i < params.length && ok; ++i)
+                        for (int i = 0; i < params.length; ++i)
                         {
+                            if (params[i] == null || argsClazzes[i] == null)
+                                break;
                             if (params[i].isAssignableFrom(argsClazzes[i]))
                                 toReturn[i] = params[i];
                             else if (params[i].isPrimitive())
                             {
-                                if ((params[i] == float.class || params[i] == double.class) && args[i].contains("."))
+                                if (!(params[i] == float.class || params[i] == double.class) && !args[i].contains("."))
                                     toReturn[i] = params[i];
-                                else if (!(params[i] == float.class || params[i] == double.class)
-                                        && !args[i].contains("."))
+                                else if (params[i] == float.class || params[i] == double.class)
                                     toReturn[i] = params[i];
                                 else
                                     break;
@@ -1406,6 +1407,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             return null;
         switch (n.getType())
         {
+            case Token.ADD:
+            case Token.DIV:
+            case Token.SUB:
+            case Token.MUL:
             case Token.NUMBER:
                 return Number.class;
             case Token.STRING:
