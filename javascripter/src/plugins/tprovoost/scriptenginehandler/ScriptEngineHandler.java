@@ -5,6 +5,7 @@ import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginInstaller.PluginInstallerListener;
 import icy.plugin.PluginLoader;
 import icy.util.ClassUtil;
+import icy.plugin.classloader.JarClassLoader;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -18,7 +19,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
-import org.xeustechnologies.jcl.JarClassLoader;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
