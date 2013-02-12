@@ -7,7 +7,6 @@ import icy.plugin.PluginInstaller;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
-import icy.sequence.SequenceUtil;
 import icy.util.ClassUtil;
 
 import java.awt.Color;
@@ -61,6 +60,7 @@ import org.mozilla.javascript.ast.ExpressionStatement;
 import org.mozilla.javascript.ast.FunctionCall;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.IfStatement;
+import org.mozilla.javascript.ast.InfixExpression;
 import org.mozilla.javascript.ast.NewExpression;
 import org.mozilla.javascript.ast.PropertyGet;
 import org.mozilla.javascript.ast.Scope;
@@ -88,6 +88,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     private ErrorReporter errorReporter = new ErrorReporter()
     {
 
+        private String lastErrortext = "";
+        private EvaluatorException exception;
+
         @Override
         public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
         {
@@ -111,7 +114,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource,
                 int lineOffset)
         {
-            return new EvaluatorException(message, sourceName, line + 1, lineSource, lineOffset);
+            if (exception != null)
+                return exception;
+            return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
         }
 
         @Override
@@ -122,14 +127,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 Document doc = errorOutput.getDocument();
                 try
                 {
-
                     Style style = errorOutput.getStyle("error");
                     if (style == null)
+                    {
                         style = errorOutput.addStyle("error", null);
-                    StyleConstants.setForeground(style, Color.red);
-                    String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                        StyleConstants.setForeground(style, Color.red);
+                    }
+                    lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
                             + lineOffset + ")";
-                    doc.insertString(doc.getLength(), text + "\n", style);
+                    exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
+                    doc.insertString(doc.getLength(), lastErrortext + "\n", style);
                 }
                 catch (BadLocationException e)
                 {
@@ -169,9 +176,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 bs.put(key, scriptable.get(key, scriptable));
             }
         }
-        catch (RhinoException e)
+        catch (EvaluatorException e)
         {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+            ignoredLines.put(e.lineNumber(), e);
+            updateGutter();
+        }
+        catch (RhinoException e3)
+        {
+            throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
         }
         finally
         {
@@ -182,6 +194,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     @Override
     public void installDefaultLanguageCompletions(String language)
     {
+        ScriptEngine engine = getEngine();
+        if (engine == null)
+        {
+            if (DEBUG)
+                System.out.println("Engine is null.");
+            return;
+        }
+
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
         HashMap<String, Class<?>> engineVariables = engineHandler.getEngineVariables();
@@ -196,9 +216,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         // ArrayList<Parameter> params = new ArrayList<Parameter>();
-        ScriptEngine engine = getEngine();
-        if (engine == null)
-            return;
 
         // HARDCODED ITEMS, TO BE REMOVED OR ADDED IN AN XML
         String mainInterface = MainInterface.class.getName();
@@ -688,6 +705,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.CALL:
                 resolveCallType(n, text, false);
                 break;
+
+            case Token.FUNCTION:
+                FunctionNode fn = (FunctionNode) n;
+                FunctionCompletion fc = new FunctionCompletion(provider, fn.getName(), "");
+                fc.setDefinedIn("script");
+                fc.setRelevance(RELEVANCE_HIGH);
+                localFunctions.put(fn.getName(), Void.class);
+                break;
         }
         return null;
     }
@@ -835,10 +860,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                                 clazzes);
                     }
                     String call2;
-                    if (lastDot != -1)
-                        call2 = firstCall.substring(lastDot + 1, idxP1);
-                    else
-                        call2 = firstCall.substring(0, idxP1);
+                    // if (lastDot != -1)
+                    // call2 = firstCall.substring(lastDot + 1, idxP1);
+                    // else
+                    call2 = firstCall.substring(0, idxP1);
                     if (call2.contentEquals("newInstance"))
                     {
                         clazz.getConstructor(clazzes);
@@ -863,8 +888,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
             catch (NoSuchMethodException e)
             {
-                System.out.println("Var Detection: no such method: " + e.getLocalizedMessage() + " at line "
-                        + n.getLineno());
+                String message = e.getLocalizedMessage();
+                int line = n.getLineno();
+                System.out.println("Var Detection: no such method: " + message + " at line " + line);
+                org.mozilla.javascript.EvaluatorException exception = new org.mozilla.javascript.EvaluatorException(
+                        message, "", line);
+                ignoredLines.put(line - 1, exception);
+                updateGutter();
             }
         }
         return null;
@@ -1005,7 +1035,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             {
                 // access a table
                 ElementGet get = (ElementGet) right;
-                AstNode index = get.getElement();
+                // AstNode index = get.getElement();
                 AstNode target = get.getTarget();
                 Class<?> clazz = resolveArrayItemTypeComponent(target);
                 clazz = createArrayItemType(clazz, target);
@@ -1065,7 +1095,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 // check types super etc
                 for (int i = 0; i < types.length; ++i)
                 {
-                    if (types[i] == null || parameterTypes[i] == null || !types[i].isAssignableFrom(parameterTypes[i]))
+                    // if (types[i] == null || parameterTypes[i] == null ||
+                    // !types[i].isAssignableFrom(parameterTypes[i]))
+                    if (types[i] != null
+                            && parameterTypes[i] != null
+                            && !(parameterTypes[i].isAssignableFrom(types[i]) || types[i]
+                                    .isAssignableFrom(parameterTypes[i])))
                         continue L1;
                 }
                 return m;
@@ -1408,6 +1443,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         switch (n.getType())
         {
             case Token.ADD:
+                // test if string
+                InfixExpression expr = (InfixExpression) n;
+                Class<?> typeLeft = getRealType(expr.getLeft());
+                Class<?> typeRight = getRealType(expr.getRight());
+                if (typeLeft == String.class || typeRight == String.class)
+                    return String.class;
             case Token.DIV:
             case Token.SUB:
             case Token.MUL:

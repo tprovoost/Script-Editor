@@ -150,13 +150,12 @@ public class ScriptEngineHandler implements PluginInstallerListener
             }
             if (getClass().getClassLoader() instanceof JarClassLoader)
             {
+                // Collection<Class<?>> col = PluginLoader.getLoadedClasses().values();
                 Collection<Class<?>> col = PluginLoader.getAllClasses().values();
                 frame.setLength(col.size());
                 int i = 0;
                 for (Class<?> clazz : new ArrayList<Class<?>>(col))
                 {
-                    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
-                        continue;
                     findBindingsMethods(clazz);
                     allClasses.add(clazz.getName());
                     ++i;
