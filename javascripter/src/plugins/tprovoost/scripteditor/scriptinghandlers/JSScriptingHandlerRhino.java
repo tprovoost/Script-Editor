@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,6 +66,8 @@ import org.mozilla.javascript.ast.NewExpression;
 import org.mozilla.javascript.ast.PropertyGet;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.StringLiteral;
+import org.mozilla.javascript.ast.VariableDeclaration;
+import org.mozilla.javascript.ast.VariableInitializer;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
@@ -88,7 +91,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     private ErrorReporter errorReporter = new ErrorReporter()
     {
 
-        private String lastErrortext = "";
         private EvaluatorException exception;
 
         @Override
@@ -115,7 +117,35 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 int lineOffset)
         {
             if (exception != null)
-                return exception;
+            {
+                EvaluatorException e = exception;
+                exception = null;
+                return e;
+            } else {
+                Document doc = errorOutput.getDocument();
+                try
+                {
+                    Style style = errorOutput.getStyle("error");
+                    if (style == null)
+                    {
+                        style = errorOutput.addStyle("error", null);
+                        StyleConstants.setForeground(style, Color.red);
+                    }
+                    String inLineSource = "";
+                    String atColumn = "";
+                    if (lineSource != null) {
+                        inLineSource = "\n in \"" + lineSource;
+                    }
+                    if (lineOffset > 0) {
+                        atColumn = "\"\n at column ("+ lineOffset + ")";
+                    }
+                    String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
+                    doc.insertString(doc.getLength(), lastErrortext + "\n", style);
+                }
+                catch (BadLocationException e)
+                {
+                }
+            }
             return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
         }
 
@@ -133,7 +163,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         style = errorOutput.addStyle("error", null);
                         StyleConstants.setForeground(style, Color.red);
                     }
-                    lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
+                    String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
                             + lineOffset + ")";
                     exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
                     doc.insertString(doc.getLength(), lastErrortext + "\n", style);
@@ -615,22 +645,25 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         if (DEBUG)
             System.out.println("current node: " + typeToName(n.getType()));
         // register current
-        Completion c = generateCompletion(n, root, text);
-        if (c != null)
+
+        for (Completion c : generateCompletion(n, root, text))
         {
-            boolean alreadyExists = false;
-            for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
+            if (c != null)
             {
-                if (variableCompletions.get(i).compareTo(c) == 0)
+                boolean alreadyExists = false;
+                for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
                 {
-                    if (textArea.getCaret().getDot() > n.getAbsolutePosition())
-                        variableCompletions.remove(i);
-                    else
-                        alreadyExists = true;
+                    if (variableCompletions.get(i).compareTo(c) == 0)
+                    {
+                        if (textArea.getCaret().getDot() > n.getAbsolutePosition())
+                            variableCompletions.remove(i);
+                        else
+                            alreadyExists = true;
+                    }
                 }
+                if (!alreadyExists)
+                    variableCompletions.add(c);
             }
-            if (!alreadyExists)
-                variableCompletions.add(c);
         }
         // recursive call on children (if any)
         if (n.hasChildren())
@@ -666,10 +699,41 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @return
      * @throws ScriptException
      */
-    private Completion generateCompletion(AstNode n, AstRoot root, String text) throws ScriptException
+    private ArrayList<Completion> generateCompletion(AstNode n, AstRoot root, String text) throws ScriptException
     {
+        ArrayList<Completion> toReturn = new ArrayList<Completion>();
         switch (n.getType())
         {
+            case Token.VAR:
+                VariableDeclaration var = (VariableDeclaration) n;
+                List<VariableInitializer> listVars = var.getVariables();
+
+                // listVars cannot be null, and contains
+                // all variables declared after the keyword "var"
+                for (VariableInitializer v : listVars)
+                {
+                    AstNode target = v.getTarget();
+                    AstNode init = v.getInitializer();
+
+                    // only use variable declaration with names,
+                    // not with Literals.
+                    if (target.getType() == Token.NAME)
+                    {
+                        Class<?> type = null;
+                        if (init != null)
+                            type = getRealType(init);
+                        String typeString = "";
+                        if (type != null)
+                            typeString = IcyCompletionProvider.getType(type, true);
+                        VariableCompletion c = new VariableCompletion(provider, target.getString(), typeString);
+                        c.setSummary("variable");
+                        c.setDefinedIn("script");
+                        c.setRelevance(RELEVANCE_HIGH);
+                        addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
+                        toReturn.add(c);
+                    }
+                }
+                break;
             case Token.EXPR_RESULT:
             {
                 AstNode expression = ((ExpressionStatement) n).getExpression();
@@ -677,16 +741,21 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     AstNode left = ((Assignment) expression).getLeft();
                     AstNode right = ((Assignment) expression).getRight();
-                    Class<?> type = resolveRight(right, text);
+                    Class<?> type = getRealType(right);
                     String typeString = "";
                     if (type != null)
                         typeString = IcyCompletionProvider.getType(type, true);
-                    VariableCompletion c = new VariableCompletion(provider, left.getString(), typeString);
-                    c.setSummary("variable");
-                    c.setDefinedIn("script");
-                    c.setRelevance(RELEVANCE_HIGH);
-                    addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
-                    return c;
+                    VariableCompletion c = null;
+                    if (left.getType() == Token.NAME)
+                        c = new VariableCompletion(provider, left.getString(), typeString);
+                    if (c != null)
+                    {
+                        c.setSummary("variable");
+                        c.setDefinedIn("script");
+                        c.setRelevance(RELEVANCE_HIGH);
+                        addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
+                        toReturn.add(c);
+                    }
                 }
                 else if (expression instanceof FunctionCall)
                 {
@@ -714,7 +783,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 localFunctions.put(fn.getName(), Void.class);
                 break;
         }
-        return null;
+        return toReturn;
     }
 
     private Class<?> resolveCallType(AstNode n, String text, boolean noerror)
@@ -977,73 +1046,79 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             return toReturn;
     }
 
-    private Class<?> resolveRight(AstNode right, String text) throws ScriptException
-    {
-        switch (right.getType())
-        {
-            case Token.NUMBER:
-                return Number.class;
-
-            case Token.CALL:
-                return resolveCallType(right, text, false);
-
-            case Token.FUNCTION:
-                return Void.class;
-
-            case Token.NEW:
-            {
-                NewExpression nexp = (NewExpression) right;
-                AstNode target = nexp.getTarget();
-                if (target != null)
-                {
-                    String className = generateClassName(target, "");
-                    return resolveClassDeclaration(className);
-                }
-            }
-            case Token.ARRAYLIT:
-                return Object[].class;
-            case Token.GETPROP:
-            {
-                AstNode target = ((PropertyGet) right).getTarget();
-                if (target.getType() == Token.GETELEM)
-                {
-                    // array
-                    String rightStr = generateClassName(right, "");
-                    // Class<?> clazz = resolveArrayItemTypeComponent(target);
-                    // clazz = createArrayItemType(clazz, target);
-                    if (rightStr.contentEquals("length"))
-                        return int.class;
-                }
-                else
-                {
-                    // class
-                    String className = generateClassName(right, "");
-                    Class<?> clazz = resolveClassDeclaration(className);
-                    if (clazz != null)
-                        return clazz;
-                    // try if it is an enum
-                    int idx = className.lastIndexOf('.');
-                    if (idx != -1)
-                    {
-                        clazz = resolveClassDeclaration(className.substring(0, idx));
-                        return clazz;
-                    }
-                }
-                break;
-            }
-            case Token.GETELEM:
-            {
-                // access a table
-                ElementGet get = (ElementGet) right;
-                // AstNode index = get.getElement();
-                AstNode target = get.getTarget();
-                Class<?> clazz = resolveArrayItemTypeComponent(target);
-                clazz = createArrayItemType(clazz, target);
-                return clazz;
-            }
-        }
-        return null;
-    }
+    // private Class<?> resolveRight(AstNode right, String text) throws ScriptException
+    // {
+    // switch (right.getType())
+    // {
+    // case Token.NAME:
+    // return getVariableDeclaration(right.getString());
+    //
+    // case Token.STRING:
+    // return String.class;
+    //
+    // case Token.NUMBER:
+    // return Number.class;
+    //
+    // case Token.CALL:
+    // return resolveCallType(right, text, false);
+    //
+    // case Token.FUNCTION:
+    // return Void.class;
+    //
+    // case Token.NEW:
+    // {
+    // NewExpression nexp = (NewExpression) right;
+    // AstNode target = nexp.getTarget();
+    // if (target != null)
+    // {
+    // String className = generateClassName(target, "");
+    // return resolveClassDeclaration(className);
+    // }
+    // }
+    // case Token.ARRAYLIT:
+    // return Object[].class;
+    // case Token.GETPROP:
+    // {
+    // AstNode target = ((PropertyGet) right).getTarget();
+    // if (target.getType() == Token.GETELEM)
+    // {
+    // // array
+    // String rightStr = generateClassName(right, "");
+    // // Class<?> clazz = resolveArrayItemTypeComponent(target);
+    // // clazz = createArrayItemType(clazz, target);
+    // if (rightStr.contentEquals("length"))
+    // return int.class;
+    // }
+    // else
+    // {
+    // // class
+    // String className = generateClassName(right, "");
+    // Class<?> clazz = resolveClassDeclaration(className);
+    // if (clazz != null)
+    // return clazz;
+    // // try if it is an enum
+    // int idx = className.lastIndexOf('.');
+    // if (idx != -1)
+    // {
+    // clazz = resolveClassDeclaration(className.substring(0, idx));
+    // return clazz;
+    // }
+    // }
+    // break;
+    // }
+    // case Token.GETELEM:
+    // {
+    // // access a table
+    // ElementGet get = (ElementGet) right;
+    // // AstNode index = get.getElement();
+    // AstNode target = get.getTarget();
+    // Class<?> clazz = resolveArrayItemTypeComponent(target);
+    // clazz = createArrayItemType(clazz, target);
+    // return clazz;
+    // }
+    // }
+    // return null;
+    // }
 
     private Class<?> resolveArrayItemTypeComponent(AstNode node)
     {
@@ -1464,26 +1539,60 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.CALL:
                 Class<?> res = resolveCallType(n, currentText, false);
                 return res;
+            case Token.FUNCTION:
+                return Void.class;
             case Token.GETPROP:
+            {
                 // class wanted
-                String className = generateClassName(n, "");
-                Class<?> clazz = resolveClassDeclaration(className);
-                if (clazz != null)
-                    return clazz;
-                // try if it is an enum
-                int idx = className.lastIndexOf('.');
-                if (idx != -1)
+                AstNode target = ((PropertyGet) n).getTarget();
+                if (target.getType() == Token.GETELEM)
                 {
-                    clazz = resolveClassDeclaration(className.substring(0, idx));
-                    return clazz;
+                    // array
+                    String rightStr = generateClassName(n, "");
+                    // Class<?> clazz = resolveArrayItemTypeComponent(target);
+                    // clazz = createArrayItemType(clazz, target);
+                    if (rightStr.contentEquals("length"))
+                        return int.class;
                 }
+                else
+                {
+                    // class
+                    String className = generateClassName(n, "");
+                    Class<?> clazz = resolveClassDeclaration(className);
+                    if (clazz != null)
+                        return clazz;
+                    // try if it is an enum
+                    int idx = className.lastIndexOf('.');
+                    if (idx != -1)
+                    {
+                        clazz = resolveClassDeclaration(className.substring(0, idx));
+                        return clazz;
+                    }
+                }
+                break;
+            }
             case Token.ARRAYLIT:
                 return Object[].class;
             case Token.NEW:
+            {
                 NewExpression nexp = (NewExpression) n;
                 AstNode target = nexp.getTarget();
-                className = generateClassName(target, "");
-                return resolveClassDeclaration(className);
+                if (target != null)
+                {
+                    String className = generateClassName(target, "");
+                    return resolveClassDeclaration(className);
+                }
+            }
+            case Token.GETELEM:
+            {
+                // access a table
+                ElementGet get = (ElementGet) n;
+                // AstNode index = get.getElement();
+                AstNode target = get.getTarget();
+                Class<?> clazz = resolveArrayItemTypeComponent(target);
+                clazz = createArrayItemType(clazz, target);
+                return clazz;
+            }
         }
 
         return null;

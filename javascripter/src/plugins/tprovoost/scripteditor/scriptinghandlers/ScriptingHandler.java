@@ -491,7 +491,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     icon = ICON_ERROR_TOOLTIP;
                 else
                     icon = ICON_ERROR;
-                gutter.addLineTrackingIcon(a, icon, ignoredLines.get(a).getMessage());
+                String tooltip = ignoredLines.get(a).getMessage();
+                // if (tooltip.length() > 127)
+                // {
+                // tooltip = tooltip.substring(0, 127) + "...";
+                // }
+                gutter.addLineTrackingIcon(a, icon, tooltip);
                 gutter.repaint();
             }
             catch (BadLocationException e)

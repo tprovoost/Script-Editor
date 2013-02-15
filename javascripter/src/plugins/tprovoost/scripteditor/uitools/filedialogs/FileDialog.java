@@ -25,6 +25,8 @@ public class FileDialog
     public static File open(String currentDirectory, String filterDesc, String... ext)
     {
         FileDialogAWT fcawt = new FileDialogAWT(false, currentDirectory, filterDesc, ext);
+        while (!fcawt.isReady())
+            ThreadUtil.sleep(100);
         JFileChooser fc = fcawt.fc;
         int res = fcawt.result;
 
@@ -47,6 +49,8 @@ public class FileDialog
     public static File[] openMulti(String currentDirectory, String filterDesc, String... ext)
     {
         FileDialogAWT fcawt = new FileDialogAWT(false, true, currentDirectory, filterDesc, ext);
+        while (!fcawt.isReady())
+            ThreadUtil.sleep(100);
         JFileChooser fc = fcawt.fc;
         int res = fcawt.result;
 
@@ -69,6 +73,8 @@ public class FileDialog
     public static File save(final String currentDirectory, final String filterDesc, final String... ext)
     {
         FileDialogAWT fcawt = new FileDialogAWT(true, currentDirectory, filterDesc, ext);
+        while (!fcawt.isReady())
+            ThreadUtil.sleep(100);
         JFileChooser fc = fcawt.fc;
         int res = fcawt.result;
 
@@ -89,8 +95,9 @@ public class FileDialog
 
     private static class FileDialogAWT
     {
-        JFileChooser fc;
-        int result;
+        private JFileChooser fc;
+        private int result;
+        private boolean ready;
 
         public FileDialogAWT(final boolean save, final String currentDirectory, final String filterDesc,
                 final String... ext)
@@ -101,9 +108,9 @@ public class FileDialog
         public FileDialogAWT(final boolean save, final boolean multi, final String currentDirectory,
                 final String filterDesc, final String[] ext)
         {
+            setReady(false);
             ThreadUtil.invokeLater(new Runnable()
             {
-
                 @Override
                 public void run()
                 {
@@ -116,8 +123,26 @@ public class FileDialog
                         result = fc.showSaveDialog(Icy.getMainInterface().getMainFrame());
                     else
                         result = fc.showOpenDialog(Icy.getMainInterface().getMainFrame());
+                    setReady(true);
                 }
             });
+        }
+
+        /**
+         * @return the ready
+         */
+        private boolean isReady()
+        {
+            return ready;
+        }
+
+        /**
+         * @param ready
+         *        the ready to set
+         */
+        private void setReady(boolean ready)
+        {
+            this.ready = ready;
         }
 
     }
