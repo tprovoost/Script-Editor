@@ -121,7 +121,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 EvaluatorException e = exception;
                 exception = null;
                 return e;
-            } else {
+            }
+            else
+            {
                 Document doc = errorOutput.getDocument();
                 try
                 {
@@ -133,11 +135,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     }
                     String inLineSource = "";
                     String atColumn = "";
-                    if (lineSource != null) {
+                    if (lineSource != null)
+                    {
                         inLineSource = "\n in \"" + lineSource;
                     }
-                    if (lineOffset > 0) {
-                        atColumn = "\"\n at column ("+ lineOffset + ")";
+                    if (lineOffset > 0)
+                    {
+                        atColumn = "\"\n at column (" + lineOffset + ")";
                     }
                     String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
                     doc.insertString(doc.getLength(), lastErrortext + "\n", style);
@@ -1232,8 +1236,18 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return toReturn;
     }
 
+    /**
+     * Specific constructor not important, just the type
+     * 
+     * @param n
+     *        : current node.
+     * @param toReturn
+     *        : text that will be returned in the end.
+     * @return
+     */
     private String generateClassName(Node n, String toReturn)
     {
+
         if (n != null)
         {
             if (n.getType() == Token.GETPROP)
@@ -1245,6 +1259,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             else if (n.getType() == Token.NAME)
             {
                 return n.getString();
+            }
+            else if (n.getType() == Token.GETELEM)
+            {
+                return generateClassName(((ElementGet) n).getTarget(), toReturn);
             }
         }
         return toReturn;
