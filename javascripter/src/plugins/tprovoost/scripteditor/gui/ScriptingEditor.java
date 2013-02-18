@@ -149,7 +149,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
             }
         });
-
         addPaneButton = new IcyButton(new IcyIcon("plus"));
         addPaneButton.setBorderPainted(false);
         addPaneButton.setPreferredSize(new Dimension(20, 20));
@@ -200,6 +199,16 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                 }
             }
         });
+    }
+
+    /**
+     * Getter on tabbedPane.
+     * 
+     * @return
+     */
+    public JTabbedPane getTabbedPane()
+    {
+        return tabbedPane;
     }
 
     /**
@@ -580,6 +589,56 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         menuFormat.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask | InputEvent.SHIFT_DOWN_MASK));
         menuEdit.add(menuFormat);
 
+        menuEdit.add(new JSeparator());
+
+        // FIND FEATURE
+        JMenuItem menuFind = new JMenuItem("Find");
+        menuFind.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                displayFindReplace();
+            }
+        });
+        menuFind.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask));
+        // menuFind.setEnabled(false);
+        menuEdit.add(menuFind);
+
+        // REPLACE FEATURE
+        JMenuItem menuReplace = new JMenuItem("Replace");
+        menuReplace.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                displayFindReplace();
+            }
+        });
+        menuReplace.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ctrlMask));
+        // menuReplace.setEnabled(false);
+        menuEdit.add(menuReplace);
+
+        // GOTO LINE FEATURE
+        JMenuItem menuGotoLine = new JMenuItem("Go to Line...");
+        menuGotoLine.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                Component c = tabbedPane.getSelectedComponent();
+                if (c instanceof ScriptingPanel)
+                {
+                    ((ScriptingPanel) c).displayGotoLine();
+                }
+            }
+        });
+        menuGotoLine.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, ctrlMask));
+        menuEdit.add(menuGotoLine);
+
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");
         populateMenuTemplate(menuTemplate);
@@ -639,6 +698,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         addFrameListener(frameListener);
 
         return toReturn;
+    }
+
+    public void displayFindReplace()
+    {
+        FindAndReplaceDialog.showDialog(this);
     }
 
     protected boolean closeTab(int i)
@@ -826,21 +890,15 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     @Override
     public void icyFrameDeactivated(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public void icyFrameInternalized(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public void icyFrameExternalized(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 }

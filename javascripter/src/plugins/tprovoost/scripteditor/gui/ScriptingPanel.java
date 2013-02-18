@@ -11,14 +11,11 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
-import icy.util.StringUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -52,6 +49,7 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
@@ -64,6 +62,7 @@ import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -110,15 +109,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Boolean used to know if the file was modified since the last save. */
     private JTabbedPane tabbedPane;
 
-    /** Provider used for autocompletion. */
+    /** Provider used for auto-completion. */
     private IcyCompletionProvider provider;
+    /** Auto-completion system. Uses provider item. */
+    private IcyAutoCompletion ac;
+
     private JScrollPane scrollpane;
     private JTextPane consoleOutput;
     private Scriptingconsole console;
     private JButton btnClearConsole;
 
-    /** Autocompletion system. Uses provider item. */
-    private IcyAutoCompletion ac;
     public JButton btnRun;
     private JButton btnRunNew;
     public JButton btnStop;
@@ -168,11 +168,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         @Override
                         public void actionPerformed(ActionEvent e)
                         {
-                            String text = consoleOutput.getSelectedText();
-                            if (StringUtil.isEmpty(text))
-                                text = consoleOutput.getText();
-                            Toolkit.getDefaultToolkit().getSystemClipboard()
-                                    .setContents(new StringSelection(text), null);
+                            consoleOutput.copy();
                         }
                     });
                     popup.add(itemCopy);
@@ -947,6 +943,28 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
             if (console != null)
                 console.clear();
+        }
+    }
+
+    /**
+     * Displays a modal dialog to go to a specific line.
+     */
+    public void displayGotoLine()
+    {
+        int min = 1;
+        int max = textArea.getLineCount();
+        String res = JOptionPane.showInputDialog(Icy.getMainInterface().getMainFrame(), "Enter line number (" + min
+                + "," + max + ")", "Go to Line", JOptionPane.QUESTION_MESSAGE);
+        try
+        {
+            int line = Integer.parseInt(res);
+            textArea.setCaretPosition(textArea.getLineStartOffset(line - 1));
+        }
+        catch (NumberFormatException e)
+        {
+        }
+        catch (BadLocationException e)
+        {
         }
     }
 }

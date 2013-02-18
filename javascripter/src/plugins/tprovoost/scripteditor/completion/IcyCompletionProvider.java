@@ -504,8 +504,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                     int mod = c.getModifiers();
                                     if (Modifier.isPublic(mod))
                                     {
-                                        NewInstanceCompletion fc = new NewInstanceCompletion(this,
-                                                ClassUtil.getSimpleClassName(s), c);
+                                        String nameFinal = ClassUtil.getSimpleClassName(s);
+                                        if (getCompletionByInputText(nameFinal) != null)
+                                            continue;
+                                        NewInstanceCompletion fc = new NewInstanceCompletion(this, nameFinal, c);
                                         fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                                         // TODO relevance assignment = type / expression = void
