@@ -6,6 +6,7 @@ import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.image.ImageUtil;
 import icy.main.Icy;
+import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
@@ -61,6 +62,8 @@ import javax.swing.JTextPane;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -233,6 +236,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.setPaintMatchedBracketPair(true);
         textArea.setPaintTabLines(true);
         textArea.setTabsEmulated(false);
+        textArea.addHyperlinkListener(new HyperlinkListener()
+        {
+
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e)
+            {
+                NetworkUtil.openBrowser(e.getURL());
+            }
+
+        });
 
         pane = new RTextScrollPane(textArea);
         pane.setIconRowHeaderEnabled(true);

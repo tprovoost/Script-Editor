@@ -151,7 +151,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
             if (getClass().getClassLoader() instanceof JarClassLoader)
             {
                 // Collection<Class<?>> col = PluginLoader.getLoadedClasses().values();
-                Collection<Class<?>> col = PluginLoader.getAllClasses().values();
+                Collection<Class<?>> col = PluginLoader.getLoadedClasses().values();
                 frame.setLength(col.size());
                 int i = 0;
                 for (Class<?> clazz : new ArrayList<Class<?>>(col))
@@ -268,7 +268,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
         {
             bindingFunctions.clear();
             engineFunctions.clear();
-            engineTypesMethod.clear(); 
+            engineTypesMethod.clear();
             allClasses.clear();
             findBindingMethodsPlugins();
             // ArrayList<IcyFrame> list = IcyFrame.getAllFrames(ScriptingEditor.class);

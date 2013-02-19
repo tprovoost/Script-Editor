@@ -486,13 +486,13 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     ArrayList<String> classes = ScriptEngineHandler.getAllClasses();
                     for (String s : classes)
                     {
-                        String name = ClassUtil.getSimpleClassName(s).toLowerCase();
-                        int idxD = name.indexOf('$');
+                        String nameFinal = ClassUtil.getSimpleClassName(s);
+                        int idxD = nameFinal.indexOf('$');
                         if (idxD != -1)
                         {
-                            name = name.substring(idxD + 1, name.length());
+                            nameFinal = nameFinal.substring(idxD + 1, nameFinal.length());
                         }
-                        if (name.startsWith(text.toLowerCase()))
+                        if (nameFinal.toLowerCase().startsWith(text.toLowerCase()))
                         {
                             try
                             {
@@ -504,9 +504,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                     int mod = c.getModifiers();
                                     if (Modifier.isPublic(mod))
                                     {
-                                        String nameFinal = ClassUtil.getSimpleClassName(s);
-                                        if (getCompletionByInputText(nameFinal) != null)
-                                            continue;
                                         NewInstanceCompletion fc = new NewInstanceCompletion(this, nameFinal, c);
                                         fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
@@ -866,15 +863,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     Class<?> clazz = ClassUtil.findClass(s);
                     if (Modifier.isPublic(clazz.getModifiers()))
                     {
-                        String name = ClassUtil.getSimpleClassName(s).toLowerCase();
-                        int idxD = name.indexOf('$');
-                        if (idxD != -1)
+                        String nameFinal = ClassUtil.getSimpleClassName(s);
+                        if (nameFinal.contains("$"))
+                            continue;
+                        if (nameFinal.toLowerCase().startsWith(text.toLowerCase()))
                         {
-                            name = name.substring(idxD + 1, name.length());
-                        }
-                        if (name.startsWith(text.toLowerCase()))
-                        {
-
                             BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, clazz);
                             c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
                             c.setDefinedIn(s.replace('$', '.'));
@@ -1054,6 +1047,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
         else
         {
+            if (clazz.isPrimitive())
+                return clazz.getSimpleName();
             return clazz.getName();
         }
     }
