@@ -77,7 +77,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     };
     private AcceptListener acceptlistener = new AcceptListener()
     {
-
         @Override
         public boolean accept(Object source)
         {

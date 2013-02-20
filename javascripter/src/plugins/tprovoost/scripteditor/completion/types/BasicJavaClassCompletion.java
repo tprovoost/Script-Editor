@@ -16,12 +16,19 @@ public class BasicJavaClassCompletion extends VariableCompletion implements Comp
 {
 
     private Class<?> clazz;
+    private boolean importOnly;
 
     public BasicJavaClassCompletion(CompletionProvider provider, Class<?> clazz)
+    {
+        this(provider, clazz, false);
+    }
+
+    public BasicJavaClassCompletion(CompletionProvider provider, Class<?> clazz, boolean importOnly)
     {
         super(provider, clazz.getSimpleName(), clazz.getSimpleName());
         this.setDefinedIn(clazz.getName());
         this.clazz = clazz;
+        this.importOnly = importOnly;
     }
 
     public Class<?> getClazz()
@@ -72,6 +79,11 @@ public class BasicJavaClassCompletion extends VariableCompletion implements Comp
     private boolean isValidChar(char ch)
     {
         return Character.isLetterOrDigit(ch) || ch == '_' || ch == '\"';
+    }
+
+    public boolean importOnly()
+    {
+        return importOnly;
     }
 
 }

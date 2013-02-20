@@ -252,7 +252,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         // creates the options panel
         options = new PanelOptions(language);
-        installLanguage(options.combo.getSelectedItem().toString());
+        installLanguage(options.comboLanguages.getSelectedItem().toString());
 
         // set the default theme: eclipse.
         setTheme("eclipse");
@@ -671,7 +671,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         /** */
         private static final long serialVersionUID = 1L;
-        private JComboBox combo;
+        private JComboBox comboLanguages;
 
         public PanelOptions()
         {
@@ -696,14 +696,14 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
             add(new JLabel("Lang: "));
             ArrayList<String> values = new ArrayList<String>();
-            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngineManager manager = new ScriptEngineManager(PluginLoader.getLoader());
             for (ScriptEngineFactory factory : manager.getEngineFactories())
             {
                 values.add(getLanguageName(factory));
             }
-            combo = new JComboBox(values.toArray());
-            combo.setSelectedItem(language);
-            combo.addItemListener(new ItemListener()
+            comboLanguages = new JComboBox(values.toArray());
+            comboLanguages.setSelectedItem(language);
+            comboLanguages.addItemListener(new ItemListener()
             {
 
                 @Override
@@ -717,7 +717,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         {
                             if (e.getStateChange() == ItemEvent.SELECTED)
                             {
-                                String language = combo.getSelectedItem().toString();
+                                String language = comboLanguages.getSelectedItem().toString();
                                 installLanguage(language);
                             }
                         }
@@ -725,7 +725,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
                 }
             });
-            add(combo);
+            add(comboLanguages);
 
             if (integrated)
                 return;
@@ -876,7 +876,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public String getLanguage()
     {
-        return (String) options.combo.getSelectedItem();
+        return (String) options.comboLanguages.getSelectedItem();
     }
 
     /**

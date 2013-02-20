@@ -673,11 +673,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                                 populateWithClassTypes(clazz, text, retVal);
                             }
                         }
+                        else
+                        {
+                            // Import feature.
+                            // doClassicCompletion(command, retVal, true);
+                        }
                     }
-                }
-                else
-                {
-                    // doClassicCompletion(text, retVal);
                 }
             }
         }
@@ -852,6 +853,11 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     @SuppressWarnings("unchecked")
     protected void doClassicCompletion(String text, List<Completion> retVal)
     {
+        doClassicCompletion(text, retVal, false);
+    }
+
+    protected void doClassicCompletion(String text, List<Completion> retVal, boolean importOnly)
+    {
         // add the classes
         if (text.length() > 0 && Character.isUpperCase(text.charAt(0)))
         {
@@ -868,7 +874,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                             continue;
                         if (nameFinal.toLowerCase().startsWith(text.toLowerCase()))
                         {
-                            BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, clazz);
+                            BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, clazz, importOnly);
                             c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
                             c.setDefinedIn(s.replace('$', '.'));
                             retVal.add(c);
@@ -921,7 +927,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 break;
             }
         }
-
     }
 
     @Override

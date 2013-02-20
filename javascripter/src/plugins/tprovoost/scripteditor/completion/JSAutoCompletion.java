@@ -68,6 +68,9 @@ public class JSAutoCompletion extends IcyAutoCompletion
 
                 // put the caret in the right position
                 tc.getCaret().setDot(caretPos);
+
+                if (((BasicJavaClassCompletion) c).importOnly())
+                    return;
             }
         }
         else if (c instanceof NewInstanceCompletion)

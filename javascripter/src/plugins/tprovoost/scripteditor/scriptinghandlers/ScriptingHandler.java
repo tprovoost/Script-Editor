@@ -1172,26 +1172,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
                 ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
-                // Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-                // for (String s : bn.keySet()) {
-                // List<Completion> completions =
-                // provider.getCompletionByInputText(s);
-                // boolean found = false;
-                // if (completions != null) {
-                // for (Completion c : completions) {
-                // if (c.getReplacementText().contentEquals(s))
-                // found = true;
-                // }
-                // }
-                // if (completions == null || !found) {
-                // Object value = bn.get(s);
-                // String type = "";
-                // if (value != null)
-                // type = value.toString();
-                // provider.addCompletion(new VariableCompletion(provider, s,
-                // type));
-                // }
-                // }
                 for (String key : localVariables.keySet())
                     engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
                 engineHandler.getEngineFunctions().putAll(localFunctions);
