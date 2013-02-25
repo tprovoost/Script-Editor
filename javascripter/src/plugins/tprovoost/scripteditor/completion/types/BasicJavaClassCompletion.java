@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.ClassOrInterfaceDeclaration;
 import japa.parser.ast.body.JavadocComment;
 
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 
@@ -17,6 +18,7 @@ import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
+import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class BasicJavaClassCompletion extends VariableCompletion implements Completion
 {
@@ -62,9 +64,11 @@ public class BasicJavaClassCompletion extends VariableCompletion implements Comp
             if (summaryCache == null)
             {
                 final ClassSource cs = ClassSource.getClassSource(clazz);
-                // InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-                cs.populateAll();
-                // cs.populateClassesOrInterfaces(is);
+                if (!cs.isClassOrInterfacesSet())
+                {
+                    InputStream is = JarAccess.getJavaSourceInputStream(clazz);
+                    cs.populateClassesOrInterfaces(is);
+                }
                 ClassOrInterfaceDeclaration coi = cs.getClassOrInterfaces().get(clazz.getName());
                 if (coi != null && coi.getJavaDoc() != null)
                 {

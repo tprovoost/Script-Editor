@@ -251,7 +251,6 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 }
                 else
                 {
-
                     String res;
                     if (nextDotIdx == -1)
                     {

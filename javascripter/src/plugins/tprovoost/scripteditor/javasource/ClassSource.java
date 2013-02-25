@@ -75,10 +75,11 @@ public class ClassSource
     private boolean enumSet = false;
     private boolean fieldsSet = false;
     private boolean classOrInterfacesSet = false;
+    private boolean working = false;
 
     private boolean DEBUG = false;
 
-    public static ClassSource getClassSource(Class<?> clazz)
+    public static synchronized ClassSource getClassSource(Class<?> clazz)
     {
         ClassSource cm = allClassSources.get(clazz);
         if (cm == null)
@@ -92,6 +93,11 @@ public class ClassSource
     private ClassSource(Class<?> clazz)
     {
         this.clazz = clazz;
+    }
+
+    public Class<?> getSourceClass()
+    {
+        return clazz;
     }
 
     public HashMap<String, ClassOrInterfaceDeclaration> getClassOrInterfaces()
@@ -119,27 +125,27 @@ public class ClassSource
         return enums;
     }
 
-    public boolean isFieldsSet()
+    public synchronized boolean isFieldsSet()
     {
         return fieldsSet;
     }
 
-    public boolean isEnumSet()
+    public synchronized boolean isEnumSet()
     {
         return enumSet;
     }
 
-    public boolean isClassOrInterfacesSet()
+    public synchronized boolean isClassOrInterfacesSet()
     {
         return classOrInterfacesSet;
     }
 
-    public boolean isConstructorsSet()
+    public synchronized boolean isConstructorsSet()
     {
         return constructorsSet;
     }
 
-    public boolean isMethodsSet()
+    public synchronized boolean isMethodsSet()
     {
         return methodsSet;
     }
@@ -158,8 +164,24 @@ public class ClassSource
         }
     }
 
+    public synchronized boolean isWorking()
+    {
+        return working;
+    }
+
+    public synchronized void setWorking(boolean working)
+    {
+        this.working = working;
+    }
+
     public void populateAll()
     {
+        if (working)
+        {
+            waitForAllSet();
+            return;
+        }
+        working = true;
         if (!classOrInterfacesSet)
         {
             InputStream is = JarAccess.getJavaSourceInputStream(clazz);
@@ -186,7 +208,6 @@ public class ClassSource
             InputStream is = JarAccess.getJavaSourceInputStream(clazz);
             populateEnums(is);
         }
-        allClassSources.put(clazz, ClassSource.this);
     }
 
     @SuppressWarnings("unchecked")
@@ -216,6 +237,7 @@ public class ClassSource
             }
         }
         classOrInterfacesSet = true;
+        startPopulating();
     }
 
     @SuppressWarnings("unchecked")
@@ -243,6 +265,7 @@ public class ClassSource
             {
             }
         }
+        startPopulating();
         fieldsSet = true;
     }
 
@@ -268,6 +291,7 @@ public class ClassSource
             {
             }
         }
+        startPopulating();
         fieldsSet = true;
     }
 
@@ -332,6 +356,7 @@ public class ClassSource
             {
             }
         }
+        startPopulating();
         constructorsSet = true;
     }
 
@@ -392,7 +417,24 @@ public class ClassSource
             {
             }
         }
+        startPopulating();
         methodsSet = true;
+    }
+
+    /**
+     * Reduces code size for the thread.
+     */
+    private void startPopulating()
+    {
+        ThreadUtil.bgRun(new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                populateAll();
+            }
+        });
     }
 
     private static final void appendDocCommentTail(StringBuffer sb, StringBuffer tail)

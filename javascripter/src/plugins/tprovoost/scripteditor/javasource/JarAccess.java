@@ -9,7 +9,6 @@ import java.util.LinkedList;
 
 public class JarAccess
 {
-    private static final String PARAM_PATTERN = "<p><b>Parameters:</b><p class='indented'>";
     private static LinkedList<String> toSource = new LinkedList<String>();
 
     public static InputStream getJavaSourceInputStream(Class<?> clazz)
