@@ -298,7 +298,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     {
         try
         {
-            Theme t = Theme.load(getClass().getClassLoader().getResourceAsStream(
+            Theme t = Theme.load(PluginLoader.getLoader().getResourceAsStream(
                     "plugins/tprovoost/scripteditor/resources/themes/" + s + ".xml"));
             t.apply(textArea);
         }
@@ -684,7 +684,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             btnRun = new IcyButton(new IcyIcon("playback_play", 16));
             btnRun.setToolTipText("Run the script in the current context.");
 
-            btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+            // btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+            btnRunNew = new IcyButton(new IcyIcon("playback_play", 16));
             btnRunNew.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
 
             btnStop = new IcyButton(new IcyIcon("square_shape", 16));
@@ -705,7 +706,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             comboLanguages.setSelectedItem(language);
             comboLanguages.addItemListener(new ItemListener()
             {
-
                 @Override
                 public void itemStateChanged(final ItemEvent e)
                 {
@@ -823,8 +823,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
             add(Box.createHorizontalStrut(STRUT_SIZE * 3));
             add(btnRunNew);
-            add(Box.createHorizontalStrut(STRUT_SIZE));
-            add(btnRun);
+            // add(Box.createHorizontalStrut(STRUT_SIZE));
+            // add(btnRun);
             add(Box.createHorizontalStrut(STRUT_SIZE));
             add(btnStop);
             add(Box.createHorizontalGlue());

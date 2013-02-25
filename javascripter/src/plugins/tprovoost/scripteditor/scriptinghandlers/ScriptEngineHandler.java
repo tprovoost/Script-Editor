@@ -1,4 +1,4 @@
-package plugins.tprovoost.scriptenginehandler;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
@@ -21,7 +21,8 @@ import javax.script.ScriptEngineManager;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 
 public class ScriptEngineHandler implements PluginInstallerListener
 {

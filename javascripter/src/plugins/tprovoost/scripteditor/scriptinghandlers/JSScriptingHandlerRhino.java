@@ -11,6 +11,7 @@ import icy.util.ClassUtil;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -62,18 +63,20 @@ import org.mozilla.javascript.ast.FunctionCall;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.IfStatement;
 import org.mozilla.javascript.ast.InfixExpression;
+import org.mozilla.javascript.ast.Loop;
 import org.mozilla.javascript.ast.NewExpression;
 import org.mozilla.javascript.ast.PropertyGet;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.StringLiteral;
+import org.mozilla.javascript.ast.SwitchCase;
+import org.mozilla.javascript.ast.SwitchStatement;
 import org.mozilla.javascript.ast.VariableDeclaration;
 import org.mozilla.javascript.ast.VariableInitializer;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.ErrorReporter;
 import sun.org.mozilla.javascript.internal.EvaluatorException;
 import sun.org.mozilla.javascript.internal.ImporterTopLevel;
@@ -688,6 +691,20 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     registerVariables(text, nIf.getThenPart(), root);
                     registerVariables(text, nIf.getElsePart(), root);
                     break;
+                case Token.DO:
+                case Token.FOR:
+                case Token.WHILE:
+                    registerVariables(text, ((Loop) n).getBody(), root);
+                    break;
+                case Token.SWITCH:
+                    for (SwitchCase c : ((SwitchStatement) n).getCases())
+                    {
+                        for (AstNode statement : c.getStatements())
+                        {
+                            registerVariables(text, statement, root);
+                        }
+                    }
+                    break;
             }
         }
     }
@@ -785,6 +802,17 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 fc.setDefinedIn("script");
                 fc.setRelevance(RELEVANCE_HIGH);
                 localFunctions.put(fn.getName(), Void.class);
+                break;
+
+            case Token.WHILE:
+            case Token.IF:
+            case Token.IFNE:
+            case Token.IFEQ:
+            case Token.FOR:
+            case Token.TRY:
+            case Token.WITH:
+            case Token.SWITCH:
+            case Token.DO:
                 break;
         }
         return toReturn;
@@ -1228,12 +1256,39 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
         if (toReturn == null)
             toReturn = super.resolveClassDeclaration(type);
+        if (toReturn == null)
+            toReturn = getNativeJSTypes(type);
         while (toReturn != null && arraySize > 0)
         {
             toReturn = Array.newInstance(toReturn, 1).getClass();
             arraySize--;
         }
         return toReturn;
+    }
+
+    // FIXME
+    /**
+     * This is a workaround on functions and their Java equivalent. However, this doesn't work
+     * properly.
+     * 
+     * @param type
+     * @return
+     */
+    private Class<?> getNativeJSTypes(String type)
+    {
+        if (type.contentEquals("Math"))
+        {
+            return Math.class;
+        }
+        else if (type.contentEquals("File"))
+        {
+            return File.class;
+        }
+        else if (type.contentEquals("String"))
+        {
+            return String.class;
+        }
+        return null;
     }
 
     /**
@@ -1382,6 +1437,23 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 ElementGet get = (ElementGet) n;
                 dumpTree(get.getElement(), root, level, "-" + decal);
                 dumpTree(get.getTarget(), root, level, "-" + decal);
+                break;
+
+            case Token.DO:
+            case Token.FOR:
+            case Token.WHILE:
+                level = commandIdx + 1;
+                dumpTree(((Loop) n).getBody(), root, commandIdx + 1, "-" + decal);
+                break;
+            case Token.SWITCH:
+                level = commandIdx + 1;
+                for (SwitchCase c : ((SwitchStatement) n).getCases())
+                {
+                    for (AstNode statement : c.getStatements())
+                    {
+                        dumpTree(statement, root, commandIdx + 1, decal);
+                    }
+                }
                 break;
             default:
                 System.out.println();

@@ -1,6 +1,7 @@
 package plugins.tprovoost.scripteditor.completion;
 
 import icy.gui.frame.progress.ProgressFrame;
+import icy.plugin.PluginLoader;
 import icy.util.ClassUtil;
 
 import java.io.File;
@@ -38,12 +39,13 @@ import org.fife.ui.autocomplete.Util;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
+import plugins.tprovoost.scripteditor.completion.types.JavaFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
 public class IcyCompletionProvider extends DefaultCompletionProvider
 {
@@ -215,8 +217,9 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     @Override
     public List<Completion> getCompletions(JTextComponent comp)
     {
-        List<Completion> toReturn = new ArrayList<Completion>();
         List<Completion> originalList = getCompletionsImpl(comp);
+        List<Completion> toReturn = new ArrayList<Completion>();
+
         List<Completion> inScriptVariables = new ArrayList<Completion>();
         List<Completion> inScriptBasic = new ArrayList<Completion>();
         List<Completion> inScriptFunctions = new ArrayList<Completion>();
@@ -254,21 +257,48 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     {
                         res = rText.substring(previousDotIdx);
                         FunctionCompletion co = (FunctionCompletion) c;
-                        FunctionCompletion c2 = new FunctionCompletion(c.getProvider(), res, co.getType());
-                        c2.setReturnValueDescription(co.getReturnValueDescription());
-                        c2.setDefinedIn(co.getDefinedIn());
-                        c2.setShortDescription(co.getShortDescription());
-                        c2.setSummary(co.getSummary());
-                        c2.setRelevance(co.getRelevance());
+
+                        FunctionCompletion coDuplicate;
+                        if (co instanceof JavaFunctionCompletion)
+                        {
+                            if (co instanceof ScriptFunctionCompletion)
+                            {
+                                coDuplicate = new ScriptFunctionCompletion(c.getProvider(), co.getName(),
+                                        ((ScriptFunctionCompletion) co).getMethod());
+                            }
+                            else if (co instanceof NewInstanceCompletion)
+                            {
+                                coDuplicate = new NewInstanceCompletion(c.getProvider(), co.getName(),
+                                        ((NewInstanceCompletion) co).getConstructor());
+                            }
+                            else
+                            {
+                                coDuplicate = null;
+                                System.out.println("Unsupported JavaFunctionCompletion Type.");
+                            }
+                            if (((JavaFunctionCompletion) co).isPopulateDone())
+                            {
+                                coDuplicate.setSummary(co.getSummary());
+                            }
+                        }
+                        else
+                        {
+                            coDuplicate = new FunctionCompletion(c.getProvider(), res, co.getType());
+                            coDuplicate.setSummary(co.getSummary());
+                        }
+                        coDuplicate.setShortDescription(co.getShortDescription());
+                        coDuplicate.setReturnValueDescription(co.getReturnValueDescription());
+                        coDuplicate.setDefinedIn(co.getDefinedIn());
+                        coDuplicate.setRelevance(co.getRelevance());
                         List<Parameter> parameters = new ArrayList<Parameter>();
                         for (int i = 0; i < co.getParamCount(); ++i)
                             parameters.add(co.getParam(i));
                         if (c instanceof ScriptFunctionCompletion)
-                            inScriptFunctions.add(c2);
+                            inScriptFunctions.add(coDuplicate);
                         else
                         {
-                            if (!isFunctionAlreadyDeclared(c2, functions))
-                                functions.add(c2);
+                            if (!isFunctionAlreadyDeclared(coDuplicate, functions))
+                                functions.add(coDuplicate);
                         }
                     }
                     else
@@ -419,9 +449,19 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     public BasicCompletion duplicateBasicCompletion(BasicCompletion c, String res)
     {
         BasicCompletion co = (BasicCompletion) c;
-        BasicCompletion c2 = new BasicCompletion(c.getProvider(), res);
-        c2.setShortDescription(co.getShortDescription());
-        c2.setSummary(co.getSummary());
+        BasicCompletion c2;
+        if (co instanceof BasicJavaClassCompletion)
+        {
+            BasicJavaClassCompletion basicJavaCO = (BasicJavaClassCompletion) co;
+            c2 = new BasicJavaClassCompletion(c.getProvider(), basicJavaCO.getJavaClass());
+            if (basicJavaCO.isParsingDone())
+                c2.setSummary(co.getSummary());
+        }
+        else
+        {
+            c2 = new BasicCompletion(c.getProvider(), res);
+            c2.setSummary(co.getSummary());
+        }
         c2.setRelevance(co.getRelevance());
         return c2;
     }
@@ -689,16 +729,18 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     {
         if (!Modifier.isPublic(clazz.getModifiers()))
             return;
+
+        String name;
+        if (clazz.isArray())
+            name = clazz.getCanonicalName();
+        else
+            name = clazz.getName();
+
         for (Constructor<?> c : clazz.getConstructors())
         {
             int mod = c.getModifiers();
             if (Modifier.isPublic(mod))
             {
-                String name;
-                if (clazz.isArray())
-                    name = clazz.getCanonicalName();
-                else
-                    name = clazz.getName();
                 NewInstanceCompletion fc = new NewInstanceCompletion(this, name, c);
                 fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
@@ -850,12 +892,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return generateSFCCopy(complete, false);
     }
 
-    @SuppressWarnings("unchecked")
     protected void doClassicCompletion(String text, List<Completion> retVal)
     {
         doClassicCompletion(text, retVal, false);
     }
 
+    @SuppressWarnings("unchecked")
     protected void doClassicCompletion(String text, List<Completion> retVal, boolean importOnly)
     {
         // add the classes
@@ -872,9 +914,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         String nameFinal = ClassUtil.getSimpleClassName(s);
                         if (nameFinal.contains("$"))
                             continue;
+
+                        String desc = null;
                         if (nameFinal.toLowerCase().startsWith(text.toLowerCase()))
                         {
                             BasicJavaClassCompletion c = new BasicJavaClassCompletion(this, clazz, importOnly);
+                            c.setShortDescription(desc == null ? "" : desc);
                             c.setRelevance(ScriptingHandler.RELEVANCE_MIN);
                             c.setDefinedIn(s.replace('$', '.'));
                             retVal.add(c);
@@ -1060,7 +1105,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
     public ArrayList<String> getClassNamesFromPackage(String packageName) throws IOException
     {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader classLoader = PluginLoader.getLoader();
         URL packageURL;
         ArrayList<String> names = new ArrayList<String>();
 

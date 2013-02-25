@@ -46,8 +46,8 @@ import javax.swing.event.ChangeListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 
 /**
  * Main GUI of the class
@@ -637,6 +637,10 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         });
         menuGotoLine.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, ctrlMask));
         menuEdit.add(menuGotoLine);
+
+        JMenu menuTools = new JMenu("Tools");
+
+        // menuTools.add(menuFindClass);
 
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");

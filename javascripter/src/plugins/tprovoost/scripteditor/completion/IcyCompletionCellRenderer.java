@@ -16,7 +16,7 @@ import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 
 public class IcyCompletionCellRenderer extends CompletionCellRenderer
 {
@@ -90,22 +90,28 @@ public class IcyCompletionCellRenderer extends CompletionCellRenderer
         ImageIcon icon;
         if (vc instanceof BasicJavaClassCompletion)
         {
-            if (((BasicJavaClassCompletion) vc).getClazz().isInterface())
+            Class<?> javaClass = ((BasicJavaClassCompletion) vc).getJavaClass();
+            if (javaClass.isInterface())
                 icon = ICON_INSTERFACE;
             else
                 icon = ICON_CLASS;
-        }
-        else
-            icon = ICON_VARIABLES;
 
-        if (vc.getSummary().startsWith("Deprecated"))
-        {
-            Image img = ImageUtil.getCopy(icon.getImage());
-            img.getGraphics().drawImage(IMAGE_DEPRECATED, 0, 0, null);
-            setIcon(new ImageIcon(img));
+            // test deprecation
+            if (javaClass.getAnnotation(Deprecated.class) != null)
+            {
+                Image img = ImageUtil.getCopy(icon.getImage());
+                img.getGraphics().drawImage(IMAGE_DEPRECATED, 0, 0, null);
+                setIcon(new ImageIcon(img));
+            }
+            else
+                setIcon(icon);
         }
         else
+        {
+            icon = ICON_VARIABLES;
             setIcon(icon);
+        }
+
         super.prepareForVariableCompletion(list, vc, index, selected, hasFocus);
     }
 

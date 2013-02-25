@@ -12,7 +12,7 @@ import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 
 public class JSAutoCompletion extends IcyAutoCompletion
 {
@@ -58,7 +58,7 @@ public class JSAutoCompletion extends IcyAutoCompletion
 
             // get the caret position
             int caretPos = tc.getCaretPosition();
-            Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
+            Class<?> clazz = ((BasicJavaClassCompletion) c).getJavaClass();
             String neededClass = clazz.getName();
 
             if (!classAlreadyImported(neededClass))
@@ -123,7 +123,7 @@ public class JSAutoCompletion extends IcyAutoCompletion
         }
         else if (c instanceof BasicJavaClassCompletion)
         {
-            Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
+            Class<?> clazz = ((BasicJavaClassCompletion) c).getJavaClass();
             toReturn = clazz.getSimpleName();
         }
         return toReturn;
