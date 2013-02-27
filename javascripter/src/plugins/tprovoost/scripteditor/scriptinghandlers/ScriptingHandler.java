@@ -24,7 +24,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeMap;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -97,7 +96,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     protected JTextComponent textArea;
 
     /** Contains all declared variables in the script. */
-    protected HashMap<String, TreeMap<Integer, Class<?>>> localVariables;
+    protected HashMap<String, ScriptVariable> localVariables;
 
     /** Contains all declared variables in the script. */
     protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
@@ -199,7 +198,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         textArea.getDocument().addDocumentListener(new AutoVerify());
 
-        localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
+        localVariables = new HashMap<String, ScriptVariable>();
 
         ScriptEngine engine = getEngine();
         if (engine == null)
@@ -287,7 +286,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         return localFunctions;
     }
 
-    public HashMap<String, TreeMap<Integer, Class<?>>> getLocalVariables()
+    public HashMap<String, ScriptVariable> getLocalVariables()
     {
         return localVariables;
     }
@@ -324,15 +323,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             name = name.substring(0, name.indexOf('['));
         }
-        TreeMap<Integer, Class<?>> list = localVariables.get(name);
-        if (list == null)
+        ScriptVariable sv = localVariables.get(name);
+        if (sv == null)
             return null;
-        Class<?> type = null;
-        for (Integer i : list.keySet())
-        {
-            if (offset > i)
-                type = list.get(i);
-        }
+        Class<?> type = sv.getType(offset);
         if (type == null)
         {
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
@@ -1172,7 +1166,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
                 for (String key : localVariables.keySet())
-                    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+                    engineHandler.getEngineVariables().put(key, localVariables.get(key).getLastType());
                 engineHandler.getEngineFunctions().putAll(localFunctions);
                 engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
                 engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);

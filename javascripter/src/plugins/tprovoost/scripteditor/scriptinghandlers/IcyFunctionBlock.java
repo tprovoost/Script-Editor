@@ -1,11 +1,14 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
+import java.lang.reflect.Type;
+
 public class IcyFunctionBlock
 {
 
     private String functionName;
     private int startOffset;
-    private Class<?> returnType;
+    private Class<?> returnTypeClass;
+    private Type returnType;
 
     /**
      * @param functionName
@@ -35,17 +38,49 @@ public class IcyFunctionBlock
         return startOffset;
     }
 
-    public Class<?> getReturnType()
+    public Type getReturnType()
     {
         return returnType;
     }
-    
+
+    public Class<?> getReturnTypeClass()
+    {
+        return returnTypeClass;
+    }
+
     public void setStartOffset(int startOffset)
     {
         this.startOffset = startOffset;
     }
-    
-    public void setReturnType(Class<?> returnType)
+
+    // public void setReturnType(String returnType)
+    // {
+    // try
+    // {
+    // if (returnType.contains("<"))
+    // {
+    // Pattern p = Pattern.compile("(\\w|_)*\\s*<(.*)>");
+    // Matcher m = p.matcher(returnType);
+    // if (m.matches())
+    // {
+    // System.out.println("classname: " + m.group(0));
+    // System.out.println("Anonymous: " + m.group(2));
+    // }
+    // }
+    // setReturnType(ClassUtil.findClass(returnType));
+    // }
+    // catch (ClassNotFoundException e)
+    // {
+    // returnType = null;
+    // }
+    // }
+
+    public void setReturnType(Class<?> returnTypeClass)
+    {
+        this.returnTypeClass = returnTypeClass;
+    }
+
+    public void setReturnType(Type returnType)
     {
         this.returnType = returnType;
     }

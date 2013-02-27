@@ -265,20 +265,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     public ScriptingPanel createNewPane(String name)
     {
         ScriptingPanel panelCreated;
-        Component c = tabbedPane.getSelectedComponent();
-        if (c instanceof ScriptingPanel)
-        {
-            String language = ((ScriptingPanel) c).getLanguage();
-            panelCreated = new ScriptingPanel(this, name, language);
-        }
+        String ext = FileUtil.getFileExtension(name, false);
+        if (ext.contentEquals("py"))
+            panelCreated = new ScriptingPanel(this, name, "python");
         else
-        {
-            String ext = FileUtil.getFileExtension(name, false);
-            if (ext.contentEquals("py"))
-                panelCreated = new ScriptingPanel(this, name, "python");
-            else
-                panelCreated = new ScriptingPanel(this, name, "javascript");
-        }
+            panelCreated = new ScriptingPanel(this, name, "javascript");
         panelCreated.setTabbedPane(tabbedPane);
         int idx = tabbedPane.getTabCount() - 1;
         if (idx != -1)
@@ -639,8 +630,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         menuEdit.add(menuGotoLine);
 
         JMenu menuTools = new JMenu("Tools");
-
-        // menuTools.add(menuFindClass);
+        JMenuItem menuFindClass = new JMenuItem("Find Class...");
+        menuTools.add(menuFindClass);
 
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");
@@ -650,7 +641,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         JMenuItem menuPreferences = new JMenuItem("Preferences");
         menuPreferences.addActionListener(new ActionListener()
         {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {
@@ -693,6 +683,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         toReturn.add(menuFile);
         toReturn.add(menuEdit);
         toReturn.add(menuTemplate);
+        toReturn.add(menuTools);
         toReturn.add(menuOptions);
 
         updateRecentFiles();

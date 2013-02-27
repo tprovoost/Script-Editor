@@ -208,8 +208,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
                     final ClassSource cs = ClassSource.getClassSource(currentClass);
                     if (!cs.isConstructorsSet())
                     {
-                        InputStream is = JarAccess.getJavaSourceInputStream(currentClass);
-                        cs.populateConstructors(is);
+                        cs.populateConstructors();
                     }
                     dc = cs.getConstructors().get(c.toGenericString());
                 }

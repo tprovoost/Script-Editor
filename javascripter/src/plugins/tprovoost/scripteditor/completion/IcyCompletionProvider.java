@@ -692,7 +692,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         IcyFunctionBlock fb = localFunctions.get(startOffset);
                         if (fb != null)
                         {
-                            clazz = fb.getReturnType();
+                            // TODO With Type instead of clazz
+                            clazz = fb.getReturnTypeClass();
                             methods = engineTypesMethod.get(clazz);
                             if (methods != null && !advanced)
                             {

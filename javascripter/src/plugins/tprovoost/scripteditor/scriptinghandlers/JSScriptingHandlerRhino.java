@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +56,7 @@ import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
 import org.mozilla.javascript.ast.AstRoot;
+import org.mozilla.javascript.ast.Block;
 import org.mozilla.javascript.ast.ElementGet;
 import org.mozilla.javascript.ast.ExpressionStatement;
 import org.mozilla.javascript.ast.FunctionCall;
@@ -632,7 +632,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             dumpTree(root, root, 1, "");
 
         // start variable registration
-        registerVariables(s, root, root);
+        registerVariables(root, root, s);
 
         // add the completions
         provider.addCompletions(variableCompletions);
@@ -645,7 +645,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @param root
      * @throws ScriptException
      */
-    private void registerVariables(String text, AstNode n, AstRoot root) throws ScriptException
+    private void registerVariables(AstNode n, AstRoot root, String text) throws ScriptException
     {
         if (n == null)
             return;
@@ -658,6 +658,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             if (c != null)
             {
                 boolean alreadyExists = false;
+                if (c instanceof VariableCompletion)
+                {
+                    ScriptVariable vc = localVariables.get(((VariableCompletion) c).getName());
+                    if (vc != null && !vc.isInScope(textArea.getCaretPosition()))
+                        alreadyExists = true;
+                }
                 for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
                 {
                     if (variableCompletions.get(i).compareTo(c) == 0)
@@ -678,33 +684,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             AstNode child = (AstNode) n.getFirstChild();
             while (child != null)
             {
-                registerVariables(text, child, root);
+                registerVariables(child, root, text);
                 child = (AstNode) child.getNext();
-            }
-        }
-        else
-        {
-            switch (n.getType())
-            {
-                case Token.IF:
-                    IfStatement nIf = (IfStatement) n;
-                    registerVariables(text, nIf.getThenPart(), root);
-                    registerVariables(text, nIf.getElsePart(), root);
-                    break;
-                case Token.DO:
-                case Token.FOR:
-                case Token.WHILE:
-                    registerVariables(text, ((Loop) n).getBody(), root);
-                    break;
-                case Token.SWITCH:
-                    for (SwitchCase c : ((SwitchStatement) n).getCases())
-                    {
-                        for (AstNode statement : c.getStatements())
-                        {
-                            registerVariables(text, statement, root);
-                        }
-                    }
-                    break;
             }
         }
     }
@@ -750,11 +731,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         c.setSummary("variable");
                         c.setDefinedIn("script");
                         c.setRelevance(RELEVANCE_HIGH);
-                        addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
+                        int pos = n.getAbsolutePosition();
+                        addVariableDeclaration(c.getName(), type, pos, pos + var.getParent().getLength());
                         toReturn.add(c);
                     }
                 }
                 break;
+            case Token.EXPR_VOID:
             case Token.EXPR_RESULT:
             {
                 AstNode expression = ((ExpressionStatement) n).getExpression();
@@ -792,6 +775,29 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
                 break;
 
+            case Token.BLOCK:
+                if (n instanceof Block)
+                {
+                    Block scope = (Block) n;
+                    AstNode child = (AstNode) scope.getFirstChild();
+                    while (child != null)
+                    {
+                        registerVariables(child, root, text);
+                        child = (AstNode) child.getNext();
+                    }
+                }
+                else if (n instanceof Scope)
+                {
+                    Scope scope = (Scope) n;
+                    AstNode child = (AstNode) scope.getFirstChild();
+                    while (child != null)
+                    {
+                        registerVariables(child, root, text);
+                        child = (AstNode) child.getNext();
+                    }
+                }
+                break;
+
             case Token.CALL:
                 resolveCallType(n, text, false);
                 break;
@@ -799,20 +805,38 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.FUNCTION:
                 FunctionNode fn = (FunctionNode) n;
                 FunctionCompletion fc = new FunctionCompletion(provider, fn.getName(), "");
+                List<AstNode> paramsFn = fn.getParams();
+                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                for (AstNode param : paramsFn)
+                {
+                    params.add(new Parameter("", param.getString()));
+                }
+                fc.setParams(params);
                 fc.setDefinedIn("script");
                 fc.setRelevance(RELEVANCE_HIGH);
                 localFunctions.put(fn.getName(), Void.class);
+                toReturn.add(fc);
+                registerVariables(fn.getBody(), root, text);
                 break;
 
-            case Token.WHILE:
             case Token.IF:
-            case Token.IFNE:
-            case Token.IFEQ:
-            case Token.FOR:
-            case Token.TRY:
-            case Token.WITH:
-            case Token.SWITCH:
+                IfStatement nIf = (IfStatement) n;
+                registerVariables(nIf.getThenPart(), root, text);
+                registerVariables(nIf.getElsePart(), root, text);
+                break;
             case Token.DO:
+            case Token.FOR:
+            case Token.WHILE:
+                registerVariables(((Loop) n).getBody(), root, text);
+                break;
+            case Token.SWITCH:
+                for (SwitchCase c : ((SwitchStatement) n).getCases())
+                {
+                    for (AstNode statement : c.getStatements())
+                    {
+                        registerVariables(statement, root, text);
+                    }
+                }
                 break;
         }
         return toReturn;
@@ -1218,11 +1242,25 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     protected void addVariableDeclaration(String name, Class<?> type, int offset)
     {
-        TreeMap<Integer, Class<?>> list = localVariables.get(name);
-        if (list == null)
-            list = new TreeMap<Integer, Class<?>>();
-        list.put(offset, type);
-        localVariables.put(name, list);
+        ScriptVariable vc = localVariables.get(name);
+        if (vc == null)
+        {
+            vc = new ScriptVariable();
+            localVariables.put(name, vc);
+        }
+        vc.addType(offset, type);
+    }
+
+    // TODO use for variables with Token.VAR variables.
+    protected void addVariableDeclaration(String name, Class<?> type, int offsetBegin, int offsetEnd)
+    {
+        ScriptVariable vc = localVariables.get(name);
+        if (vc == null)
+        {
+            vc = new ScriptVariable();
+            localVariables.put(name, vc);
+        }
+        vc.addType(offsetBegin, offsetEnd, type);
     }
 
     @Override
@@ -1269,7 +1307,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     // FIXME
     /**
      * This is a workaround on functions and their Java equivalent. However, this doesn't work
-     * properly.
+     * properly, as those Classes have different methods.
      * 
      * @param type
      * @return
@@ -1412,6 +1450,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.FUNCTION:
                 FunctionNode fn2 = (FunctionNode) n;
                 System.out.print(" " + fn2.getName());
+                dumpTree(fn2.getBody(), root, commandIdx + 1, "-" + decal);
                 break;
             case Token.IF:
                 System.out.println();
@@ -1422,13 +1461,27 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 break;
             case Token.BLOCK:
                 System.out.println();
-                Scope scope = (Scope) n;
-                Node child = scope.getFirstChild();
-                level = commandIdx + 1;
-                while (child != null)
+                if (n instanceof Block)
                 {
-                    dumpTree(child, root, level, "-" + decal);
-                    child = child.getNext();
+                    Block scope = (Block) n;
+                    Node child = scope.getFirstChild();
+                    level = commandIdx + 1;
+                    while (child != null)
+                    {
+                        dumpTree(child, root, level, "-" + decal);
+                        child = child.getNext();
+                    }
+                }
+                else if (n instanceof Scope)
+                {
+                    Scope scope = (Scope) n;
+                    Node child = scope.getFirstChild();
+                    level = commandIdx + 1;
+                    while (child != null)
+                    {
+                        dumpTree(child, root, level, "-" + decal);
+                        child = child.getNext();
+                    }
                 }
                 break;
             case Token.GETELEM:
@@ -1684,7 +1737,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 return clazz;
             }
         }
-
         return null;
     }
 

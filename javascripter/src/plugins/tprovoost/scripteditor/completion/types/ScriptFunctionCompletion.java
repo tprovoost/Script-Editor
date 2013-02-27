@@ -3,7 +3,6 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.JavadocComment;
 import japa.parser.ast.body.MethodDeclaration;
 
-import java.io.InputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -23,7 +22,6 @@ import javax.swing.text.Segment;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
-import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class ScriptFunctionCompletion extends JavaFunctionCompletion
 {
@@ -258,8 +256,7 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
                     final ClassSource cs = ClassSource.getClassSource(currentClass);
                     if (!cs.isMethodsSet())
                     {
-                        InputStream is = JarAccess.getJavaSourceInputStream(currentClass);
-                        cs.populateMethods(is);
+                        cs.populateMethods();
                     }
                     md = cs.getMethods().get(m.toGenericString());
                 }

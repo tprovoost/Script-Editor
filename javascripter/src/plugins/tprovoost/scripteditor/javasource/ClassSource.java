@@ -64,6 +64,7 @@ public class ClassSource
     private static HashMap<Class<?>, ClassSource> allClassSources = new HashMap<Class<?>, ClassSource>();
 
     private Class<?> clazz;
+    private CompilationUnit cu;
     private HashMap<String, ConstructorDeclaration> constructors = new HashMap<String, ConstructorDeclaration>();
     private HashMap<String, MethodDeclaration> methods = new HashMap<String, MethodDeclaration>();
     private HashMap<String, VariableDeclarator> fields = new HashMap<String, VariableDeclarator>();
@@ -79,13 +80,31 @@ public class ClassSource
 
     private boolean DEBUG = false;
 
-    public static synchronized ClassSource getClassSource(Class<?> clazz)
+    public static synchronized ClassSource getClassSource(final Class<?> clazz)
     {
         ClassSource cm = allClassSources.get(clazz);
         if (cm == null)
         {
             cm = new ClassSource(clazz);
-            allClassSources.put(clazz, cm);
+            final ClassSource cmFinal = cm;
+            allClassSources.put(clazz, cmFinal);
+            // ThreadUtil.bgRun(new Runnable()
+            // {
+            //
+            // @Override
+            // public void run()
+            // {
+            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
+            if (is != null)
+                try
+                {
+                    cmFinal.cu = JavaParser.parse(is);
+                }
+                catch (ParseException e)
+                {
+                }
+            // }
+            // });
         }
         return cm;
     }
@@ -184,140 +203,179 @@ public class ClassSource
         working = true;
         if (!classOrInterfacesSet)
         {
-            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-            populateClassesOrInterfaces(is);
+            populateClassesOrInterfaces();
         }
         if (!fieldsSet)
         {
-            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-            populateFields(is);
+            populateFields();
         }
         if (!constructorsSet)
         {
-            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-            populateConstructors(is);
+            populateConstructors();
 
         }
         if (!methodsSet)
         {
-            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-            populateMethods(is);
+            populateMethods();
         }
         if (!enumSet)
         {
-            InputStream is = JarAccess.getJavaSourceInputStream(clazz);
-            populateEnums(is);
+            populateEnums();
         }
     }
 
     @SuppressWarnings("unchecked")
-    public void populateClassesOrInterfaces(InputStream is)
+    public void populateClassesOrInterfaces()
     {
-        if (is != null)
+        if (working)
+        {
+            return;
+        }
+        if (cu != null)
         {
             // JAVA SOURCE VERSION
-            CompilationUnit cu;
-            try
+            ClassOrInterfaceVisitor coi = new ClassOrInterfaceVisitor();
+            coi.visit(cu, null);
+            ArrayList<BodyDeclaration> list = coi.getList();
+            if (list.isEmpty())
             {
-                cu = JavaParser.parse(is);
-                ClassOrInterfaceVisitor coi = new ClassOrInterfaceVisitor();
-                coi.visit(cu, null);
-                ArrayList<BodyDeclaration> list = coi.getList();
-                if (list.isEmpty())
-                {
-                    System.out.println("Empty Class/Interface Declaration in " + clazz.getName());
-                }
-                else
-                {
-                    classOrInterfaces.put(clazz.getName(), (ClassOrInterfaceDeclaration) list.get(0));
-                }
+                System.out.println("Empty Class/Interface Declaration in " + clazz.getName());
             }
-            catch (ParseException e)
+            else
             {
+                classOrInterfaces.put(clazz.getName(), (ClassOrInterfaceDeclaration) list.get(0));
             }
+
         }
         classOrInterfacesSet = true;
         startPopulating();
     }
 
     @SuppressWarnings("unchecked")
-    public void populateFields(InputStream is)
+    public void populateFields()
     {
-        if (is != null)
+        if (working)
+        {
+            return;
+        }
+        if (cu != null)
+        {
+            FieldVisitor coi = new FieldVisitor();
+            coi.visit(cu, null);
+            for (BodyDeclaration bd : coi.getList())
+            {
+                FieldDeclaration fd = (FieldDeclaration) bd;
+                for (VariableDeclarator vd : fd.getVariables())
+                {
+                    fields.put(vd.getId().getName(), vd);
+                }
+            }
+        }
+        startPopulating();
+        fieldsSet = true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void populateEnums()
+    {
+        if (working)
+            return;
+        if (cu != null)
         {
             // JAVA SOURCE VERSION
-            CompilationUnit cu;
-            try
+            EnumVisitor ev = new EnumVisitor();
+            ev.visit(cu, null);
+            for (BodyDeclaration bd : ev.getList())
             {
-                cu = JavaParser.parse(is);
-                FieldVisitor coi = new FieldVisitor();
-                coi.visit(cu, null);
-                for (BodyDeclaration bd : coi.getList())
+                EnumDeclaration ed = (EnumDeclaration) bd;
+                enums.put(ed.getName(), ed);
+            }
+        }
+        startPopulating();
+        fieldsSet = true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void populateConstructors()
+    {
+        if (working)
+            return;
+        if (cu != null)
+        {
+            ConstructorVisitor cv = new ConstructorVisitor();
+            cv.visit(cu, null);
+            for (Constructor<?> c : clazz.getDeclaredConstructors())
+            {
+                L1: for (BodyDeclaration bd : cv.getList())
                 {
-                    FieldDeclaration fd = (FieldDeclaration) bd;
-                    for (VariableDeclarator vd : fd.getVariables())
+                    ConstructorDeclaration cd = (ConstructorDeclaration) bd;
+                    if (!cd.getName().contentEquals(c.getName()))
+                        continue;
+                    List<japa.parser.ast.body.Parameter> paramsSource = cd.getParameters();
+                    Class<?> paramsReflect[] = c.getParameterTypes();
+                    // ArrayList<Parameter> params = new ArrayList<Parameter>();
+                    if (paramsSource != null && paramsSource.size() == paramsReflect.length)
                     {
-                        fields.put(vd.getId().getName(), vd);
+                        for (int i = 0; i < paramsSource.size(); ++i)
+                        {
+                            japa.parser.ast.body.Parameter paramSource = paramsSource.get(i);
+                            Class<?> paramReflect = paramsReflect[i];
+                            String className;
+                            if (paramReflect.isArray())
+                            {
+                                className = paramReflect.getCanonicalName();
+                            }
+                            else
+                            {
+                                className = paramReflect.getName();
+                            }
+                            String paramSourceType = paramSource.getType().toString();
+                            int idx = paramSourceType.indexOf('<');
+                            if (idx != -1)
+                                paramSourceType = paramSourceType.substring(0, idx);
+                            if (!className.contains(paramSourceType))
+                                continue L1;
+                            // else
+                            // params.add(new Parameter(ClassUtil.getSimpleClassName(className),
+                            // paramSource
+                            // .getId().getName()));
+                        }
+                        constructors.put(c.toGenericString(), cd);
                     }
                 }
-            }
-            catch (ParseException e)
-            {
+
+                if (constructors.get(c.toGenericString()) == null && DEBUG)
+                    System.out.println("No matching constructor in java: " + c.toGenericString());
+
             }
         }
         startPopulating();
-        fieldsSet = true;
+        constructorsSet = true;
     }
 
     @SuppressWarnings("unchecked")
-    public void populateEnums(InputStream is)
+    public void populateMethods()
     {
-        if (is != null)
+        if (working)
+            waitForAllSet();
+        if (cu != null)
         {
             // JAVA SOURCE VERSION
-            CompilationUnit cu;
-            try
-            {
-                cu = JavaParser.parse(is);
-                EnumVisitor ev = new EnumVisitor();
-                ev.visit(cu, null);
-                for (BodyDeclaration bd : ev.getList())
-                {
-                    EnumDeclaration ed = (EnumDeclaration) bd;
-                    enums.put(ed.getName(), ed);
-                }
-            }
-            catch (ParseException e)
-            {
-            }
-        }
-        startPopulating();
-        fieldsSet = true;
-    }
 
-    @SuppressWarnings("unchecked")
-    public void populateConstructors(InputStream is)
-    {
-        if (is != null)
-        {
-            // JAVA SOURCE VERSION
-            CompilationUnit cu;
-            try
+            MethodVisitor mv = new MethodVisitor();
+            mv.visit(cu, null);
+            for (Method method : clazz.getDeclaredMethods())
             {
-                cu = JavaParser.parse(is);
-                ConstructorVisitor cv = new ConstructorVisitor();
-                cv.visit(cu, null);
-                for (Constructor<?> c : clazz.getDeclaredConstructors())
+                L1: for (BodyDeclaration cd : mv.getList())
                 {
-                    L1: for (BodyDeclaration bd : cv.getList())
+                    MethodDeclaration md = ((MethodDeclaration) cd);
+                    if (!md.getName().contentEquals(method.getName()))
+                        continue;
+                    List<japa.parser.ast.body.Parameter> paramsSource = md.getParameters();
+                    Class<?> paramsReflect[] = method.getParameterTypes();
+                    if (paramsSource == null || paramsSource.size() == paramsReflect.length)
                     {
-                        ConstructorDeclaration cd = (ConstructorDeclaration) bd;
-                        if (!cd.getName().contentEquals(c.getName()))
-                            continue;
-                        List<japa.parser.ast.body.Parameter> paramsSource = cd.getParameters();
-                        Class<?> paramsReflect[] = c.getParameterTypes();
-                        // ArrayList<Parameter> params = new ArrayList<Parameter>();
-                        if (paramsSource != null && paramsSource.size() == paramsReflect.length)
+                        if (paramsSource != null)
                         {
                             for (int i = 0; i < paramsSource.size(); ++i)
                             {
@@ -338,83 +396,13 @@ public class ClassSource
                                     paramSourceType = paramSourceType.substring(0, idx);
                                 if (!className.contains(paramSourceType))
                                     continue L1;
-                                // else
-                                // params.add(new Parameter(ClassUtil.getSimpleClassName(className),
-                                // paramSource
-                                // .getId().getName()));
                             }
-                            constructors.put(c.toGenericString(), cd);
                         }
+                        methods.put(method.toGenericString(), (MethodDeclaration) cd);
                     }
-
-                    if (constructors.get(c.toGenericString()) == null && DEBUG)
-                        System.out.println("No matching constructor in java: " + c.toGenericString());
-
                 }
-            }
-            catch (ParseException e)
-            {
-            }
-        }
-        startPopulating();
-        constructorsSet = true;
-    }
-
-    @SuppressWarnings("unchecked")
-    public void populateMethods(InputStream is)
-    {
-        if (is != null)
-        {
-            // JAVA SOURCE VERSION
-            CompilationUnit cu;
-            try
-            {
-                cu = JavaParser.parse(is);
-                MethodVisitor mv = new MethodVisitor();
-                mv.visit(cu, null);
-                for (Method method : clazz.getDeclaredMethods())
-                {
-                    L1: for (BodyDeclaration cd : mv.getList())
-                    {
-                        MethodDeclaration md = ((MethodDeclaration) cd);
-                        if (!md.getName().contentEquals(method.getName()))
-                            continue;
-                        List<japa.parser.ast.body.Parameter> paramsSource = md.getParameters();
-                        Class<?> paramsReflect[] = method.getParameterTypes();
-                        if (paramsSource == null || paramsSource.size() == paramsReflect.length)
-                        {
-                            if (paramsSource != null)
-                            {
-                                for (int i = 0; i < paramsSource.size(); ++i)
-                                {
-                                    japa.parser.ast.body.Parameter paramSource = paramsSource.get(i);
-                                    Class<?> paramReflect = paramsReflect[i];
-                                    String className;
-                                    if (paramReflect.isArray())
-                                    {
-                                        className = paramReflect.getCanonicalName();
-                                    }
-                                    else
-                                    {
-                                        className = paramReflect.getName();
-                                    }
-                                    String paramSourceType = paramSource.getType().toString();
-                                    int idx = paramSourceType.indexOf('<');
-                                    if (idx != -1)
-                                        paramSourceType = paramSourceType.substring(0, idx);
-                                    if (!className.contains(paramSourceType))
-                                        continue L1;
-                                }
-                            }
-                            methods.put(method.toGenericString(), (MethodDeclaration) cd);
-                        }
-                    }
-                    if (methods.get(method.toGenericString()) == null && DEBUG)
-                        System.out.println("No matching method in java: " + method.toGenericString());
-                }
-            }
-            catch (ParseException e)
-            {
+                if (methods.get(method.toGenericString()) == null && DEBUG)
+                    System.out.println("No matching method in java: " + method.toGenericString());
             }
         }
         startPopulating();
