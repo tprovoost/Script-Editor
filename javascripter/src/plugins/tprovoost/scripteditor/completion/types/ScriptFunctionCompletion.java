@@ -291,19 +291,23 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
             // putting back the right parameters.
             ArrayList<Parameter> params = new ArrayList<Parameter>();
             List<japa.parser.ast.body.Parameter> list = md.getParameters();
-            for (int i = 0; i < getParamCount(); ++i)
+            int size = getParamCount();
+            if (list != null && list.size() == size)
             {
-                japa.parser.ast.body.Parameter sourceParam = list.get(i);
-                String name = sourceParam.getId().getName();
-                Parameter param = new Parameter(sourceParam.getType(), name);
+                for (int i = 0; i < getParamCount(); ++i)
+                {
+                    japa.parser.ast.body.Parameter sourceParam = list.get(i);
+                    String name = sourceParam.getId().getName();
+                    Parameter param = new Parameter(sourceParam.getType(), name);
 
-                params.add(param);
-                String desc = paramsHash.get(name);
-                if (desc != null)
-                    param.setDescription(desc);
+                    params.add(param);
+                    String desc = paramsHash.get(name);
+                    if (desc != null)
+                        param.setDescription(desc);
+                }
+                super.setParams(params);
+                cacheParams.put(method.toGenericString(), params);
             }
-            super.setParams(params);
-            cacheParams.put(method.toGenericString(), params);
             cacheSummary.put(method.toGenericString(), summary);
         }
         else

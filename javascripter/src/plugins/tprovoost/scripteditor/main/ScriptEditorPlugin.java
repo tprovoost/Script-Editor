@@ -24,7 +24,7 @@ public class ScriptEditorPlugin extends PluginActionable
     public void run()
     {
         String jv = SystemUtil.getJavaName();
-        if (!jv.contains("OpenJDK"))
+        if (jv.contains("OpenJDK"))
         {
             MessageDialog
                     .showDialog("This Plugin is only compatible with Sun version, not OpenJDK for now. Compatibility coming soon with v1.0.");

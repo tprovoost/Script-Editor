@@ -3,7 +3,6 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.JavadocComment;
 
-import java.io.InputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -23,7 +22,6 @@ import javax.swing.text.Segment;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
-import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class NewInstanceCompletion extends JavaFunctionCompletion
 {
@@ -242,19 +240,23 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
             // putting back the right parameters.
             ArrayList<Parameter> params = new ArrayList<Parameter>();
             List<japa.parser.ast.body.Parameter> list = dc.getParameters();
-            for (int i = 0; i < getParamCount(); ++i)
+            int size = getParamCount();
+            if (list != null && list.size() == size)
             {
-                japa.parser.ast.body.Parameter sourceParam = list.get(i);
-                String name = sourceParam.getId().getName();
-                Parameter param = new Parameter(sourceParam.getType(), name);
+                for (int i = 0; i < getParamCount(); ++i)
+                {
+                    japa.parser.ast.body.Parameter sourceParam = list.get(i);
+                    String name = sourceParam.getId().getName();
+                    Parameter param = new Parameter(sourceParam.getType(), name);
 
-                params.add(param);
-                String desc = paramsHash.get(name);
-                if (desc != null)
-                    param.setDescription(desc);
+                    params.add(param);
+                    String desc = paramsHash.get(name);
+                    if (desc != null)
+                        param.setDescription(desc);
+                }
+                super.setParams(params);
+                cacheParams.put(constructor.toGenericString(), params);
             }
-            super.setParams(params);
-            cacheParams.put(constructor.toGenericString(), params);
             cacheSummary.put(constructor.toGenericString(), summary);
         }
         else
