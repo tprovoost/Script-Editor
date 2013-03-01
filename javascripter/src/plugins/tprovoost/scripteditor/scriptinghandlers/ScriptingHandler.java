@@ -326,19 +326,30 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         ScriptVariable sv = localVariables.get(name);
         if (sv == null)
             return null;
-        Class<?> type = sv.getType(offset);
+        Class<?> type = sv.getVariableClassType(offset);
         if (type == null)
         {
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
             type = engineHandler.getEngineVariables().get(name);
         }
-        if (type != null && isArray)
+        if (type != null)
         {
-            int occ = originalName.split("\\[").length - 1;
-            for (int i = 0; i < occ; ++i)
+            if (isArray)
             {
-                type = type.getComponentType();
+                int occ = originalName.split("\\[").length - 1;
+                for (int i = 0; i < occ; ++i)
+                {
+                    type = type.getComponentType();
+                }
             }
+            // else if (type.getTypeParameters().length > 0)
+            // {
+            // System.out.println(name + " has generic Types:");
+            // for (TypeVariable<?> t : type.getTypeParameters())
+            // {
+            // System.out.println(t);
+            // }
+            // }
         }
         return type;
     }
@@ -953,14 +964,31 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         // try with declared in the script importClass
         for (String s : scriptDeclaredImportClasses)
         {
-            if (ClassUtil.getSimpleClassName(s).contentEquals(type))
+            String className = ClassUtil.getSimpleClassName(s);
+            int idx = className.indexOf('$');
+            if (idx != -1)
+                className = className.substring(idx + 1);
+            if (className.contentEquals(type))
                 try
                 {
                     return ClassUtil.findClass(s);
                 }
                 catch (ClassNotFoundException e)
                 {
-                    System.out.println(e.getLocalizedMessage());
+                    // System.out.println(e.getLocalizedMessage());
+                }
+                catch (NoClassDefFoundError e2)
+                {
+                }
+            int idxDollar = type.indexOf("$");
+            if (type.contains(className) && idxDollar != -1)
+                try
+                {
+                    return ClassUtil.findClass(s + type.substring(idxDollar));
+                }
+                catch (ClassNotFoundException e)
+                {
+                    // System.out.println(e.getLocalizedMessage());
                 }
                 catch (NoClassDefFoundError e2)
                 {
@@ -1166,7 +1194,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
                 for (String key : localVariables.keySet())
-                    engineHandler.getEngineVariables().put(key, localVariables.get(key).getLastType());
+                    engineHandler.getEngineVariables().put(key, localVariables.get(key).getVariableLastClassType());
                 engineHandler.getEngineFunctions().putAll(localFunctions);
                 engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
                 engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);

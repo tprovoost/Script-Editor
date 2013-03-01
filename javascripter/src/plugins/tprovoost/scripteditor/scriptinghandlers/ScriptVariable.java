@@ -22,7 +22,7 @@ public class ScriptVariable
         variableScopes.add(new ScriptVariableScope(offsetBegin, offsetEnd, returnType));
     }
 
-    public Class<?> getType(int offset)
+    public Class<?> getVariableClassType(int offset)
     {
         for (ScriptVariableScope svc : variableScopes)
         {
@@ -33,11 +33,11 @@ public class ScriptVariable
         return null;
     }
 
-    public Class<?> getLastType()
+    public Class<?> getVariableLastClassType()
     {
         if (!variableScopes.isEmpty())
         {
-            return variableScopes.get(variableScopes.size() - 1).type;
+            return variableScopes.get(variableScopes.size() - 1).cType;
         }
         return null;
     }
@@ -46,20 +46,22 @@ public class ScriptVariable
     {
         private int declarationOffset;
         private int endScopeOffset;
-        private Class<?> type;
+        private Class<?> cType;
+
+        // private Type type;
 
         public ScriptVariableScope(int declarationOffset, int endScopeOffset, Class<?> type)
         {
             this.declarationOffset = declarationOffset;
             this.endScopeOffset = endScopeOffset;
-            this.type = type;
+            this.cType = type;
             variableScopes.add(this);
         }
 
         public Class<?> getType(int offset)
         {
             if (offset >= declarationOffset && (endScopeOffset == -1 || offset < endScopeOffset))
-                return type;
+                return cType;
             return null;
         }
     }

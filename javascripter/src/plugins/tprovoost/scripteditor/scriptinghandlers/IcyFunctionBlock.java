@@ -1,14 +1,11 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
-import java.lang.reflect.Type;
-
 public class IcyFunctionBlock
 {
 
     private String functionName;
     private int startOffset;
-    private Class<?> returnTypeClass;
-    private Type returnType;
+    private Class<?> returnType;
 
     /**
      * @param functionName
@@ -21,11 +18,6 @@ public class IcyFunctionBlock
         this.functionName = functionName;
         this.startOffset = startOffset;
         this.returnType = returnType;
-        // ScriptEngineManager manager = new ScriptEngineManager();
-        // for (ScriptEngineFactory factory : manager.getEngineFactories())
-        // {
-        // System.out.println(factory.getEngineName() + " / " + factory.getEngineVersion());
-        // }
     }
 
     public String getFunctionName()
@@ -38,14 +30,9 @@ public class IcyFunctionBlock
         return startOffset;
     }
 
-    public Type getReturnType()
+    public Class<?> getReturnType()
     {
         return returnType;
-    }
-
-    public Class<?> getReturnTypeClass()
-    {
-        return returnTypeClass;
     }
 
     public void setStartOffset(int startOffset)
@@ -75,12 +62,7 @@ public class IcyFunctionBlock
     // }
     // }
 
-    public void setReturnType(Class<?> returnTypeClass)
-    {
-        this.returnTypeClass = returnTypeClass;
-    }
-
-    public void setReturnType(Type returnType)
+    public void setReturnType(Class<?> returnType)
     {
         this.returnType = returnType;
     }

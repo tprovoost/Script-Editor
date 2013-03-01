@@ -401,7 +401,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public void registerImports()
     {
         String s = textArea.getText();
-        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.)+)\\)");
+        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.|\\$)+)\\)");
         Matcher m = patternClasses.matcher(s);
         int offset = 0;
         while (m.find(offset))
@@ -998,7 +998,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         Method m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
                         returnType = m.getReturnType();
                     }
-
                     fb = functionBlocksToResolve.pop();
                     fb.setReturnType(returnType);
                     if (DEBUG)
@@ -1273,7 +1272,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             type = type.substring(0, type.length() - 2);
             arraySize++;
         }
-
         // try absolute
         if (type.contentEquals("Array"))
         {

@@ -625,7 +625,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     ArrayList<ScriptFunctionCompletion> methods = null;
 
                     // is the command a classname ?
-                    Class<?> clazz = handler.resolveClassDeclaration(command);
+                    Class<?> clazz = handler.resolveClassDeclaration(command.replace('.', '$'));
                     if (clazz != null)
                     {
                         // ----------------------------
@@ -647,7 +647,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            populateWithClassTypes(clazz, text, retVal, true);
+                            populateClassTypes(clazz, text, retVal, true);
                         }
                     }
 
@@ -676,7 +676,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            populateWithClassTypes(clazz, text, retVal);
+                            populateClass(clazz, text, retVal);
                         }
                     }
                     else
@@ -693,7 +693,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         if (fb != null)
                         {
                             // TODO With Type instead of clazz
-                            clazz = fb.getReturnTypeClass();
+                            clazz = fb.getReturnType();
                             methods = engineTypesMethod.get(clazz);
                             if (methods != null && !advanced)
                             {
@@ -710,7 +710,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                             }
                             else
                             {
-                                populateWithClassTypes(clazz, text, retVal);
+                                populateClass(fb.getReturnType(), text, retVal);
                             }
                         }
                         else
@@ -764,18 +764,20 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
     }
 
-    private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal)
+    private void populateClass(Class<?> type, String text, List<Completion> retVal)
     {
-        populateWithClassTypes(clazz, text, retVal, false);
+        populateClassTypes(type, text, retVal, false);
     }
 
-    private void populateWithClassTypes(Class<?> clazz, String text, List<Completion> retVal, boolean staticOnly)
+    private void populateClassTypes(Class<?> type, String text, List<Completion> retVal, boolean staticOnly)
     {
-        if (!Modifier.isPublic(clazz.getModifiers()))
+        if (!Modifier.isPublic(type.getModifiers()))
             return;
         ArrayList<Completion> listFields = new ArrayList<Completion>();
         ArrayList<Completion> listMethods = new ArrayList<Completion>();
-        for (Field f : clazz.getFields())
+        ArrayList<Completion> listClasses = new ArrayList<Completion>();
+        ArrayList<Completion> listEnums = new ArrayList<Completion>();
+        for (Field f : type.getFields())
         {
             String name = f.getName();
             if (!name.toLowerCase().startsWith(text.toLowerCase()))
@@ -804,13 +806,22 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 }
             }
         }
-        if (clazz.isArray())
+        for (Class<?> c : type.getClasses())
+        {
+            if (Modifier.isPublic(c.getModifiers()))
+            {
+                BasicJavaClassCompletion jcc = new BasicJavaClassCompletion(this, c);
+                jcc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                listClasses.add(jcc);
+            }
+        }
+        if (type.isArray())
         {
             VariableCompletion vc = new VariableCompletion(this, "length", int.class.getName());
             vc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
             listFields.add(vc);
         }
-        for (Method m : clazz.getMethods())
+        for (Method m : type.getMethods())
         {
             if (!m.getName().toLowerCase().startsWith(text.toLowerCase()))
                 continue;
@@ -826,7 +837,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                 // TODO relevance assignment = type / expr = void
-                fc.setDefinedIn(clazz.toString().replace('$', '.'));
+                fc.setDefinedIn(type.toString().replace('$', '.'));
                 ArrayList<Parameter> params = new ArrayList<Parameter>();
                 int i = 0;
                 for (Class<?> clazzParam : m.getParameterTypes())
@@ -848,7 +859,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                 fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                 // TODO relevance assignment = type / expr = void
-                fc.setDefinedIn(clazz.toString().replace('$', '.'));
+                fc.setDefinedIn(type.toString().replace('$', '.'));
                 ArrayList<Parameter> params = new ArrayList<Parameter>();
                 int i = 0;
                 for (Class<?> clazzParam : m.getParameterTypes())
@@ -867,6 +878,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
         retVal.addAll(listFields);
         retVal.addAll(listMethods);
+        retVal.addAll(listClasses);
+        retVal.addAll(listEnums);
     }
 
     private Completion generateSFCCopy(ScriptFunctionCompletion complete, boolean b)
@@ -912,8 +925,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     if (Modifier.isPublic(clazz.getModifiers()))
                     {
                         String nameFinal = ClassUtil.getSimpleClassName(s);
-                        if (nameFinal.contains("$"))
-                            continue;
+                        int idxDollar = nameFinal.indexOf('$');
+                        if (idxDollar != -1)
+                        {
+                            nameFinal = nameFinal.substring(idxDollar + 1);
+                            // continue;
+                        }
 
                         String desc = null;
                         if (nameFinal.toLowerCase().startsWith(text.toLowerCase()))
