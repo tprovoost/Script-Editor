@@ -1,9 +1,10 @@
-package plugins.tprovoost.scriptenginehandler;
+package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginInstaller.PluginInstallerListener;
 import icy.plugin.PluginLoader;
+import icy.plugin.classloader.JarClassLoader;
 import icy.util.ClassUtil;
 import icy.plugin.classloader.JarClassLoader;
 
@@ -21,7 +22,8 @@ import javax.script.ScriptEngineManager;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 
 public class ScriptEngineHandler implements PluginInstallerListener
 {
@@ -150,13 +152,12 @@ public class ScriptEngineHandler implements PluginInstallerListener
             }
             if (getClass().getClassLoader() instanceof JarClassLoader)
             {
-                Collection<Class<?>> col = PluginLoader.getAllClasses().values();
+                // Collection<Class<?>> col = PluginLoader.getLoadedClasses().values();
+                Collection<Class<?>> col = PluginLoader.getLoadedClasses().values();
                 frame.setLength(col.size());
                 int i = 0;
                 for (Class<?> clazz : new ArrayList<Class<?>>(col))
                 {
-                    if (clazz.getName().startsWith("plugins.tprovoost.scripteditor"))
-                        continue;
                     findBindingsMethods(clazz);
                     allClasses.add(clazz.getName());
                     ++i;
@@ -270,6 +271,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
             bindingFunctions.clear();
             engineFunctions.clear();
             engineTypesMethod.clear();
+            allClasses.clear();
             findBindingMethodsPlugins();
             // ArrayList<IcyFrame> list = IcyFrame.getAllFrames(ScriptingEditor.class);
             // if (list != null && !list.isEmpty())

@@ -73,6 +73,8 @@ public class ButtonTabComponent extends JPanel
         add(button);
         // add more space to the top of the component
         setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
+
+        // addMouseListener(this);
     }
 
     private class TabButton extends JButton implements ActionListener
@@ -159,7 +161,12 @@ public class ButtonTabComponent extends JPanel
         public void mouseClicked(MouseEvent e)
         {
             if (EventUtil.isMiddleMouseButton(e))
+            {
                 deletePane();
+                e.consume();
+            }
+            else
+                super.mouseClicked(e);
         };
     };
 

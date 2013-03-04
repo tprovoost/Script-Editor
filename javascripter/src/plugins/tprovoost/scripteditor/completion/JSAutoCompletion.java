@@ -12,7 +12,7 @@ import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 
 public class JSAutoCompletion extends IcyAutoCompletion
 {
@@ -58,9 +58,13 @@ public class JSAutoCompletion extends IcyAutoCompletion
 
             // get the caret position
             int caretPos = tc.getCaretPosition();
-            Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
+            Class<?> clazz = ((BasicJavaClassCompletion) c).getJavaClass();
             String neededClass = clazz.getName();
 
+            if (clazz.isMemberClass())
+            {
+                neededClass = ClassUtil.getBaseClassName(neededClass);
+            }
             if (!classAlreadyImported(neededClass))
             {
                 // import the needed class + movement
@@ -120,8 +124,28 @@ public class JSAutoCompletion extends IcyAutoCompletion
         }
         else if (c instanceof BasicJavaClassCompletion)
         {
-            Class<?> clazz = ((BasicJavaClassCompletion) c).getClazz();
-            toReturn = clazz.getSimpleName();
+            Class<?> clazz = ((BasicJavaClassCompletion) c).getJavaClass();
+
+            String textBefore = "";
+            CompletionProvider provider = getCompletionProvider();
+            if (provider instanceof IcyCompletionProvider)
+            {
+                textBefore = ((IcyCompletionProvider) provider).getAlreadyEnteredTextWithFunc(getTextComponent());
+                int lastIdx = textBefore.lastIndexOf('.');
+                if (lastIdx != -1)
+                    textBefore = textBefore.substring(0, lastIdx);
+                else
+                    textBefore = "";
+            }
+            if (textBefore == "")
+            {
+                toReturn = clazz.getName();
+                toReturn = ClassUtil.getSimpleClassName(toReturn).replace('$', '.');
+            }
+            else
+            {
+                toReturn = clazz.getSimpleName();
+            }
         }
         return toReturn;
     }
@@ -135,9 +159,16 @@ public class JSAutoCompletion extends IcyAutoCompletion
             resultingImport = "importPackage(Packages." + ClassUtil.getPackageName(neededClass) + ")\n";
 
         if (!tc.getText().contains(resultingImport))
-            // add at the beginning
+        {
+            // FIXME: add after the last import insteand of beginning of file.
             tc.setText(resultingImport + tc.getText());
+        }
         return resultingImport;
+    }
+
+    public String addBaseClass(JTextComponent tc, String neededBaseClass)
+    {
+        return neededBaseClass;
     }
 
 }

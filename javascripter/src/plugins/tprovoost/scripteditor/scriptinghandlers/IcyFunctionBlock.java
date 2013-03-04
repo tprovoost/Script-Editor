@@ -18,11 +18,6 @@ public class IcyFunctionBlock
         this.functionName = functionName;
         this.startOffset = startOffset;
         this.returnType = returnType;
-        // ScriptEngineManager manager = new ScriptEngineManager();
-        // for (ScriptEngineFactory factory : manager.getEngineFactories())
-        // {
-        // System.out.println(factory.getEngineName() + " / " + factory.getEngineVersion());
-        // }
     }
 
     public String getFunctionName()
@@ -39,12 +34,34 @@ public class IcyFunctionBlock
     {
         return returnType;
     }
-    
+
     public void setStartOffset(int startOffset)
     {
         this.startOffset = startOffset;
     }
-    
+
+    // public void setReturnType(String returnType)
+    // {
+    // try
+    // {
+    // if (returnType.contains("<"))
+    // {
+    // Pattern p = Pattern.compile("(\\w|_)*\\s*<(.*)>");
+    // Matcher m = p.matcher(returnType);
+    // if (m.matches())
+    // {
+    // System.out.println("classname: " + m.group(0));
+    // System.out.println("Anonymous: " + m.group(2));
+    // }
+    // }
+    // setReturnType(ClassUtil.findClass(returnType));
+    // }
+    // catch (ClassNotFoundException e)
+    // {
+    // returnType = null;
+    // }
+    // }
+
     public void setReturnType(Class<?> returnType)
     {
         this.returnType = returnType;

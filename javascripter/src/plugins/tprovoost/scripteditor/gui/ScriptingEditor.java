@@ -46,8 +46,8 @@ import javax.swing.event.ChangeListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
 
 /**
  * Main GUI of the class
@@ -77,7 +77,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     };
     private AcceptListener acceptlistener = new AcceptListener()
     {
-
         @Override
         public boolean accept(Object source)
         {
@@ -149,7 +148,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
             }
         });
-
         addPaneButton = new IcyButton(new IcyIcon("plus"));
         addPaneButton.setBorderPainted(false);
         addPaneButton.setPreferredSize(new Dimension(20, 20));
@@ -200,6 +198,16 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                 }
             }
         });
+    }
+
+    /**
+     * Getter on tabbedPane.
+     * 
+     * @return
+     */
+    public JTabbedPane getTabbedPane()
+    {
+        return tabbedPane;
     }
 
     /**
@@ -257,20 +265,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     public ScriptingPanel createNewPane(String name)
     {
         ScriptingPanel panelCreated;
-        Component c = tabbedPane.getSelectedComponent();
-        if (c instanceof ScriptingPanel)
-        {
-            String language = ((ScriptingPanel) c).getLanguage();
-            panelCreated = new ScriptingPanel(this, name, language);
-        }
+        String ext = FileUtil.getFileExtension(name, false);
+        if (ext.contentEquals("py"))
+            panelCreated = new ScriptingPanel(this, name, "python");
         else
-        {
-            String ext = FileUtil.getFileExtension(name, false);
-            if (ext.contentEquals("py"))
-                panelCreated = new ScriptingPanel(this, name, "python");
-            else
-                panelCreated = new ScriptingPanel(this, name, "javascript");
-        }
+            panelCreated = new ScriptingPanel(this, name, "javascript");
         panelCreated.setTabbedPane(tabbedPane);
         int idx = tabbedPane.getTabCount() - 1;
         if (idx != -1)
@@ -580,6 +579,60 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         menuFormat.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask | InputEvent.SHIFT_DOWN_MASK));
         menuEdit.add(menuFormat);
 
+        menuEdit.add(new JSeparator());
+
+        // FIND FEATURE
+        JMenuItem menuFind = new JMenuItem("Find");
+        menuFind.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                displayFindReplace();
+            }
+        });
+        menuFind.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask));
+        // menuFind.setEnabled(false);
+        menuEdit.add(menuFind);
+
+        // REPLACE FEATURE
+        JMenuItem menuReplace = new JMenuItem("Replace");
+        menuReplace.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                displayFindReplace();
+            }
+        });
+        menuReplace.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ctrlMask));
+        // menuReplace.setEnabled(false);
+        menuEdit.add(menuReplace);
+
+        // GOTO LINE FEATURE
+        JMenuItem menuGotoLine = new JMenuItem("Go to Line...");
+        menuGotoLine.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                Component c = tabbedPane.getSelectedComponent();
+                if (c instanceof ScriptingPanel)
+                {
+                    ((ScriptingPanel) c).displayGotoLine();
+                }
+            }
+        });
+        menuGotoLine.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, ctrlMask));
+        menuEdit.add(menuGotoLine);
+
+        JMenu menuTools = new JMenu("Tools");
+        JMenuItem menuFindClass = new JMenuItem("Find Class...");
+        menuTools.add(menuFindClass);
+
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");
         populateMenuTemplate(menuTemplate);
@@ -588,7 +641,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         JMenuItem menuPreferences = new JMenuItem("Preferences");
         menuPreferences.addActionListener(new ActionListener()
         {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {
@@ -631,6 +683,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         toReturn.add(menuFile);
         toReturn.add(menuEdit);
         toReturn.add(menuTemplate);
+        toReturn.add(menuTools);
         toReturn.add(menuOptions);
 
         updateRecentFiles();
@@ -639,6 +692,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         addFrameListener(frameListener);
 
         return toReturn;
+    }
+
+    public void displayFindReplace()
+    {
+        FindAndReplaceDialog.showDialog(this);
     }
 
     protected boolean closeTab(int i)
@@ -826,21 +884,15 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     @Override
     public void icyFrameDeactivated(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public void icyFrameInternalized(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public void icyFrameExternalized(IcyFrameEvent e)
     {
-        // TODO Auto-generated method stub
-
     }
 }

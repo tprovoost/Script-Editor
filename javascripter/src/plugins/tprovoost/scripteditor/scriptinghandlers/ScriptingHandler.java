@@ -1,6 +1,7 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
+import icy.image.ImageUtil;
 import icy.plugin.PluginDescriptor;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
@@ -9,6 +10,7 @@ import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 
+import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,7 +24,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeMap;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -37,6 +38,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -49,13 +51,12 @@ import org.mozilla.javascript.EvaluatorException;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
 
 /**
  * This class is in charge of the compilation of the script. It mostly depends
@@ -70,7 +71,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * {@link HashMap} containing all ignored Lines if they contains errors.
      * This allows the parser to no stop at the first line where the error is.
      */
-    private HashMap<Integer, Exception> ignoredLines = new HashMap<Integer, Exception>();
+    protected HashMap<Integer, Exception> ignoredLines = new HashMap<Integer, Exception>();
 
     /**
      * List of the variable completions found when script was parsed. Functions
@@ -95,7 +96,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     protected JTextComponent textArea;
 
     /** Contains all declared variables in the script. */
-    protected HashMap<String, TreeMap<Integer, Class<?>>> localVariables;
+    protected HashMap<String, ScriptVariable> localVariables;
 
     /** Contains all declared variables in the script. */
     protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
@@ -128,6 +129,28 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     private boolean newEngine = true;
     private boolean strict = false;
     private boolean varInterpretation = false;
+
+    /**
+     * Thread running the evaluation.
+     */
+    public EvalThread thread;
+
+    private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
+
+    /** Turn to true if you need to display more information in the console. */
+    protected static final boolean DEBUG = false;
+
+    // Different relevance of items. Simplify code, but integer values can
+    // always be used.
+    public static final int RELEVANCE_MIN = 1;
+    public static final int RELEVANCE_LOW = 2;
+    public static final int RELEVANCE_HIGH = 10;
+
+    private static final IcyIcon ICON_ERROR_TOOLTIP = new IcyIcon(ImageUtil.load(PluginLoader
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/quickfix_warning_obj.gif")), 16, false);
+
+    private static final IcyIcon ICON_ERROR = new IcyIcon(ImageUtil.load(PluginLoader
+            .getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/error.gif")), 15, false);
 
     private StringWriter sw = new StringWriter();
     private PrintWriter pw = new PrintWriter(sw, true)
@@ -164,22 +187,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         }
     };
 
-    /**
-     * Thread running the evaluation.
-     */
-    public EvalThread thread;
-
-    private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
-
-    /** Turn to true if you need to display more information in the console. */
-    protected static final boolean DEBUG = false;
-
-    // Different relevance of items. Simplify code, but integer values can
-    // always be used.
-    public static final int RELEVANCE_MIN = 1;
-    public static final int RELEVANCE_LOW = 2;
-    public static final int RELEVANCE_HIGH = 10;
-
     public ScriptingHandler(DefaultCompletionProvider provider, String engineType, JTextComponent textArea,
             Gutter gutter, boolean forceRun, ScriptingPanel scriptingPanel)
     {
@@ -191,7 +198,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         textArea.getDocument().addDocumentListener(new AutoVerify());
 
-        localVariables = new HashMap<String, TreeMap<Integer, Class<?>>>();
+        localVariables = new HashMap<String, ScriptVariable>();
 
         ScriptEngine engine = getEngine();
         if (engine == null)
@@ -279,7 +286,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         return localFunctions;
     }
 
-    public HashMap<String, TreeMap<Integer, Class<?>>> getLocalVariables()
+    public HashMap<String, ScriptVariable> getLocalVariables()
     {
         return localVariables;
     }
@@ -316,27 +323,33 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             name = name.substring(0, name.indexOf('['));
         }
-        TreeMap<Integer, Class<?>> list = localVariables.get(name);
-        if (list == null)
+        ScriptVariable sv = localVariables.get(name);
+        if (sv == null)
             return null;
-        Class<?> type = null;
-        for (Integer i : list.keySet())
-        {
-            if (offset > i)
-                type = list.get(i);
-        }
+        Class<?> type = sv.getVariableClassType(offset);
         if (type == null)
         {
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
             type = engineHandler.getEngineVariables().get(name);
         }
-        if (type != null && isArray)
+        if (type != null)
         {
-            int occ = originalName.split("\\[").length - 1;
-            for (int i = 0; i < occ; ++i)
+            if (isArray)
             {
-                type = type.getComponentType();
+                int occ = originalName.split("\\[").length - 1;
+                for (int i = 0; i < occ; ++i)
+                {
+                    type = type.getComponentType();
+                }
             }
+            // else if (type.getTypeParameters().length > 0)
+            // {
+            // System.out.println(name + " has generic Types:");
+            // for (TypeVariable<?> t : type.getTypeParameters())
+            // {
+            // System.out.println(t);
+            // }
+            // }
         }
         return type;
     }
@@ -462,20 +475,32 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         else
         {
             interpret(s);
-            updateOutput();
             if (exec && (isCompilationOk()))
                 run();
         }
     }
 
-    private void updateGutter()
+    protected void updateGutter()
     {
+        if (gutter == null || !(textArea instanceof JTextArea))
+            return;
         gutter.removeAllTrackingIcons();
         for (Integer a : new ArrayList<Integer>(ignoredLines.keySet()))
         {
             try
             {
-                gutter.addLineTrackingIcon(a, new IcyIcon("arrow_right", 10, false));
+                IcyIcon icon;
+                Exception e = ignoredLines.get(a);
+                if (e instanceof EvaluatorException)
+                    icon = ICON_ERROR_TOOLTIP;
+                else
+                    icon = ICON_ERROR;
+                String tooltip = ignoredLines.get(a).getMessage();
+                // if (tooltip.length() > 127)
+                // {
+                // tooltip = tooltip.substring(0, 127) + "...";
+                // }
+                gutter.addLineTrackingIcon(a, icon, tooltip);
                 gutter.repaint();
             }
             catch (BadLocationException e)
@@ -502,7 +527,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     Exception ee = ignoredLines.get(a);
                     String msg = ee.getLocalizedMessage();
 
-                    System.out.println(msg);
+                    // System.out.println(msg);
                     textResult += msg + "\n";
                 }
                 if (errorOutput != null)
@@ -510,9 +535,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                     Document doc = errorOutput.getDocument();
                     try
                     {
-                        Style style = errorOutput.getStyle("normal");
+                        Style style = errorOutput.getStyle("error");
                         if (style == null)
-                            style = errorOutput.addStyle("normal", null);
+                        {
+                            style = errorOutput.addStyle("error", null);
+                            StyleConstants.setForeground(style, Color.red);
+                        }
                         doc.insertString(doc.getLength(), textResult, style);
                     }
                     catch (BadLocationException e)
@@ -545,12 +573,13 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             Context context = Context.enter();
             context.setApplicationClassLoader(PluginLoader.getLoader());
-            if (gutter != null)
-                updateGutter();
+            updateGutter();
             clearScriptVariables();
             registerImports();
             if (provider != null && varInterpretation)
+            {
                 detectVariables(s, context);
+            }
             setCompilationOk(true);
         }
         catch (EvaluatorException ee)
@@ -935,14 +964,31 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         // try with declared in the script importClass
         for (String s : scriptDeclaredImportClasses)
         {
-            if (ClassUtil.getSimpleClassName(s).contentEquals(type))
+            String className = ClassUtil.getSimpleClassName(s);
+            int idx = className.indexOf('$');
+            if (idx != -1)
+                className = className.substring(idx + 1);
+            if (className.contentEquals(type))
                 try
                 {
                     return ClassUtil.findClass(s);
                 }
                 catch (ClassNotFoundException e)
                 {
-                    System.out.println(e.getLocalizedMessage());
+                    // System.out.println(e.getLocalizedMessage());
+                }
+                catch (NoClassDefFoundError e2)
+                {
+                }
+            int idxDollar = type.indexOf("$");
+            if (type.contains(className) && idxDollar != -1)
+                try
+                {
+                    return ClassUtil.findClass(s + type.substring(idxDollar));
+                }
+                catch (ClassNotFoundException e)
+                {
+                    // System.out.println(e.getLocalizedMessage());
                 }
                 catch (NoClassDefFoundError e2)
                 {
@@ -1147,28 +1193,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
                 ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 
-                // Bindings bn = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-                // for (String s : bn.keySet()) {
-                // List<Completion> completions =
-                // provider.getCompletionByInputText(s);
-                // boolean found = false;
-                // if (completions != null) {
-                // for (Completion c : completions) {
-                // if (c.getReplacementText().contentEquals(s))
-                // found = true;
-                // }
-                // }
-                // if (completions == null || !found) {
-                // Object value = bn.get(s);
-                // String type = "";
-                // if (value != null)
-                // type = value.toString();
-                // provider.addCompletion(new VariableCompletion(provider, s,
-                // type));
-                // }
-                // }
                 for (String key : localVariables.keySet())
-                    engineHandler.getEngineVariables().put(key, localVariables.get(key).lastEntry().getValue());
+                    engineHandler.getEngineVariables().put(key, localVariables.get(key).getVariableLastClassType());
                 engineHandler.getEngineFunctions().putAll(localFunctions);
                 engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
                 engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
@@ -1210,10 +1236,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                                 }
                                 ignoredLines.put(lineError, se);
 
-                                if (gutter != null)
-                                {
-                                    updateGutter();
-                                }
+                                updateGutter();
                                 updateOutput();
                             }
                             else
@@ -1244,10 +1267,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             }
             finally
             {
-                if (gutter != null)
-                {
-                    updateGutter();
-                }
+                updateGutter();
                 fireEvaluationOver();
                 thread = null;
             }

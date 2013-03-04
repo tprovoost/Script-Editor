@@ -1,13 +1,13 @@
 package plugins.tprovoost.scripteditor.completion.types;
 
-import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.JavadocComment;
+import japa.parser.ast.body.MethodDeclaration;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,14 +23,13 @@ import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 
-public class NewInstanceCompletion extends JavaFunctionCompletion
+public class ScriptFunctionCompletion extends JavaFunctionCompletion
 {
-    private static HashMap<String, ConstructorDeclaration> cacheConsDecl = new HashMap<String, ConstructorDeclaration>();
+    private static HashMap<String, MethodDeclaration> cacheMetDecl = new HashMap<String, MethodDeclaration>();
     private static HashMap<String, List<Parameter>> cacheParams = new HashMap<String, List<Parameter>>();
 
-    private Constructor<?> constructor;
+    private Method method;
     private boolean isStatic;
-    private boolean isParseDone = false;
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
@@ -39,10 +38,10 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
         String value();
     }
 
-    public NewInstanceCompletion(CompletionProvider provider, String name, Constructor<?> constructor)
+    public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method)
     {
-        super(provider, name, constructor.getDeclaringClass().getName());
-        this.constructor = constructor;
+        super(provider, name, method.getReturnType().getName());
+        this.method = method;
     }
 
     /**
@@ -52,11 +51,11 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
      */
     public String getMethodCall()
     {
-        ConstructorDeclaration constDecl = cacheConsDecl.get(constructor);
         String parametersAsString = "";
-        if (constDecl != null)
+        MethodDeclaration methodDecl = cacheMetDecl.get(method);
+        if (methodDecl != null)
         {
-            List<japa.parser.ast.body.Parameter> params = constDecl.getParameters();
+            List<japa.parser.ast.body.Parameter> params = methodDecl.getParameters();
             for (int i = 0; i < params.size(); ++i)
             {
                 japa.parser.ast.body.Parameter p = params.get(i);
@@ -68,7 +67,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
         }
         else
         {
-            Class<?>[] paramTypes = constructor.getParameterTypes();
+            Class<?>[] paramTypes = method.getParameterTypes();
             for (int i = 0; i < paramTypes.length; ++i)
             {
                 if (i != 0)
@@ -77,8 +76,8 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
                     parametersAsString += "arg" + i;
             }
         }
-        return "Packages." + constructor.getDeclaringClass().getName() + "." + constructor.getName() + "("
-                + parametersAsString + ");";
+        return "Packages." + method.getDeclaringClass().getName() + "." + method.getName() + "(" + parametersAsString
+                + ");";
     }
 
     /**
@@ -88,8 +87,8 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
      */
     public boolean isStatic()
     {
-        if (constructor != null)
-            return Modifier.isStatic(constructor.getModifiers());
+        if (method != null)
+            return Modifier.isStatic(method.getModifiers());
         return false;
     }
 
@@ -100,20 +99,20 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
     {
         if (isStatic)
             return null;
-        return constructor.getDeclaringClass();
+        return method.getDeclaringClass();
     }
 
-    public Constructor<?> getConstructor()
+    public Method getMethod()
     {
-        return constructor;
+        return method;
     }
 
     @Override
     public boolean equals(Object arg0)
     {
-        if (!(arg0 instanceof NewInstanceCompletion))
+        if (!(arg0 instanceof ScriptFunctionCompletion))
             return false;
-        return ((NewInstanceCompletion) arg0).getName().contentEquals(getName());
+        return ((ScriptFunctionCompletion) arg0).getName().contentEquals(getName());
     }
 
     @Override
@@ -159,7 +158,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
     @Override
     public Parameter getParam(int index)
     {
-        List<Parameter> params = cacheParams.get(constructor.toGenericString());
+        List<Parameter> params = cacheParams.get(method.toGenericString());
         if (params != null)
         {
             return params.get(index);
@@ -174,7 +173,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
     @Override
     public String getSummary()
     {
-        summary = cacheSummary.get(constructor.toGenericString());
+        summary = cacheSummary.get(method.toGenericString());
         if (!isParseDone)
         {
             if (summary == null)
@@ -188,27 +187,78 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
         }
         addParameters(sb);
         possiblyAddDefinedIn(sb);
+        String sumResult = sb.toString();
         sb.append("</html>");
-        return sb.toString();
+        return sumResult;
     }
 
-    private void populate()
+    @Override
+    protected void addDefinitionString(StringBuffer sb)
     {
-        ConstructorDeclaration dc = cacheConsDecl.get(constructor.toGenericString());
-        if (dc == null)
+        super.addDefinitionString(sb);
+    }
+
+    @Override
+    protected void addParameters(StringBuffer sb)
+    {
+        int paramCount = getParamCount();
+        if (paramCount > 0)
         {
-            Class<?> currentClass = constructor.getDeclaringClass();
-            while (dc == null && currentClass != null)
+            sb.append("<b>Parameters:</b><br>");
+            sb.append("<center><table width='90%'><tr><td>");
+            for (int i = 0; i < paramCount; i++)
+            {
+                Parameter param = getParam(i);
+                sb.append("<b>");
+                sb.append(param.getName() != null ? param.getName() : param.getType());
+                sb.append(" : </b><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                String desc = param.getDescription();
+                if (desc != null)
+                {
+                    sb.append(desc);
+                }
+                sb.append("<br>");
+            }
+            sb.append("</td></tr></table></center><br><br>");
+        }
+        String returnValDesc = getReturnValueDescription();
+        if (returnValDesc != null)
+        {
+            sb.append("<b>Returns:</b><br><center><table width='90%'><tr><td>");
+            sb.append(returnValDesc);
+            sb.append("</td></tr></table></center><br><br>");
+        }
+    }
+
+    @Override
+    protected void possiblyAddDefinedIn(StringBuffer sb)
+    {
+        super.possiblyAddDefinedIn(sb);
+    }
+
+    @Override
+    protected boolean possiblyAddDescription(StringBuffer sb)
+    {
+        return super.possiblyAddDescription(sb);
+    }
+
+    protected void populate()
+    {
+        MethodDeclaration md = cacheMetDecl.get(method.toGenericString());
+        if (md == null)
+        {
+            Class<?> currentClass = method.getDeclaringClass();
+            while (md == null && currentClass != null)
             {
                 try
                 {
-                    Constructor<?> c = currentClass.getDeclaredConstructor(constructor.getParameterTypes());
+                    Method m = currentClass.getDeclaredMethod(this.method.getName(), this.method.getParameterTypes());
                     final ClassSource cs = ClassSource.getClassSource(currentClass);
-                    if (!cs.isConstructorsSet())
+                    if (!cs.isMethodsSet())
                     {
-                        cs.populateConstructors();
+                        cs.populateMethods();
                     }
-                    dc = cs.getConstructors().get(c.toGenericString());
+                    md = cs.getMethods().get(m.toGenericString());
                 }
                 catch (SecurityException e)
                 {
@@ -219,9 +269,9 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
                 currentClass = currentClass.getSuperclass();
             }
         }
-        if (dc != null)
+        if (md != null)
         {
-            JavadocComment comment = dc.getJavaDoc();
+            JavadocComment comment = md.getJavaDoc();
             if (comment != null)
             {
                 String content = comment.getContent();
@@ -230,6 +280,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
             }
             HashMap<String, String> paramsHash = ClassSource.getParameters(summary);
 
+            // Removes parameters from Doc since they are going to be handled in this.
             if (paramsHash.size() > 0 && summary != null)
             {
                 int idx = summary.indexOf(ClassSource.PARAM_PATTERN);
@@ -239,7 +290,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
 
             // putting back the right parameters.
             ArrayList<Parameter> params = new ArrayList<Parameter>();
-            List<japa.parser.ast.body.Parameter> list = dc.getParameters();
+            List<japa.parser.ast.body.Parameter> list = md.getParameters();
             int size = getParamCount();
             if (list != null && list.size() == size)
             {
@@ -255,9 +306,9 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
                         param.setDescription(desc);
                 }
                 super.setParams(params);
-                cacheParams.put(constructor.toGenericString(), params);
+                cacheParams.put(method.toGenericString(), params);
             }
-            cacheSummary.put(constructor.toGenericString(), summary);
+            cacheSummary.put(method.toGenericString(), summary);
         }
         else
         {

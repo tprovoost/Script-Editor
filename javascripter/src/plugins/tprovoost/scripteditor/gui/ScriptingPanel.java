@@ -6,19 +6,17 @@ import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.image.ImageUtil;
 import icy.main.Icy;
+import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
-import icy.util.StringUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -52,6 +50,7 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollBar;
@@ -63,7 +62,10 @@ import javax.swing.JTextPane;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -110,15 +112,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Boolean used to know if the file was modified since the last save. */
     private JTabbedPane tabbedPane;
 
-    /** Provider used for autocompletion. */
+    /** Provider used for auto-completion. */
     private IcyCompletionProvider provider;
+    /** Auto-completion system. Uses provider item. */
+    private IcyAutoCompletion ac;
+
     private JScrollPane scrollpane;
     private JTextPane consoleOutput;
     private Scriptingconsole console;
     private JButton btnClearConsole;
 
-    /** Autocompletion system. Uses provider item. */
-    private IcyAutoCompletion ac;
     public JButton btnRun;
     private JButton btnRunNew;
     public JButton btnStop;
@@ -168,11 +171,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         @Override
                         public void actionPerformed(ActionEvent e)
                         {
-                            String text = consoleOutput.getSelectedText();
-                            if (StringUtil.isEmpty(text))
-                                text = consoleOutput.getText();
-                            Toolkit.getDefaultToolkit().getSystemClipboard()
-                                    .setContents(new StringSelection(text), null);
+                            consoleOutput.copy();
                         }
                     });
                     popup.add(itemCopy);
@@ -237,13 +236,23 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.setPaintMatchedBracketPair(true);
         textArea.setPaintTabLines(true);
         textArea.setTabsEmulated(false);
+        textArea.addHyperlinkListener(new HyperlinkListener()
+        {
+
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e)
+            {
+                NetworkUtil.openBrowser(e.getURL());
+            }
+
+        });
 
         pane = new RTextScrollPane(textArea);
         pane.setIconRowHeaderEnabled(true);
 
         // creates the options panel
         options = new PanelOptions(language);
-        installLanguage(options.combo.getSelectedItem().toString());
+        installLanguage(options.comboLanguages.getSelectedItem().toString());
 
         // set the default theme: eclipse.
         setTheme("eclipse");
@@ -289,7 +298,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     {
         try
         {
-            Theme t = Theme.load(getClass().getClassLoader().getResourceAsStream(
+            Theme t = Theme.load(PluginLoader.getLoader().getResourceAsStream(
                     "plugins/tprovoost/scripteditor/resources/themes/" + s + ".xml"));
             t.apply(textArea);
         }
@@ -662,7 +671,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         /** */
         private static final long serialVersionUID = 1L;
-        private JComboBox combo;
+        private JComboBox comboLanguages;
 
         public PanelOptions()
         {
@@ -675,7 +684,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             btnRun = new IcyButton(new IcyIcon("playback_play", 16));
             btnRun.setToolTipText("Run the script in the current context.");
 
-            btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+            // btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
+            btnRunNew = new IcyButton(new IcyIcon("playback_play", 16));
             btnRunNew.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
 
             btnStop = new IcyButton(new IcyIcon("square_shape", 16));
@@ -687,16 +697,15 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
             add(new JLabel("Lang: "));
             ArrayList<String> values = new ArrayList<String>();
-            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngineManager manager = new ScriptEngineManager(PluginLoader.getLoader());
             for (ScriptEngineFactory factory : manager.getEngineFactories())
             {
                 values.add(getLanguageName(factory));
             }
-            combo = new JComboBox(values.toArray());
-            combo.setSelectedItem(language);
-            combo.addItemListener(new ItemListener()
+            comboLanguages = new JComboBox(values.toArray());
+            comboLanguages.setSelectedItem(language);
+            comboLanguages.addItemListener(new ItemListener()
             {
-
                 @Override
                 public void itemStateChanged(final ItemEvent e)
                 {
@@ -708,7 +717,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         {
                             if (e.getStateChange() == ItemEvent.SELECTED)
                             {
-                                String language = combo.getSelectedItem().toString();
+                                String language = comboLanguages.getSelectedItem().toString();
                                 installLanguage(language);
                             }
                         }
@@ -716,7 +725,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
                 }
             });
-            add(combo);
+            add(comboLanguages);
 
             if (integrated)
                 return;
@@ -814,8 +823,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
             add(Box.createHorizontalStrut(STRUT_SIZE * 3));
             add(btnRunNew);
-            add(Box.createHorizontalStrut(STRUT_SIZE));
-            add(btnRun);
+            // add(Box.createHorizontalStrut(STRUT_SIZE));
+            // add(btnRun);
             add(Box.createHorizontalStrut(STRUT_SIZE));
             add(btnStop);
             add(Box.createHorizontalGlue());
@@ -867,7 +876,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public String getLanguage()
     {
-        return (String) options.combo.getSelectedItem();
+        return (String) options.comboLanguages.getSelectedItem();
     }
 
     /**
@@ -947,6 +956,28 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
             if (console != null)
                 console.clear();
+        }
+    }
+
+    /**
+     * Displays a modal dialog to go to a specific line.
+     */
+    public void displayGotoLine()
+    {
+        int min = 1;
+        int max = textArea.getLineCount();
+        String res = JOptionPane.showInputDialog(Icy.getMainInterface().getMainFrame(), "Enter line number (" + min
+                + "," + max + ")", "Go to Line", JOptionPane.QUESTION_MESSAGE);
+        try
+        {
+            int line = Integer.parseInt(res);
+            textArea.setCaretPosition(textArea.getLineStartOffset(line - 1));
+        }
+        catch (NumberFormatException e)
+        {
+        }
+        catch (BadLocationException e)
+        {
         }
     }
 }

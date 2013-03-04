@@ -7,11 +7,11 @@ import icy.plugin.PluginInstaller;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
-import icy.sequence.SequenceUtil;
 import icy.util.ClassUtil;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.TreeMap;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -56,21 +56,27 @@ import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
 import org.mozilla.javascript.ast.AstRoot;
+import org.mozilla.javascript.ast.Block;
 import org.mozilla.javascript.ast.ElementGet;
 import org.mozilla.javascript.ast.ExpressionStatement;
 import org.mozilla.javascript.ast.FunctionCall;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.IfStatement;
+import org.mozilla.javascript.ast.InfixExpression;
+import org.mozilla.javascript.ast.Loop;
 import org.mozilla.javascript.ast.NewExpression;
 import org.mozilla.javascript.ast.PropertyGet;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.StringLiteral;
+import org.mozilla.javascript.ast.SwitchCase;
+import org.mozilla.javascript.ast.SwitchStatement;
+import org.mozilla.javascript.ast.VariableDeclaration;
+import org.mozilla.javascript.ast.VariableInitializer;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptEngineHandler;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion;
-import plugins.tprovoost.scriptenginehandler.ScriptFunctionCompletion.BindingFunction;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import sun.org.mozilla.javascript.internal.ErrorReporter;
 import sun.org.mozilla.javascript.internal.EvaluatorException;
 import sun.org.mozilla.javascript.internal.ImporterTopLevel;
@@ -87,6 +93,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     private LinkedList<IcyFunctionBlock> functionBlocksToResolve = new LinkedList<IcyFunctionBlock>();
     private ErrorReporter errorReporter = new ErrorReporter()
     {
+
+        private EvaluatorException exception;
 
         @Override
         public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
@@ -111,7 +119,41 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource,
                 int lineOffset)
         {
-            return new EvaluatorException(message, sourceName, line + 1, lineSource, lineOffset);
+            if (exception != null)
+            {
+                EvaluatorException e = exception;
+                exception = null;
+                return e;
+            }
+            else
+            {
+                Document doc = errorOutput.getDocument();
+                try
+                {
+                    Style style = errorOutput.getStyle("error");
+                    if (style == null)
+                    {
+                        style = errorOutput.addStyle("error", null);
+                        StyleConstants.setForeground(style, Color.red);
+                    }
+                    String inLineSource = "";
+                    String atColumn = "";
+                    if (lineSource != null)
+                    {
+                        inLineSource = "\n in \"" + lineSource;
+                    }
+                    if (lineOffset > 0)
+                    {
+                        atColumn = "\"\n at column (" + lineOffset + ")";
+                    }
+                    String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
+                    doc.insertString(doc.getLength(), lastErrortext + "\n", style);
+                }
+                catch (BadLocationException e)
+                {
+                }
+            }
+            return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
         }
 
         @Override
@@ -122,14 +164,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 Document doc = errorOutput.getDocument();
                 try
                 {
-
                     Style style = errorOutput.getStyle("error");
                     if (style == null)
+                    {
                         style = errorOutput.addStyle("error", null);
-                    StyleConstants.setForeground(style, Color.red);
-                    String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                        StyleConstants.setForeground(style, Color.red);
+                    }
+                    String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
                             + lineOffset + ")";
-                    doc.insertString(doc.getLength(), text + "\n", style);
+                    exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
+                    doc.insertString(doc.getLength(), lastErrortext + "\n", style);
                 }
                 catch (BadLocationException e)
                 {
@@ -169,9 +213,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 bs.put(key, scriptable.get(key, scriptable));
             }
         }
-        catch (RhinoException e)
+        catch (EvaluatorException e)
         {
-            throw new ScriptException(e.details(), e.sourceName(), e.lineNumber() + 1);
+            ignoredLines.put(e.lineNumber(), e);
+            updateGutter();
+        }
+        catch (RhinoException e3)
+        {
+            throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
         }
         finally
         {
@@ -182,6 +231,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     @Override
     public void installDefaultLanguageCompletions(String language)
     {
+        ScriptEngine engine = getEngine();
+        if (engine == null)
+        {
+            if (DEBUG)
+                System.out.println("Engine is null.");
+            return;
+        }
+
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
         HashMap<String, Class<?>> engineVariables = engineHandler.getEngineVariables();
@@ -196,9 +253,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         // ArrayList<Parameter> params = new ArrayList<Parameter>();
-        ScriptEngine engine = getEngine();
-        if (engine == null)
-            return;
 
         // HARDCODED ITEMS, TO BE REMOVED OR ADDED IN AN XML
         String mainInterface = MainInterface.class.getName();
@@ -347,7 +401,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public void registerImports()
     {
         String s = textArea.getText();
-        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.)+)\\)");
+        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.|\\$)+)\\)");
         Matcher m = patternClasses.matcher(s);
         int offset = 0;
         while (m.find(offset))
@@ -578,7 +632,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             dumpTree(root, root, 1, "");
 
         // start variable registration
-        registerVariables(s, root, root);
+        registerVariables(root, root, s);
 
         // add the completions
         provider.addCompletions(variableCompletions);
@@ -591,29 +645,38 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @param root
      * @throws ScriptException
      */
-    private void registerVariables(String text, AstNode n, AstRoot root) throws ScriptException
+    private void registerVariables(AstNode n, AstRoot root, String text) throws ScriptException
     {
         if (n == null)
             return;
         if (DEBUG)
             System.out.println("current node: " + typeToName(n.getType()));
         // register current
-        Completion c = generateCompletion(n, root, text);
-        if (c != null)
+
+        for (Completion c : generateCompletion(n, root, text))
         {
-            boolean alreadyExists = false;
-            for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
+            if (c != null)
             {
-                if (variableCompletions.get(i).compareTo(c) == 0)
+                boolean alreadyExists = false;
+                if (c instanceof VariableCompletion)
                 {
-                    if (textArea.getCaret().getDot() > n.getAbsolutePosition())
-                        variableCompletions.remove(i);
-                    else
+                    ScriptVariable vc = localVariables.get(((VariableCompletion) c).getName());
+                    if (vc != null && !vc.isInScope(textArea.getCaretPosition()))
                         alreadyExists = true;
                 }
+                for (int i = 0; i < variableCompletions.size() && !alreadyExists; ++i)
+                {
+                    if (variableCompletions.get(i).compareTo(c) == 0)
+                    {
+                        if (textArea.getCaret().getDot() > n.getAbsolutePosition())
+                            variableCompletions.remove(i);
+                        else
+                            alreadyExists = true;
+                    }
+                }
+                if (!alreadyExists)
+                    variableCompletions.add(c);
             }
-            if (!alreadyExists)
-                variableCompletions.add(c);
         }
         // recursive call on children (if any)
         if (n.hasChildren())
@@ -621,19 +684,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             AstNode child = (AstNode) n.getFirstChild();
             while (child != null)
             {
-                registerVariables(text, child, root);
+                registerVariables(child, root, text);
                 child = (AstNode) child.getNext();
-            }
-        }
-        else
-        {
-            switch (n.getType())
-            {
-                case Token.IF:
-                    IfStatement nIf = (IfStatement) n;
-                    registerVariables(text, nIf.getThenPart(), root);
-                    registerVariables(text, nIf.getElsePart(), root);
-                    break;
             }
         }
     }
@@ -649,10 +701,43 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @return
      * @throws ScriptException
      */
-    private Completion generateCompletion(AstNode n, AstRoot root, String text) throws ScriptException
+    private ArrayList<Completion> generateCompletion(AstNode n, AstRoot root, String text) throws ScriptException
     {
+        ArrayList<Completion> toReturn = new ArrayList<Completion>();
         switch (n.getType())
         {
+            case Token.VAR:
+                VariableDeclaration var = (VariableDeclaration) n;
+                List<VariableInitializer> listVars = var.getVariables();
+
+                // listVars cannot be null, and contains
+                // all variables declared after the keyword "var"
+                for (VariableInitializer v : listVars)
+                {
+                    AstNode target = v.getTarget();
+                    AstNode init = v.getInitializer();
+
+                    // only use variable declaration with names,
+                    // not with Literals.
+                    if (target.getType() == Token.NAME)
+                    {
+                        Class<?> type = null;
+                        if (init != null)
+                            type = getRealType(init);
+                        String typeString = "";
+                        if (type != null)
+                            typeString = IcyCompletionProvider.getType(type, true);
+                        VariableCompletion c = new VariableCompletion(provider, target.getString(), typeString);
+                        c.setSummary("variable");
+                        c.setDefinedIn("script");
+                        c.setRelevance(RELEVANCE_HIGH);
+                        int pos = n.getAbsolutePosition();
+                        addVariableDeclaration(c.getName(), type, pos, pos + var.getParent().getLength());
+                        toReturn.add(c);
+                    }
+                }
+                break;
+            case Token.EXPR_VOID:
             case Token.EXPR_RESULT:
             {
                 AstNode expression = ((ExpressionStatement) n).getExpression();
@@ -660,16 +745,21 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     AstNode left = ((Assignment) expression).getLeft();
                     AstNode right = ((Assignment) expression).getRight();
-                    Class<?> type = resolveRight(right, text);
+                    Class<?> type = getRealType(right);
                     String typeString = "";
                     if (type != null)
                         typeString = IcyCompletionProvider.getType(type, true);
-                    VariableCompletion c = new VariableCompletion(provider, left.getString(), typeString);
-                    c.setSummary("variable");
-                    c.setDefinedIn("script");
-                    c.setRelevance(RELEVANCE_HIGH);
-                    addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
-                    return c;
+                    VariableCompletion c = null;
+                    if (left.getType() == Token.NAME)
+                        c = new VariableCompletion(provider, left.getString(), typeString);
+                    if (c != null)
+                    {
+                        c.setSummary("variable");
+                        c.setDefinedIn("script");
+                        c.setRelevance(RELEVANCE_HIGH);
+                        addVariableDeclaration(c.getName(), type, n.getAbsolutePosition());
+                        toReturn.add(c);
+                    }
                 }
                 else if (expression instanceof FunctionCall)
                 {
@@ -685,11 +775,71 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
                 break;
 
+            case Token.BLOCK:
+                if (n instanceof Block)
+                {
+                    Block scope = (Block) n;
+                    AstNode child = (AstNode) scope.getFirstChild();
+                    while (child != null)
+                    {
+                        registerVariables(child, root, text);
+                        child = (AstNode) child.getNext();
+                    }
+                }
+                else if (n instanceof Scope)
+                {
+                    Scope scope = (Scope) n;
+                    AstNode child = (AstNode) scope.getFirstChild();
+                    while (child != null)
+                    {
+                        registerVariables(child, root, text);
+                        child = (AstNode) child.getNext();
+                    }
+                }
+                break;
+
             case Token.CALL:
                 resolveCallType(n, text, false);
                 break;
+
+            case Token.FUNCTION:
+                FunctionNode fn = (FunctionNode) n;
+                FunctionCompletion fc = new FunctionCompletion(provider, fn.getName(), "");
+                List<AstNode> paramsFn = fn.getParams();
+                ArrayList<Parameter> params = new ArrayList<Parameter>();
+                for (AstNode param : paramsFn)
+                {
+                    params.add(new Parameter("", param.getString()));
+                }
+                fc.setParams(params);
+                fc.setDefinedIn("script");
+                fc.setRelevance(RELEVANCE_HIGH);
+                localFunctions.put(fn.getName(), Void.class);
+                toReturn.add(fc);
+                registerVariables(fn.getBody(), root, text);
+                break;
+
+            case Token.IF:
+                IfStatement nIf = (IfStatement) n;
+                registerVariables(nIf.getThenPart(), root, text);
+                registerVariables(nIf.getElsePart(), root, text);
+                break;
+            case Token.DO:
+            case Token.FOR:
+            case Token.WHILE:
+                registerVariables(((Loop) n).getBody(), root, text);
+                break;
+            case Token.SWITCH:
+                for (SwitchCase c : ((SwitchStatement) n).getCases())
+                {
+                    for (AstNode statement : c.getStatements())
+                    {
+                        registerVariables(statement, root, text);
+                    }
+                }
+                break;
         }
-        return null;
+        return toReturn;
     }
 
     private Class<?> resolveCallType(AstNode n, String text, boolean noerror)
@@ -835,10 +985,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                                 clazzes);
                     }
                     String call2;
-                    if (lastDot != -1)
-                        call2 = firstCall.substring(lastDot + 1, idxP1);
-                    else
-                        call2 = firstCall.substring(0, idxP1);
+                    // if (lastDot != -1)
+                    // call2 = firstCall.substring(lastDot + 1, idxP1);
+                    // else
+                    call2 = firstCall.substring(0, idxP1);
                     if (call2.contentEquals("newInstance"))
                     {
                         clazz.getConstructor(clazzes);
@@ -848,7 +998,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         Method m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
                         returnType = m.getReturnType();
                     }
-
                     fb = functionBlocksToResolve.pop();
                     fb.setReturnType(returnType);
                     if (DEBUG)
@@ -863,8 +1012,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
             catch (NoSuchMethodException e)
             {
-                System.out.println("Var Detection: no such method: " + e.getLocalizedMessage() + " at line "
-                        + n.getLineno());
+                String message = e.getLocalizedMessage();
+                int line = n.getLineno();
+                System.out.println("Var Detection: no such method: " + message + " at line " + line);
+                org.mozilla.javascript.EvaluatorException exception = new org.mozilla.javascript.EvaluatorException(
+                        message, "", line);
+                ignoredLines.put(line - 1, exception);
+                updateGutter();
             }
         }
         return null;
@@ -947,73 +1101,79 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             return toReturn;
     }
 
-    private Class<?> resolveRight(AstNode right, String text) throws ScriptException
-    {
-        switch (right.getType())
-        {
-            case Token.NUMBER:
-                return Number.class;
-
-            case Token.CALL:
-                return resolveCallType(right, text, false);
-
-            case Token.FUNCTION:
-                return Void.class;
-
-            case Token.NEW:
-            {
-                NewExpression nexp = (NewExpression) right;
-                AstNode target = nexp.getTarget();
-                if (target != null)
-                {
-                    String className = generateClassName(target, "");
-                    return resolveClassDeclaration(className);
-                }
-            }
-            case Token.ARRAYLIT:
-                return Object[].class;
-            case Token.GETPROP:
-            {
-                AstNode target = ((PropertyGet) right).getTarget();
-                if (target.getType() == Token.GETELEM)
-                {
-                    // array
-                    String rightStr = generateClassName(right, "");
-                    // Class<?> clazz = resolveArrayItemTypeComponent(target);
-                    // clazz = createArrayItemType(clazz, target);
-                    if (rightStr.contentEquals("length"))
-                        return int.class;
-                }
-                else
-                {
-                    // class
-                    String className = generateClassName(right, "");
-                    Class<?> clazz = resolveClassDeclaration(className);
-                    if (clazz != null)
-                        return clazz;
-                    // try if it is an enum
-                    int idx = className.lastIndexOf('.');
-                    if (idx != -1)
-                    {
-                        clazz = resolveClassDeclaration(className.substring(0, idx));
-                        return clazz;
-                    }
-                }
-                break;
-            }
-            case Token.GETELEM:
-            {
-                // access a table
-                ElementGet get = (ElementGet) right;
-                AstNode index = get.getElement();
-                AstNode target = get.getTarget();
-                Class<?> clazz = resolveArrayItemTypeComponent(target);
-                clazz = createArrayItemType(clazz, target);
-                return clazz;
-            }
-        }
-        return null;
-    }
+    // private Class<?> resolveRight(AstNode right, String text) throws ScriptException
+    // {
+    // switch (right.getType())
+    // {
+    // case Token.NAME:
+    // return getVariableDeclaration(right.getString());
+    //
+    // case Token.STRING:
+    // return String.class;
+    //
+    // case Token.NUMBER:
+    // return Number.class;
+    //
+    // case Token.CALL:
+    // return resolveCallType(right, text, false);
+    //
+    // case Token.FUNCTION:
+    // return Void.class;
+    //
+    // case Token.NEW:
+    // {
+    // NewExpression nexp = (NewExpression) right;
+    // AstNode target = nexp.getTarget();
+    // if (target != null)
+    // {
+    // String className = generateClassName(target, "");
+    // return resolveClassDeclaration(className);
+    // }
+    // }
+    // case Token.ARRAYLIT:
+    // return Object[].class;
+    // case Token.GETPROP:
+    // {
+    // AstNode target = ((PropertyGet) right).getTarget();
+    // if (target.getType() == Token.GETELEM)
+    // {
+    // // array
+    // String rightStr = generateClassName(right, "");
+    // // Class<?> clazz = resolveArrayItemTypeComponent(target);
+    // // clazz = createArrayItemType(clazz, target);
+    // if (rightStr.contentEquals("length"))
+    // return int.class;
+    // }
+    // else
+    // {
+    // // class
+    // String className = generateClassName(right, "");
+    // Class<?> clazz = resolveClassDeclaration(className);
+    // if (clazz != null)
+    // return clazz;
+    // // try if it is an enum
+    // int idx = className.lastIndexOf('.');
+    // if (idx != -1)
+    // {
+    // clazz = resolveClassDeclaration(className.substring(0, idx));
+    // return clazz;
+    // }
+    // }
+    // break;
+    // }
+    // case Token.GETELEM:
+    // {
+    // // access a table
+    // ElementGet get = (ElementGet) right;
+    // // AstNode index = get.getElement();
+    // AstNode target = get.getTarget();
+    // Class<?> clazz = resolveArrayItemTypeComponent(target);
+    // clazz = createArrayItemType(clazz, target);
+    // return clazz;
+    // }
+    // }
+    // return null;
+    // }
 
     private Class<?> resolveArrayItemTypeComponent(AstNode node)
     {
@@ -1065,7 +1225,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 // check types super etc
                 for (int i = 0; i < types.length; ++i)
                 {
-                    if (types[i] == null || parameterTypes[i] == null || !types[i].isAssignableFrom(parameterTypes[i]))
+                    // if (types[i] == null || parameterTypes[i] == null ||
+                    // !types[i].isAssignableFrom(parameterTypes[i]))
+                    if (types[i] != null
+                            && parameterTypes[i] != null
+                            && !(parameterTypes[i].isAssignableFrom(types[i]) || types[i]
+                                    .isAssignableFrom(parameterTypes[i])))
                         continue L1;
                 }
                 return m;
@@ -1076,11 +1241,25 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     protected void addVariableDeclaration(String name, Class<?> type, int offset)
     {
-        TreeMap<Integer, Class<?>> list = localVariables.get(name);
-        if (list == null)
-            list = new TreeMap<Integer, Class<?>>();
-        list.put(offset, type);
-        localVariables.put(name, list);
+        ScriptVariable vc = localVariables.get(name);
+        if (vc == null)
+        {
+            vc = new ScriptVariable();
+            localVariables.put(name, vc);
+        }
+        vc.addType(offset, type);
+    }
+
+    // TODO use for variables with Token.VAR variables.
+    protected void addVariableDeclaration(String name, Class<?> type, int offsetBegin, int offsetEnd)
+    {
+        ScriptVariable vc = localVariables.get(name);
+        if (vc == null)
+        {
+            vc = new ScriptVariable();
+            localVariables.put(name, vc);
+        }
+        vc.addType(offsetBegin, offsetEnd, type);
     }
 
     @Override
@@ -1093,7 +1272,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             type = type.substring(0, type.length() - 2);
             arraySize++;
         }
-
         // try absolute
         if (type.contentEquals("Array"))
         {
@@ -1114,6 +1292,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
         if (toReturn == null)
             toReturn = super.resolveClassDeclaration(type);
+        if (toReturn == null)
+            toReturn = getNativeJSTypes(type);
         while (toReturn != null && arraySize > 0)
         {
             toReturn = Array.newInstance(toReturn, 1).getClass();
@@ -1122,8 +1302,43 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return toReturn;
     }
 
+    // FIXME
+    /**
+     * This is a workaround on functions and their Java equivalent. However, this doesn't work
+     * properly, as those Classes have different methods.
+     * 
+     * @param type
+     * @return
+     */
+    private Class<?> getNativeJSTypes(String type)
+    {
+        if (type.contentEquals("Math"))
+        {
+            return Math.class;
+        }
+        else if (type.contentEquals("File"))
+        {
+            return File.class;
+        }
+        else if (type.contentEquals("String"))
+        {
+            return String.class;
+        }
+        return null;
+    }
+
+    /**
+     * Specific constructor not important, just the type
+     * 
+     * @param n
+     *        : current node.
+     * @param toReturn
+     *        : text that will be returned in the end.
+     * @return
+     */
     private String generateClassName(Node n, String toReturn)
     {
+
         if (n != null)
         {
             if (n.getType() == Token.GETPROP)
@@ -1135,6 +1350,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             else if (n.getType() == Token.NAME)
             {
                 return n.getString();
+            }
+            else if (n.getType() == Token.GETELEM)
+            {
+                return generateClassName(((ElementGet) n).getTarget(), toReturn);
             }
         }
         return toReturn;
@@ -1229,6 +1448,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.FUNCTION:
                 FunctionNode fn2 = (FunctionNode) n;
                 System.out.print(" " + fn2.getName());
+                dumpTree(fn2.getBody(), root, commandIdx + 1, "-" + decal);
                 break;
             case Token.IF:
                 System.out.println();
@@ -1239,13 +1459,27 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 break;
             case Token.BLOCK:
                 System.out.println();
-                Scope scope = (Scope) n;
-                Node child = scope.getFirstChild();
-                level = commandIdx + 1;
-                while (child != null)
+                if (n instanceof Block)
                 {
-                    dumpTree(child, root, level, "-" + decal);
-                    child = child.getNext();
+                    Block scope = (Block) n;
+                    Node child = scope.getFirstChild();
+                    level = commandIdx + 1;
+                    while (child != null)
+                    {
+                        dumpTree(child, root, level, "-" + decal);
+                        child = child.getNext();
+                    }
+                }
+                else if (n instanceof Scope)
+                {
+                    Scope scope = (Scope) n;
+                    Node child = scope.getFirstChild();
+                    level = commandIdx + 1;
+                    while (child != null)
+                    {
+                        dumpTree(child, root, level, "-" + decal);
+                        child = child.getNext();
+                    }
                 }
                 break;
             case Token.GETELEM:
@@ -1254,6 +1488,23 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 ElementGet get = (ElementGet) n;
                 dumpTree(get.getElement(), root, level, "-" + decal);
                 dumpTree(get.getTarget(), root, level, "-" + decal);
+                break;
+
+            case Token.DO:
+            case Token.FOR:
+            case Token.WHILE:
+                level = commandIdx + 1;
+                dumpTree(((Loop) n).getBody(), root, commandIdx + 1, "-" + decal);
+                break;
+            case Token.SWITCH:
+                level = commandIdx + 1;
+                for (SwitchCase c : ((SwitchStatement) n).getCases())
+                {
+                    for (AstNode statement : c.getStatements())
+                    {
+                        dumpTree(statement, root, commandIdx + 1, decal);
+                    }
+                }
                 break;
             default:
                 System.out.println();
@@ -1408,6 +1659,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         switch (n.getType())
         {
             case Token.ADD:
+                // test if string
+                InfixExpression expr = (InfixExpression) n;
+                Class<?> typeLeft = getRealType(expr.getLeft());
+                Class<?> typeRight = getRealType(expr.getRight());
+                if (typeLeft == String.class || typeRight == String.class)
+                    return String.class;
             case Token.DIV:
             case Token.SUB:
             case Token.MUL:
@@ -1423,28 +1680,61 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.CALL:
                 Class<?> res = resolveCallType(n, currentText, false);
                 return res;
+            case Token.FUNCTION:
+                return Void.class;
             case Token.GETPROP:
+            {
                 // class wanted
-                String className = generateClassName(n, "");
-                Class<?> clazz = resolveClassDeclaration(className);
-                if (clazz != null)
-                    return clazz;
-                // try if it is an enum
-                int idx = className.lastIndexOf('.');
-                if (idx != -1)
+                AstNode target = ((PropertyGet) n).getTarget();
+                if (target.getType() == Token.GETELEM)
                 {
-                    clazz = resolveClassDeclaration(className.substring(0, idx));
-                    return clazz;
+                    // array
+                    String rightStr = generateClassName(n, "");
+                    // Class<?> clazz = resolveArrayItemTypeComponent(target);
+                    // clazz = createArrayItemType(clazz, target);
+                    if (rightStr.contentEquals("length"))
+                        return int.class;
                 }
+                else
+                {
+                    // class
+                    String className = generateClassName(n, "");
+                    Class<?> clazz = resolveClassDeclaration(className);
+                    if (clazz != null)
+                        return clazz;
+                    // try if it is an enum
+                    int idx = className.lastIndexOf('.');
+                    if (idx != -1)
+                    {
+                        clazz = resolveClassDeclaration(className.substring(0, idx));
+                        return clazz;
+                    }
+                }
+                break;
+            }
             case Token.ARRAYLIT:
                 return Object[].class;
             case Token.NEW:
+            {
                 NewExpression nexp = (NewExpression) n;
                 AstNode target = nexp.getTarget();
-                className = generateClassName(target, "");
-                return resolveClassDeclaration(className);
+                if (target != null)
+                {
+                    String className = generateClassName(target, "");
+                    return resolveClassDeclaration(className);
+                }
+            }
+            case Token.GETELEM:
+            {
+                // access a table
+                ElementGet get = (ElementGet) n;
+                // AstNode index = get.getElement();
+                AstNode target = get.getTarget();
+                Class<?> clazz = resolveArrayItemTypeComponent(target);
+                clazz = createArrayItemType(clazz, target);
+                return clazz;
+            }
         }
-
         return null;
     }
 

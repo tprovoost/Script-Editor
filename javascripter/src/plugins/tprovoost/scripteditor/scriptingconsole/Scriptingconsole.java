@@ -4,17 +4,12 @@ import icy.util.DateUtil;
 import icy.util.EventUtil;
 
 import java.awt.Dimension;
-import java.awt.HeadlessException;
-import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -244,35 +239,17 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         if (EventUtil.isRightMouseButton(e))
         {
             JPopupMenu popup = new JPopupMenu();
-            JMenuItem itemCopy = new JMenuItem("Paste");
-            itemCopy.addActionListener(new ActionListener()
+            JMenuItem itemPaste = new JMenuItem("Paste");
+            itemPaste.addActionListener(new ActionListener()
             {
 
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    try
-                    {
-                        String paste = (String) Toolkit.getDefaultToolkit().getSystemClipboard()
-                                .getData(DataFlavor.stringFlavor);
-                        String curText = getText();
-                        int pos = getCaretPosition();
-                        String before = curText.substring(0, pos);
-                        String after = curText.substring(pos, curText.length());
-                        setText(before + paste + after);
-                    }
-                    catch (HeadlessException e1)
-                    {
-                    }
-                    catch (UnsupportedFlavorException e1)
-                    {
-                    }
-                    catch (IOException e1)
-                    {
-                    }
+                    paste();
                 }
             });
-            popup.add(itemCopy);
+            popup.add(itemPaste);
             popup.show(this, e.getX(), e.getY());
             e.consume();
         }

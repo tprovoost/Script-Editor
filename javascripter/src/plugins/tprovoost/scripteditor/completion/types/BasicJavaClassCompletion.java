@@ -1,6 +1,10 @@
 package plugins.tprovoost.scripteditor.completion.types;
 
+import japa.parser.ast.body.ClassOrInterfaceDeclaration;
+import japa.parser.ast.body.JavadocComment;
+
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -12,26 +16,90 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.VariableCompletion;
 
+import plugins.tprovoost.scripteditor.javasource.ClassSource;
+
 public class BasicJavaClassCompletion extends VariableCompletion implements Completion
 {
-
+    private static HashMap<Class<?>, String> cache = new HashMap<Class<?>, String>();
     private Class<?> clazz;
+    private boolean importOnly;
+    private boolean parsingDone = false;
 
     public BasicJavaClassCompletion(CompletionProvider provider, Class<?> clazz)
     {
-        super(provider, clazz.getSimpleName(), clazz.getSimpleName());
-        this.setDefinedIn(clazz.getName());
-        this.clazz = clazz;
+        this(provider, clazz, false);
     }
 
-    public Class<?> getClazz()
+    public BasicJavaClassCompletion(CompletionProvider provider, Class<?> clazz, boolean importOnly)
+    {
+        super(provider, clazz.getSimpleName(), clazz.getSimpleName());
+        this.clazz = clazz;
+        this.importOnly = importOnly;
+    }
+
+    public Class<?> getJavaClass()
     {
         return clazz;
+    }
+
+    public boolean isParsingDone()
+    {
+        return parsingDone;
     }
 
     public boolean isAbstract()
     {
         return Modifier.isAbstract(clazz.getModifiers());
+    }
+
+    @Override
+    public String getSummary()
+    {
+        String summaryCache = cache.get(clazz);
+        // return super.getSummary();
+        if (!parsingDone)
+        {
+            if (summaryCache == null)
+            {
+                final ClassSource cs = ClassSource.getClassSource(clazz);
+                if (!cs.isClassOrInterfacesSet())
+                {
+                    cs.populateClassesOrInterfaces();
+                }
+                ClassOrInterfaceDeclaration coi = cs.getClassOrInterfaces().get(clazz.getName());
+                if (coi != null && coi.getJavaDoc() != null)
+                {
+                    JavadocComment comment = coi.getJavaDoc();
+                    if (comment != null)
+                    {
+                        String content = comment.getContent();
+                        content = ClassSource.docCommentToHtml("/**" + content + "*/");
+                        summaryCache = content;
+                    }
+                }
+                else
+                {
+                    summaryCache = "";
+                }
+                cache.put(clazz, summaryCache);
+            }
+            parsingDone = true;
+            super.setSummary(summaryCache);
+        }
+        StringBuffer sb = new StringBuffer();
+        addDefinitionString(sb);
+        possiblyAddDescription(sb);
+        possiblyAddDefinedIn(sb);
+        sb.append("</html>");
+        return sb.toString();
+    }
+
+    @Override
+    public String getShortDescription()
+    {
+        if (parsingDone && cache.get(clazz) != null)
+            return cache.get(clazz);
+        return super.getDefinitionString();
     }
 
     @Override
@@ -72,6 +140,11 @@ public class BasicJavaClassCompletion extends VariableCompletion implements Comp
     private boolean isValidChar(char ch)
     {
         return Character.isLetterOrDigit(ch) || ch == '_' || ch == '\"';
+    }
+
+    public boolean importOnly()
+    {
+        return importOnly;
     }
 
 }
