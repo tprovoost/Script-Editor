@@ -1,5 +1,8 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
+import icy.file.FileUtil;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
@@ -231,7 +234,14 @@ public class PythonScriptingHandler extends ScriptingHandler
         // inside Icy dir
         if (sysProps.getProperty("python.home") == null)
         {
-            sysProps.put("python.home", "python");
+        	String sep = File.separator;
+        	String path = FileUtil.getCurrentDirectory() + sep + "plugins" + sep + "tlecomte" + sep + "jythonForIcy";
+        	File f = new File(path);
+        	if (!f.exists() || !f.isDirectory()) {
+        		//fallback to current dir if the above path does not exist or is not a directory
+        		path = System.getProperty("user.dir");
+        	}
+            sysProps.put("python.home", path);
         }
 
         // put System properties (those set with -D on the command line) in
