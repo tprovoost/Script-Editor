@@ -6,7 +6,6 @@ import icy.plugin.PluginInstaller.PluginInstallerListener;
 import icy.plugin.PluginLoader;
 import icy.plugin.classloader.JarClassLoader;
 import icy.util.ClassUtil;
-import icy.plugin.classloader.JarClassLoader;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
