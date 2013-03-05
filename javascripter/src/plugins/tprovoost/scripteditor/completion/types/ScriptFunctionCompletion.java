@@ -40,7 +40,7 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
 
     public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method)
     {
-        super(provider, name, method.getReturnType().getName());
+        super(provider, name, method.getReturnType().isArray() ? method.getReturnType().getCanonicalName() : method.getReturnType().getName());
         this.method = method;
     }
 

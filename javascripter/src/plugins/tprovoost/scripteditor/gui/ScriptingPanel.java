@@ -10,6 +10,7 @@ import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
+import icy.system.FileDrop;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
 
@@ -236,6 +237,22 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.setPaintMatchedBracketPair(true);
         textArea.setPaintTabLines(true);
         textArea.setTabsEmulated(false);
+        new FileDrop(textArea, new FileDrop.FileDropListener()
+        {
+            
+            @Override
+            public void filesDropped(File[] files)
+            {
+                for (File f : files)
+                    try
+                    {
+                        ScriptingPanel.this.editor.openFile(f);
+                    }
+                    catch (IOException e)
+                    {
+                    }
+            }
+        });
         textArea.addHyperlinkListener(new HyperlinkListener()
         {
 

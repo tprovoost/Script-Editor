@@ -1,11 +1,14 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
+import java.lang.reflect.Method;
+
 public class IcyFunctionBlock
 {
 
     private String functionName;
     private int startOffset;
     private Class<?> returnType;
+    private Method m;
 
     /**
      * @param functionName
@@ -66,4 +69,15 @@ public class IcyFunctionBlock
     {
         this.returnType = returnType;
     }
+
+    public void setMethod(Method m)
+    {
+        this.m = m;
+    }
+
+    public Method getMethod()
+    {
+        return m;
+    }
+
 }

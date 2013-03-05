@@ -942,14 +942,17 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 Class<?> returnType = clazz;
 
                 String call = firstCall.substring(lastDot + 1, idxP1);
+                Method m = null;
                 if (lastDot != -1)
                 {
                     // Static access to a class
-                    Method m = resolveMethod(clazz, call, clazzes);
+                    m = resolveMethod(clazz, call, clazzes);
                     returnType = m.getReturnType();
                 }
                 IcyFunctionBlock fb = functionBlocksToResolve.pop();
                 fb.setReturnType(returnType);
+                if (m != null)
+                    fb.setMethod(m);
                 if (DEBUG)
                     System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
                             + text.substring(offset));
@@ -995,11 +998,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     }
                     else
                     {
-                        Method m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
+                        m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
                         returnType = m.getReturnType();
                     }
                     fb = functionBlocksToResolve.pop();
                     fb.setReturnType(returnType);
+                    if (m != null)
+                        fb.setMethod(m);
                     if (DEBUG)
                         System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
                                 + text.substring(offset));
