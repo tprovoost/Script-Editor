@@ -711,8 +711,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                             }
                             else
                             {
-                                populateClassTypes(fb.getReturnType(), fb.getMethod().getGenericReturnType(), text,
-                                        retVal, false);
+                                Type t = null;
+                                if (fb.getMethod() != null)
+                                    t = fb.getMethod().getGenericReturnType();
+                                populateClassTypes(fb.getReturnType(), t, text, retVal, false);
                             }
                         }
                         else

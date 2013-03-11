@@ -214,7 +214,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *        : reference to the provider used by autocomplete. Cannot be
      *        null.
      * @param engineType
-     *        : as of now, only "javascript" or "python".
+     *        : as of now, only "JavaScript" or "Python".
      * @param textArea2
      *        : reference to the textArea. Cannot be null.
      * @param gutter
@@ -233,7 +233,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *        : reference to the provider used by autocomplete. Cannot be
      *        null.
      * @param engineType
-     *        : as of now, only "javascript" or "python".
+     *        : as of now, only "JavaScript" or "Python".
      * @param textArea2
      *        : reference to the textArea. Cannot be null.
      * @param gutter
@@ -777,9 +777,16 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         ArrayList<Method> functions = engineHandler.getFunctions();
-        String newEngineType = getEngine().getFactory().getLanguageName();
+        String newEngineType = ScriptEngineHandler.getLanguageName(getEngine().getFactory());
         ScriptEngine engine = ScriptEngineHandler.getEngine(newEngineType, true);
         installMethods(engine, functions);
+        try
+        {
+            installDefaultLanguageCompletions(ScriptEngineHandler.getLanguageName(getEngine().getFactory()));
+        }
+        catch (ScriptException e)
+        {
+        }
         engine.getContext().setWriter(pw);
         engine.getContext().setErrorWriter(pw);
 

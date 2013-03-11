@@ -58,7 +58,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 {
     private JTabbedPane tabbedPane;
     private JButton addPaneButton;
-    private String currentDirectoryPath = "";
+    private static String currentDirectoryPath = "";
     private ArrayList<String> previousFiles = new ArrayList<String>();
     private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
     private static final int MAX_RECENT_FILES = 20;
@@ -267,9 +267,9 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         ScriptingPanel panelCreated;
         String ext = FileUtil.getFileExtension(name, false);
         if (ext.contentEquals("py"))
-            panelCreated = new ScriptingPanel(this, name, "python");
+            panelCreated = new ScriptingPanel(this, name, "Python");
         else
-            panelCreated = new ScriptingPanel(this, name, "javascript");
+            panelCreated = new ScriptingPanel(this, name, "JavaScript");
         panelCreated.setTabbedPane(tabbedPane);
         int idx = tabbedPane.getTabCount() - 1;
         if (idx != -1)
@@ -504,7 +504,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
         menuFile.add(new JSeparator());
 
-        JMenuItem menuClose = new JMenuItem("Close");
+        JMenuItem menuClose = new JMenuItem("Close Tab");
         menuClose.addActionListener(new ActionListener()
         {
 
@@ -520,6 +520,44 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         });
         menuClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, ctrlMask));
         menuFile.add(menuClose);
+
+        JMenuItem menuCloseAll = new JMenuItem("Close All Tabs");
+        menuCloseAll.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                while (tabbedPane.getTabCount() > 1)
+                {
+                    if (!closeTab(0))
+                        break;
+                }
+            }
+        });
+        menuFile.add(menuCloseAll);
+
+        JMenuItem menuCloseAllOthers = new JMenuItem("Close Other Tabs");
+        menuCloseAllOthers.addActionListener(new ActionListener()
+        {
+
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                int idx = tabbedPane.getSelectedIndex();
+                int deleted = 0;
+                int idxDelete = 0;
+                while (tabbedPane.getTabCount() > 2)
+                {
+                    if (!closeTab(idxDelete))
+                        break;
+                    deleted++;
+                    if (deleted >= idx)
+                        idxDelete = 1;
+                }
+            }
+        });
+        menuFile.add(menuCloseAllOthers);
 
         // MENU EDIT
         JMenu menuEdit = new JMenu("Edit");
@@ -630,8 +668,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         menuEdit.add(menuGotoLine);
 
         JMenu menuTools = new JMenu("Tools");
-        JMenuItem menuFindClass = new JMenuItem("Find Class...");
-        menuTools.add(menuFindClass);
+        // JMenuItem menuFindClass = new JMenuItem("Find Class...");
+        // menuTools.add(menuFindClass);
 
         // MENU TEMPLATES
         JMenu menuTemplate = new JMenu("Templates");
@@ -717,7 +755,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
      */
     private void populateMenuTemplate(JMenu menuTemplate)
     {
-        JMenu menuTemplateJS = new JMenu("Javascript");
+        JMenu menuTemplateJS = new JMenu("JavaScript");
         JMenuItem itemJSDuplicateSequence = new JMenuItem("Duplicate Sequence");
 
         itemJSDuplicateSequence.addActionListener(new ActionListener()
@@ -768,7 +806,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
     private void openPythonTemplate(String templateName)
     {
-        openTemplate("python", templateName);
+        openTemplate("Python", templateName);
     }
 
     /**
@@ -866,6 +904,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         }
     }
 
+    public static String getDefaultFolder()
+    {
+        return "";
+    }
+
     @Override
     public void icyFrameIconified(IcyFrameEvent e)
     {
@@ -895,4 +938,5 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     public void icyFrameExternalized(IcyFrameEvent e)
     {
     }
+
 }

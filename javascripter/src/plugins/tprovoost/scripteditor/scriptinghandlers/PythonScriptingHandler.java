@@ -43,7 +43,7 @@ public class PythonScriptingHandler extends ScriptingHandler
     public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
             boolean autocompilation)
     {
-        super(provider, "python", textArea, gutter, autocompilation);
+        super(provider, "Python", textArea, gutter, autocompilation);
         this.engine = getEngine();
     }
 
@@ -53,7 +53,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         PythonInterpreter py;
         // tests if new engine or current
         // TODO
-        if (this.engine == engine)
+        if (this.engine == engine && interpreter != null)
         {
             // simply run the eval method.
             // py = new PythonInterpreter();
@@ -77,8 +77,12 @@ public class PythonScriptingHandler extends ScriptingHandler
                 py.set(s2, bindings.get(s2));
             }
         }
-        py.setOut(engine.getContext().getWriter());
-        py.setErr(engine.getContext().getErrorWriter());
+        ScriptContext cx = engine.getContext();
+        if (cx != null)
+        {
+            py.setOut(cx.getWriter());
+            py.setErr(cx.getErrorWriter());
+        }
 
         // run the eval
         try
@@ -96,7 +100,10 @@ public class PythonScriptingHandler extends ScriptingHandler
         {
             try
             {
-                engine.getContext().getErrorWriter().write(pe.toString());
+                if (cx != null)
+                {
+                    engine.getContext().getErrorWriter().write(pe.toString());
+                }
             }
             catch (IOException e)
             {
@@ -229,7 +236,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         Properties postProps = new Properties();
         Properties sysProps = System.getProperties();
 
-        // set default python.home property as a subdirectory named "python"
+        // set default python.home property as a subdirectory named "Python"
         // inside Icy dir
         if (sysProps.getProperty("python.home") == null)
         {

@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 
 import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
@@ -302,4 +303,20 @@ public class ScriptEngineHandler implements PluginInstallerListener
         return allClasses;
     }
 
+    /**
+     * Get the String language corresponding to the engine factory.<br/>
+     * Ex: ECMAScript factory returns JavaScript.
+     * 
+     * @param factory
+     * @return
+     */
+    public static String getLanguageName(ScriptEngineFactory factory)
+    {
+        String languageName = factory.getLanguageName();
+        if (languageName.contentEquals("ECMAScript"))
+            return "JavaScript";
+        if (languageName.contentEquals("python"))
+            return "Python";
+        return languageName;
+    }
 }
