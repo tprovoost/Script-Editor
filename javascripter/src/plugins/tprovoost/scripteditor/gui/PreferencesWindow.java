@@ -356,9 +356,9 @@ public class PreferencesWindow extends IcyFrame
 
     public void loadPrefs()
     {
-        cboxVarInterp.setSelected(prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.FALSE));
+        cboxVarInterp.setSelected(prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.TRUE));
         cboxOverride.setSelected(prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE));
-        cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.FALSE));
+        cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.TRUE));
         cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
 
         boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE);
