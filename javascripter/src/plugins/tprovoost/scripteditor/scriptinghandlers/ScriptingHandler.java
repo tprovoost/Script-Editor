@@ -775,21 +775,24 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      */
     public ScriptEngine createNewEngine()
     {
-        ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
-        ArrayList<Method> functions = engineHandler.getFunctions();
-        String newEngineType = ScriptEngineHandler.getLanguageName(getEngine().getFactory());
-        ScriptEngine engine = ScriptEngineHandler.getEngine(newEngineType, true);
-        installMethods(engine, functions);
-        try
+        ScriptEngine engine = getEngine();
+        if (engine != null)
         {
-            installDefaultLanguageCompletions(ScriptEngineHandler.getLanguageName(getEngine().getFactory()));
+            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+            ArrayList<Method> functions = engineHandler.getFunctions();
+            String newEngineType = ScriptEngineHandler.getLanguageName(engine.getFactory());
+            engine = ScriptEngineHandler.getEngine(newEngineType, true);
+            installMethods(engine, functions);
+            try
+            {
+                installDefaultLanguageCompletions(newEngineType);
+            }
+            catch (ScriptException e)
+            {
+            }
+            engine.getContext().setWriter(pw);
+            engine.getContext().setErrorWriter(pw);
         }
-        catch (ScriptException e)
-        {
-        }
-        engine.getContext().setWriter(pw);
-        engine.getContext().setErrorWriter(pw);
-
         return engine;
     }
 

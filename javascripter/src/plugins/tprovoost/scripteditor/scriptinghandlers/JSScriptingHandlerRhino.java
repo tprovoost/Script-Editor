@@ -185,7 +185,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public JSScriptingHandlerRhino(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter,
             boolean autocompilation)
     {
-        super(provider, "JavaScript", textArea, gutter, autocompilation);
+        super(provider, "javascript", textArea, gutter, autocompilation);
     }
 
     @Override

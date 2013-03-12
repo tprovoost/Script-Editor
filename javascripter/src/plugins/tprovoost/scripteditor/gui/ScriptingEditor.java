@@ -10,6 +10,7 @@ import icy.gui.frame.IcyFrameListener;
 import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
+import icy.plugin.PluginLoader;
 import icy.preferences.IcyPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
@@ -806,7 +807,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
     private void openPythonTemplate(String templateName)
     {
-        openTemplate("Python", templateName);
+        openTemplate("python", templateName);
     }
 
     /**
@@ -822,7 +823,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         current = current.substring(0, current.length() - 1);
         try
         {
-            InputStream is = getClass().getClassLoader().getResourceAsStream(
+            InputStream is = PluginLoader.getResourceAsStream(
                     "plugins/tprovoost/scripteditor/resources/templates/" + type + "/" + templateName);
             openStream(templateName, is);
         }

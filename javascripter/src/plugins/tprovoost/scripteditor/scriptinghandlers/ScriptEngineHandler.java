@@ -91,11 +91,12 @@ public class ScriptEngineHandler implements PluginInstallerListener
 
     public static ScriptEngine getEngine(String engineType, boolean create)
     {
-        ScriptEngine engineHash = engines.get(engineType);
+        String engineTypeL = engineType.toLowerCase();
+        ScriptEngine engineHash = engines.get(engineTypeL);
         if (engineHash == null || create)
         {
-            engineHash = factory.getEngineByName(engineType);
-            engines.put(engineType, engineHash);
+            engineHash = factory.getEngineByName(engineTypeL);
+            engines.put(engineTypeL, engineHash);
         }
         return engineHash;
     }
