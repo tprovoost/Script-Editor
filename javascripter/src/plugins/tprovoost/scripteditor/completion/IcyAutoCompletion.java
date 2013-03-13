@@ -26,6 +26,9 @@ public abstract class IcyAutoCompletion extends AutoCompletion
 
         // test if contains the class or if contains the importPackage enclosing
         // the class
+        if (neededClass.startsWith("java.") || neededClass.startsWith("javax."))
+            return text.contains("importClass(" + neededClass + ")")
+                    || text.contains("importPackage(" + ClassUtil.getPackageName(neededClass) + ")");
         return text.contains("importClass(Packages." + neededClass + ")")
                 || text.contains("importPackage(Packages." + ClassUtil.getPackageName(neededClass) + ")");
     }

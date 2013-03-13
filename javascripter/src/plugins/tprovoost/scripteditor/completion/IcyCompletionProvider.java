@@ -817,11 +817,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
         for (Class<?> c : type.getClasses())
         {
-            if (Modifier.isPublic(c.getModifiers()))
+            if (Modifier.isPublic(c.getModifiers()) && c.getSimpleName().toLowerCase().startsWith(text.toLowerCase()))
             {
                 BasicJavaClassCompletion jcc = new BasicJavaClassCompletion(this, c);
                 jcc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                listClasses.add(jcc);
+                if (!exists(jcc, retVal))
+                    listClasses.add(jcc);
             }
         }
         if (type.isArray())

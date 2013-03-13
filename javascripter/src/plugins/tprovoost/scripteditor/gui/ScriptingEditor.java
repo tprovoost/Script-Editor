@@ -406,7 +406,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
             File[] files = fc.getSelectedFiles();
             for (File f : files)
             {
-                String path = FileUtil.getDirectory(f.getPath());
+                String path = FileUtil.getDirectory(f.getAbsolutePath());
                 currentDirectoryPath = path;
                 prefs.put(STRING_LAST_DIRECTORY, path);
                 try
@@ -823,8 +823,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         current = current.substring(0, current.length() - 1);
         try
         {
-            InputStream is = PluginLoader.getResourceAsStream(
-                    "plugins/tprovoost/scripteditor/resources/templates/" + type + "/" + templateName);
+            InputStream is = PluginLoader.getResourceAsStream("plugins/tprovoost/scripteditor/resources/templates/"
+                    + type + "/" + templateName);
             openStream(templateName, is);
         }
         catch (IOException e1)
@@ -847,7 +847,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
             previousFiles.add(path);
             XMLPreferences key = openedFiles.node(path);
             key.put("name", path);
-            // key.putBoolean("opened", true);
         }
         if (previousFiles.size() > MAX_RECENT_FILES)
         {

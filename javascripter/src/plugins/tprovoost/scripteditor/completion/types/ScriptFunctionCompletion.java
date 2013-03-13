@@ -190,9 +190,9 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
         }
         addParameters(sb);
         possiblyAddDefinedIn(sb);
-        String sumResult = sb.toString();
         possiblyAddSource(sb);
         sb.append("</html>");
+        String sumResult = sb.toString();
         return sumResult;
     }
 
@@ -232,7 +232,7 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
     {
         InputStream is = JarAccess.getJavaSourceInputStream(method.getDeclaringClass());
         if (is != null)
-            sb.append("<hr><a href=\"SourceCodeLink\">View Source</a>"); // TODO: Localize me
+            sb.append("<hr><a href=\"SourceCodeLink\">View Source</a>");
     }
 
     protected void populate()

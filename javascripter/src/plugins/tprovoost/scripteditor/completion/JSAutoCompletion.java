@@ -2,8 +2,6 @@ package plugins.tprovoost.scripteditor.completion;
 
 import icy.util.ClassUtil;
 
-import java.lang.reflect.Method;
-
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
@@ -29,27 +27,27 @@ public class JSAutoCompletion extends IcyAutoCompletion
         if (c instanceof ScriptFunctionCompletion)
         {
             // get position before insertion
-            JTextComponent tc = getTextComponent();
-            ScriptFunctionCompletion sfc = ((ScriptFunctionCompletion) c);
+            // JTextComponent tc = getTextComponent();
+            // ScriptFunctionCompletion sfc = ((ScriptFunctionCompletion) c);
+            //
+            // // get method added
+            // Method m = sfc.getMethod();
+            // if (m != null)
+            // {
+            // String neededClass = m.getDeclaringClass().getName();
 
-            // get method added
-            Method m = sfc.getMethod();
-            if (m != null)
-            {
-                String neededClass = m.getDeclaringClass().getName();
-
-                // test eventual needed importClasses
-                if (!sfc.isStatic() && !classAlreadyImported(neededClass))
-                {
-                    int caretPos = tc.getCaretPosition();
-
-                    // import the needed class + movement
-                    caretPos += addImport(tc, neededClass, true).length();
-
-                    // put the caret in the right position
-                    tc.getCaret().setDot(caretPos);
-                }
-            }
+            // test eventual needed importClasses
+            // if (sfc.isStatic() && !classAlreadyImported(neededClass))
+            // {
+            // int caretPos = tc.getCaretPosition();
+            //
+            // // import the needed class + movement
+            // caretPos += addImport(tc, neededClass, true).length();
+            //
+            // // put the caret in the right position
+            // tc.getCaret().setDot(caretPos);
+            // }
+            // }
         }
         else if (c instanceof BasicJavaClassCompletion)
         {
