@@ -119,8 +119,8 @@ public class ScriptProvider extends SearchResultProducer
             if (result != null)
                 tmpResults.add(result);
         }
-
         results = tmpResults;
+
         consumer.resultsChanged(this);
     }
 

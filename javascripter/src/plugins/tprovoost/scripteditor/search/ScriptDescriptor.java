@@ -21,6 +21,11 @@ public class ScriptDescriptor implements XMLPersistent
     {
         loadFromXML(node);
     }
+    
+    public ScriptDescriptor(String name, String url) {
+        this.name = name;
+        this.url = url;
+    }
 
     public String getName()
     {

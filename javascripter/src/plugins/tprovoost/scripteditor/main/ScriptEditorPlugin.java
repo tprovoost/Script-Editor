@@ -105,7 +105,7 @@ public class ScriptEditorPlugin extends PluginActionable
     {
         if (!editors.isEmpty())
         {
-            ThreadUtil.bgRun(new Runnable()
+            ThreadUtil.invokeLater(new Runnable()
             {
 
                 @Override

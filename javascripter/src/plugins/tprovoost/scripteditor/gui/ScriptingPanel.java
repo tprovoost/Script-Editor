@@ -814,7 +814,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         else
             add(pane);
 
-        add(options, BorderLayout.NORTH);
+        if (editor != null)
+            add(options, BorderLayout.NORTH);
         revalidate();
     }
 

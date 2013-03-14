@@ -230,7 +230,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                     File f = ((ScriptingPanel) c).getSaveFile();
                     if (f != null)
                     {
-                        String path = f.getAbsolutePath();
+                        String path = f.getAbsolutePath().replace('/', '.');
                         XMLPreferences key = openedFiles.node(path);
                         key.putBoolean("opened", true);
                     }
@@ -334,7 +334,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
             if (item == null)
             {
                 previousFiles.remove(path);
-                prefs.node("openedFiles").remove(path);
+                prefs.node("openedFiles").remove(path.replace('/', '.'));
             }
             else
             {
@@ -839,22 +839,23 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
 
     public void addRecentFile(File f)
     {
-        String filename = f.getName();
-        String path = f.getPath();
+        String path = f.getAbsolutePath();
+        String pathR = path.replace('/', '.');
         XMLPreferences openedFiles = prefs.node("openedFiles");
         if (!previousFiles.contains(path))
         {
             previousFiles.add(path);
-            XMLPreferences key = openedFiles.node(path);
+            XMLPreferences key = openedFiles.node(pathR);
             key.put("name", path);
         }
         if (previousFiles.size() > MAX_RECENT_FILES)
         {
-            filename = previousFiles.get(0);
-            XMLPreferences key = openedFiles.node(filename);
+            path = previousFiles.get(0);
+            pathR = path.replace('/', '.');
+            XMLPreferences key = openedFiles.node(pathR);
             if (key.exists())
             {
-                openedFiles.remove(filename);
+                openedFiles.remove(pathR);
             }
             previousFiles.remove(0);
         }
