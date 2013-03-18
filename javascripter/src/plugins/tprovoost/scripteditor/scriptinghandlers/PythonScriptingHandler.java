@@ -240,13 +240,14 @@ public class PythonScriptingHandler extends ScriptingHandler
         // inside Icy dir
         if (sysProps.getProperty("python.home") == null)
         {
-        	String sep = File.separator;
-        	String path = FileUtil.getCurrentDirectory() + sep + "plugins" + sep + "tlecomte" + sep + "jythonForIcy";
-        	File f = new File(path);
-        	if (!f.exists() || !f.isDirectory()) {
-        		//fallback to current dir if the above path does not exist or is not a directory
-        		path = System.getProperty("user.dir");
-        	}
+            String sep = File.separator;
+            String path = FileUtil.getCurrentDirectory() + sep + "plugins" + sep + "tlecomte" + sep + "jythonForIcy";
+            File f = new File(path);
+            if (!f.exists() || !f.isDirectory())
+            {
+                // fallback to current dir if the above path does not exist or is not a directory
+                path = System.getProperty("user.dir");
+            }
             sysProps.put("python.home", path);
         }
 
