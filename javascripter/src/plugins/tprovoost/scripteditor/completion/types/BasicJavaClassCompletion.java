@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.ClassOrInterfaceDeclaration;
 import japa.parser.ast.body.JavadocComment;
 
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 
@@ -17,6 +18,7 @@ import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.VariableCompletion;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
+import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class BasicJavaClassCompletion extends VariableCompletion implements Completion
 {
@@ -90,8 +92,16 @@ public class BasicJavaClassCompletion extends VariableCompletion implements Comp
         addDefinitionString(sb);
         possiblyAddDescription(sb);
         possiblyAddDefinedIn(sb);
+        possiblyAddSource(sb);
         sb.append("</html>");
         return sb.toString();
+    }
+
+    private void possiblyAddSource(StringBuffer sb)
+    {
+        InputStream is = JarAccess.getJavaSourceInputStream(clazz);
+        if (is != null)
+            sb.append("<hr><a href=\"SourceCodeLink\">View Source</a>"); // TODO: Localize me
     }
 
     @Override

@@ -127,30 +127,33 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             }
             else
             {
-                Document doc = errorOutput.getDocument();
-                try
+                if (errorOutput != null)
                 {
-                    Style style = errorOutput.getStyle("error");
-                    if (style == null)
+                    try
                     {
-                        style = errorOutput.addStyle("error", null);
-                        StyleConstants.setForeground(style, Color.red);
+                        Style style = errorOutput.getStyle("error");
+                        if (style == null)
+                        {
+                            style = errorOutput.addStyle("error", null);
+                            StyleConstants.setForeground(style, Color.red);
+                        }
+                        String inLineSource = "";
+                        String atColumn = "";
+                        if (lineSource != null)
+                        {
+                            inLineSource = "\n in \"" + lineSource;
+                        }
+                        if (lineOffset > 0)
+                        {
+                            atColumn = "\"\n at column (" + lineOffset + ")";
+                        }
+                        Document doc = errorOutput.getDocument();
+                        String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
+                        doc.insertString(doc.getLength(), lastErrortext + "\n", style);
                     }
-                    String inLineSource = "";
-                    String atColumn = "";
-                    if (lineSource != null)
+                    catch (BadLocationException e)
                     {
-                        inLineSource = "\n in \"" + lineSource;
                     }
-                    if (lineOffset > 0)
-                    {
-                        atColumn = "\"\n at column (" + lineOffset + ")";
-                    }
-                    String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
-                    doc.insertString(doc.getLength(), lastErrortext + "\n", style);
-                }
-                catch (BadLocationException e)
-                {
                 }
             }
             return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
@@ -942,14 +945,17 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 Class<?> returnType = clazz;
 
                 String call = firstCall.substring(lastDot + 1, idxP1);
+                Method m = null;
                 if (lastDot != -1)
                 {
                     // Static access to a class
-                    Method m = resolveMethod(clazz, call, clazzes);
+                    m = resolveMethod(clazz, call, clazzes);
                     returnType = m.getReturnType();
                 }
                 IcyFunctionBlock fb = functionBlocksToResolve.pop();
                 fb.setReturnType(returnType);
+                if (m != null)
+                    fb.setMethod(m);
                 if (DEBUG)
                     System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
                             + text.substring(offset));
@@ -995,11 +1001,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     }
                     else
                     {
-                        Method m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
+                        m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
                         returnType = m.getReturnType();
                     }
                     fb = functionBlocksToResolve.pop();
                     fb.setReturnType(returnType);
+                    if (m != null)
+                        fb.setMethod(m);
                     if (DEBUG)
                         System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
                                 + text.substring(offset));
@@ -1731,7 +1739,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 // AstNode index = get.getElement();
                 AstNode target = get.getTarget();
                 Class<?> clazz = resolveArrayItemTypeComponent(target);
-                clazz = createArrayItemType(clazz, target);
+                if (clazz != null)
+                    clazz = createArrayItemType(clazz, target);
                 return clazz;
             }
         }

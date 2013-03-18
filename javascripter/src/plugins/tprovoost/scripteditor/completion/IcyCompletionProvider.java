@@ -11,6 +11,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -676,7 +677,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            populateClass(clazz, text, retVal);
+                            populateClassTypes(clazz, text, retVal);
                         }
                     }
                     else
@@ -710,7 +711,10 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                             }
                             else
                             {
-                                populateClass(fb.getReturnType(), text, retVal);
+                                Type t = null;
+                                if (fb.getMethod() != null)
+                                    t = fb.getMethod().getGenericReturnType();
+                                populateClassTypes(fb.getReturnType(), t, text, retVal, false);
                             }
                         }
                         else
@@ -764,12 +768,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
     }
 
-    private void populateClass(Class<?> type, String text, List<Completion> retVal)
+    private void populateClassTypes(Class<?> type, String text, List<Completion> retVal)
     {
-        populateClassTypes(type, text, retVal, false);
+        populateClassTypes(type, null, text, retVal, false);
     }
 
     private void populateClassTypes(Class<?> type, String text, List<Completion> retVal, boolean staticOnly)
+    {
+        populateClassTypes(type, null, text, retVal, false);
+    }
+
+    private void populateClassTypes(Class<?> type, Type t, String text, List<Completion> retVal, boolean staticOnly)
     {
         if (!Modifier.isPublic(type.getModifiers()))
             return;
@@ -808,11 +817,12 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
         for (Class<?> c : type.getClasses())
         {
-            if (Modifier.isPublic(c.getModifiers()))
+            if (Modifier.isPublic(c.getModifiers()) && c.getSimpleName().toLowerCase().startsWith(text.toLowerCase()))
             {
                 BasicJavaClassCompletion jcc = new BasicJavaClassCompletion(this, c);
                 jcc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-                listClasses.add(jcc);
+                if (!exists(jcc, retVal))
+                    listClasses.add(jcc);
             }
         }
         if (type.isArray())

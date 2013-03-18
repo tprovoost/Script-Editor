@@ -214,7 +214,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *        : reference to the provider used by autocomplete. Cannot be
      *        null.
      * @param engineType
-     *        : as of now, only "javascript" or "python".
+     *        : as of now, only "JavaScript" or "Python".
      * @param textArea2
      *        : reference to the textArea. Cannot be null.
      * @param gutter
@@ -233,7 +233,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      *        : reference to the provider used by autocomplete. Cannot be
      *        null.
      * @param engineType
-     *        : as of now, only "javascript" or "python".
+     *        : as of now, only "JavaScript" or "Python".
      * @param textArea2
      *        : reference to the textArea. Cannot be null.
      * @param gutter
@@ -775,14 +775,24 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      */
     public ScriptEngine createNewEngine()
     {
-        ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
-        ArrayList<Method> functions = engineHandler.getFunctions();
-        String newEngineType = getEngine().getFactory().getLanguageName();
-        ScriptEngine engine = ScriptEngineHandler.getEngine(newEngineType, true);
-        installMethods(engine, functions);
-        engine.getContext().setWriter(pw);
-        engine.getContext().setErrorWriter(pw);
-
+        ScriptEngine engine = getEngine();
+        if (engine != null)
+        {
+            ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+            ArrayList<Method> functions = engineHandler.getFunctions();
+            String newEngineType = ScriptEngineHandler.getLanguageName(engine.getFactory());
+            engine = ScriptEngineHandler.getEngine(newEngineType, true);
+            installMethods(engine, functions);
+            try
+            {
+                installDefaultLanguageCompletions(newEngineType);
+            }
+            catch (ScriptException e)
+            {
+            }
+            engine.getContext().setWriter(pw);
+            engine.getContext().setErrorWriter(pw);
+        }
         return engine;
     }
 

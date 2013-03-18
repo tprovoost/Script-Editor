@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import javax.script.ScriptEngineFactory;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -129,23 +128,6 @@ public class PythonScriptingconsole extends Scriptingconsole
     public void keyReleased(KeyEvent e)
     {
 
-    }
-
-    /**
-     * Get the String language corresponding to the engine factory.<br/>
-     * Ex: ECMAScript factory returns JavaScript.
-     * 
-     * @param factory
-     * @return
-     */
-    public String getLanguageName(ScriptEngineFactory factory)
-    {
-        String languageName = factory.getLanguageName();
-        if (languageName.contentEquals("ECMAScript"))
-            return "javascript";
-        if (languageName.contentEquals("python"))
-            return "python";
-        return languageName;
     }
 
     public void setOutput(JTextPane outputNew)

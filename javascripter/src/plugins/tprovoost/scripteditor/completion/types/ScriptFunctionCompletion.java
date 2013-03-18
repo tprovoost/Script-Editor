@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.JavadocComment;
 import japa.parser.ast.body.MethodDeclaration;
 
+import java.io.InputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -22,6 +23,7 @@ import javax.swing.text.Segment;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
+import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class ScriptFunctionCompletion extends JavaFunctionCompletion
 {
@@ -40,7 +42,8 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
 
     public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method)
     {
-        super(provider, name, method.getReturnType().getName());
+        super(provider, name, method.getReturnType().isArray() ? method.getReturnType().getCanonicalName() : method
+                .getReturnType().getName());
         this.method = method;
     }
 
@@ -187,15 +190,10 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
         }
         addParameters(sb);
         possiblyAddDefinedIn(sb);
-        String sumResult = sb.toString();
+        possiblyAddSource(sb);
         sb.append("</html>");
+        String sumResult = sb.toString();
         return sumResult;
-    }
-
-    @Override
-    protected void addDefinitionString(StringBuffer sb)
-    {
-        super.addDefinitionString(sb);
     }
 
     @Override
@@ -230,16 +228,11 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
         }
     }
 
-    @Override
-    protected void possiblyAddDefinedIn(StringBuffer sb)
+    private void possiblyAddSource(StringBuffer sb)
     {
-        super.possiblyAddDefinedIn(sb);
-    }
-
-    @Override
-    protected boolean possiblyAddDescription(StringBuffer sb)
-    {
-        return super.possiblyAddDescription(sb);
+        InputStream is = JarAccess.getJavaSourceInputStream(method.getDeclaringClass());
+        if (is != null)
+            sb.append("<hr><a href=\"SourceCodeLink\">View Source</a>");
     }
 
     protected void populate()

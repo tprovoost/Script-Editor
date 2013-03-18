@@ -8,6 +8,10 @@ import icy.plugin.abstract_.PluginActionable;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineManager;
@@ -78,17 +82,36 @@ public class ScriptEditorPlugin extends PluginActionable
     // return 42;
     // }
 
+    public static void openInScriptEditor(final File f) throws IOException
+    {
+        // TODO gen text
+        BufferedReader reader = new BufferedReader(new FileReader(f));
+        String text = "";
+        String line;
+        while ((line = reader.readLine()) != null)
+        {
+            text += (line + "\n");
+        }
+        reader.close();
+        openInScriptEditor(text, f.getName());
+    }
+
     public static void openInScriptEditor(final String text)
+    {
+        openInScriptEditor(text, "Untitled*");
+    }
+
+    public static void openInScriptEditor(final String text, final String title)
     {
         if (!editors.isEmpty())
         {
-            ThreadUtil.bgRun(new Runnable()
+            ThreadUtil.invokeLater(new Runnable()
             {
 
                 @Override
                 public void run()
                 {
-                    ScriptingPanel panel = editors.get(0).createNewPane("Untitled*");
+                    ScriptingPanel panel = editors.get(0).createNewPane(title);
                     panel.getTextArea().setText(text);
                 }
             });
@@ -103,7 +126,7 @@ public class ScriptEditorPlugin extends PluginActionable
                 public void run()
                 {
                     new ScriptEditorPlugin().run();
-                    ScriptingPanel panel = editors.get(0).createNewPane("Untitled*");
+                    ScriptingPanel panel = editors.get(0).createNewPane(title);
                     panel.getTextArea().setText(text);
                 }
             });

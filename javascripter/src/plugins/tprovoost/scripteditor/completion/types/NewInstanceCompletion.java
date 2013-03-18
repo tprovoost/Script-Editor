@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.completion.types;
 import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.JavadocComment;
 
+import java.io.InputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -22,6 +23,7 @@ import javax.swing.text.Segment;
 import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
+import plugins.tprovoost.scripteditor.javasource.JarAccess;
 
 public class NewInstanceCompletion extends JavaFunctionCompletion
 {
@@ -188,6 +190,7 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
         }
         addParameters(sb);
         possiblyAddDefinedIn(sb);
+        possiblyAddSource(sb);
         sb.append("</html>");
         return sb.toString();
     }
@@ -265,5 +268,12 @@ public class NewInstanceCompletion extends JavaFunctionCompletion
         }
         isParseDone = true;
     }
-
+    
+    private void possiblyAddSource(StringBuffer sb)
+    {
+        InputStream is = JarAccess.getJavaSourceInputStream(constructor.getDeclaringClass());
+        if (is != null)
+            sb.append("<hr><a href=\"SourceCodeLink\">View Source</a>");
+    }
+    
 }

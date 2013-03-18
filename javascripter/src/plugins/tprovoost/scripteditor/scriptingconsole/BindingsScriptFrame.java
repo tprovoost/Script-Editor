@@ -115,7 +115,7 @@ public class BindingsScriptFrame extends IcyFrame
         {
             String languageName = engine.getFactory().getLanguageName();
             if (languageName.contentEquals("ECMAScript"))
-                languageName = "javascript";
+                languageName = "JavaScript";
             ScriptEngine engine = ScriptEngineHandler.getEngine(languageName);
             if (engine != this.engine)
                 this.engine = engine;

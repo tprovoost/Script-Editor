@@ -9,5 +9,6 @@
 	<classpathentry kind="lib" path="/Icy-App/plugins/adufour/ezplug/EzPlug.jar"/>
 	<classpathentry kind="lib" path="C:/jython2.7b1/jython.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/JavaDocParser"/>
+	<classpathentry kind="lib" path="/Icy-App/plugins/adufour/blocks/Blocks.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

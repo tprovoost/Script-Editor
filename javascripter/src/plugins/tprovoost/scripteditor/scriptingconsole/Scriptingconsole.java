@@ -13,7 +13,6 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.script.ScriptEngineFactory;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
@@ -52,7 +51,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         addMouseListener(this);
 
         provider = new IcyCompletionProvider();
-        provider.installDefaultCompletions("javascript");
+        provider.installDefaultCompletions("JavaScript");
         // // if (System.getProperty("java.version").startsWith("1.6.")) {
         // scriptHandler = new JSScriptingHandler62(provider, this, null,
         // false);
@@ -71,7 +70,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
     public void setLanguage(String language)
     {
         provider.clear();
-        if (language.contentEquals("javascript"))
+        if (language.contentEquals("JavaScript"))
         {
             provider = new IcyCompletionProvider();
             provider.installDefaultCompletions("javascript");
@@ -81,9 +80,9 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
             // else
             scriptHandler = new JSScriptingHandlerRhino(provider, this, null, false);
         }
-        else if (language.contentEquals("python"))
+        else if (language.contentEquals("Python"))
         {
-            provider.installDefaultCompletions("python");
+            provider.installDefaultCompletions("Python");
             scriptHandler = new PythonScriptingHandler(provider, this, null, false);
         }
         else
@@ -201,23 +200,6 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
     public void keyReleased(KeyEvent e)
     {
 
-    }
-
-    /**
-     * Get the String language corresponding to the engine factory.<br/>
-     * Ex: ECMAScript factory returns JavaScript.
-     * 
-     * @param factory
-     * @return
-     */
-    public String getLanguageName(ScriptEngineFactory factory)
-    {
-        String languageName = factory.getLanguageName();
-        if (languageName.contentEquals("ECMAScript"))
-            return "javascript";
-        if (languageName.contentEquals("python"))
-            return "python";
-        return languageName;
     }
 
     public void setOutput(JTextPane output)
