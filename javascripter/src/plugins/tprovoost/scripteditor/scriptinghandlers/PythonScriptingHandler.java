@@ -241,7 +241,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         if (sysProps.getProperty("python.home") == null)
         {
             String sep = File.separator;
-            String path = FileUtil.getCurrentDirectory() + sep + "tlecomte" + sep + "jythonForIcy";
+            String path = FileUtil.getCurrentDirectory() + sep + "plugins" + sep + "tlecomte" + sep + "jythonForIcy";
             File f = new File(path);
             if (!f.exists() || !f.isDirectory())
             {

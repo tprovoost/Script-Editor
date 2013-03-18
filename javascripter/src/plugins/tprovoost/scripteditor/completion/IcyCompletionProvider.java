@@ -775,7 +775,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
 
     private void populateClassTypes(Class<?> type, String text, List<Completion> retVal, boolean staticOnly)
     {
-        populateClassTypes(type, null, text, retVal, false);
+        populateClassTypes(type, null, text, retVal, staticOnly);
     }
 
     private void populateClassTypes(Class<?> type, Type t, String text, List<Completion> retVal, boolean staticOnly)
@@ -820,7 +820,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             if (Modifier.isPublic(c.getModifiers()) && c.getSimpleName().toLowerCase().startsWith(text.toLowerCase()))
             {
                 BasicJavaClassCompletion jcc = new BasicJavaClassCompletion(this, c);
-                jcc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+                jcc.setRelevance(ScriptingHandler.RELEVANCE_MIN);
                 if (!exists(jcc, retVal))
                     listClasses.add(jcc);
             }
