@@ -11,6 +11,7 @@ import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
+import icy.roi.BooleanMask2D;
 import icy.system.FileDrop;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
@@ -21,6 +22,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -587,7 +589,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         clazz = cons.getDeclaringClass();
                         final ClassSource cs = ClassSource.getClassSource(clazz);
                         ConstructorDeclaration cd = cs.getConstructors().get(cons.toGenericString());
-                        openSource(clazz, cd.getBeginLine() - 1, cd.getEndLine() - 1);
+                        if (cd != null)
+                            openSource(clazz, cd.getBeginLine() - 1, cd.getEndLine() - 1);
+                        else
+                            System.out.println(clazz);
                     }
                 }
                 else

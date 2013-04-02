@@ -47,8 +47,8 @@ public class ScriptEngineHandler implements PluginInstallerListener
     /*
      * ------------ non static ------------
      */
-    private HashMap<String, Class<?>> engineVariables = new HashMap<String, Class<?>>();
-    private HashMap<String, Class<?>> engineFunctions = new HashMap<String, Class<?>>();
+    private HashMap<String, VariableType> engineVariables = new HashMap<String, VariableType>();
+    private HashMap<String, VariableType> engineFunctions = new HashMap<String, VariableType>();
     private ArrayList<String> engineDeclaredImports = new ArrayList<String>();
     private ArrayList<String> engineDeclaredImportClasses = new ArrayList<String>();
     private HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();;
@@ -119,12 +119,12 @@ public class ScriptEngineHandler implements PluginInstallerListener
         return engineDeclaredImports;
     }
 
-    public HashMap<String, Class<?>> getEngineFunctions()
+    public HashMap<String, VariableType> getEngineFunctions()
     {
         return engineFunctions;
     }
 
-    public HashMap<String, Class<?>> getEngineVariables()
+    public HashMap<String, VariableType> getEngineVariables()
     {
         return engineVariables;
     }
@@ -244,8 +244,13 @@ public class ScriptEngineHandler implements PluginInstallerListener
             sfc.setParams(fParams);
             sfc.setRelevance(2);
 
-            if (engineFunctions != null)
-                engineFunctions.put(functionName, method.getReturnType());
+            if (engineFunctions != null) {
+                Class<?> returnType = method.getReturnType();
+                if (VariableType.isGeneric(returnType))
+                    engineFunctions.put(functionName, new VariableType(returnType, VariableType.getType(method.getGenericReturnType().toString())));
+                else
+                    engineFunctions.put(functionName, new VariableType(returnType));
+            }
             if (engineTypesMethod != null)
             {
                 ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);

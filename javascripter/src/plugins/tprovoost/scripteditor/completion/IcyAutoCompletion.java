@@ -1,7 +1,5 @@
 package plugins.tprovoost.scripteditor.completion;
 
-import icy.util.ClassUtil;
-
 import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.AutoCompletion;
@@ -20,18 +18,7 @@ public abstract class IcyAutoCompletion extends AutoCompletion
         return getTextComponent().getText().contains(neededPackage);
     }
 
-    public boolean classAlreadyImported(String neededClass)
-    {
-        String text = getTextComponent().getText();
-
-        // test if contains the class or if contains the importPackage enclosing
-        // the class
-        if (neededClass.startsWith("java.") || neededClass.startsWith("javax."))
-            return text.contains("importClass(" + neededClass + ")")
-                    || text.contains("importPackage(" + ClassUtil.getPackageName(neededClass) + ")");
-        return text.contains("importClass(Packages." + neededClass + ")")
-                || text.contains("importPackage(Packages." + ClassUtil.getPackageName(neededClass) + ")");
-    }
+    public abstract boolean classAlreadyImported(String neededClass);
 
     /**
      * Add an import into the textcomponent if necessary.

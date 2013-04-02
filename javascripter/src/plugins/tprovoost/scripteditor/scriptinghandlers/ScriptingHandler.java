@@ -99,7 +99,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     protected HashMap<String, ScriptVariable> localVariables;
 
     /** Contains all declared variables in the script. */
-    protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
+    protected HashMap<String, VariableType> localFunctions = new HashMap<String, VariableType>();
 
     /** Contains all declared importPackages in the script. */
     protected ArrayList<String> scriptDeclaredImports = new ArrayList<String>();
@@ -281,7 +281,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         }
     }
 
-    public HashMap<String, Class<?>> getLocalFunctions()
+    public HashMap<String, VariableType> getLocalFunctions()
     {
         return localFunctions;
     }
@@ -302,7 +302,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name)
+    public VariableType getVariableDeclaration(String name)
     {
         return getVariableDeclaration(name, textArea.getCaretPosition());
     }
@@ -315,7 +315,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name, int offset)
+    public VariableType getVariableDeclaration(String name, int offset)
     {
         boolean isArray = name.contains("[");
         String originalName = name;
@@ -326,20 +326,23 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         ScriptVariable sv = localVariables.get(name);
         if (sv == null)
             return null;
-        Class<?> type = sv.getVariableClassType(offset);
+        VariableType type = sv.getVariableClassType(offset);
+        Class<?> typeC = null;
         if (type == null)
         {
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
             type = engineHandler.getEngineVariables().get(name);
         }
         if (type != null)
+            typeC = type.getClazz();
+        if (typeC != null)
         {
             if (isArray)
             {
                 int occ = originalName.split("\\[").length - 1;
                 for (int i = 0; i < occ; ++i)
                 {
-                    type = type.getComponentType();
+                    typeC = typeC.getComponentType();
                 }
             }
             // else if (type.getTypeParameters().length > 0)
@@ -351,7 +354,14 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             // }
             // }
         }
-        return type;
+        if (type != null)
+        {
+            VariableType vt = new VariableType(typeC);
+            vt.setType(type.getType());
+            return vt;
+
+        }
+        return new VariableType((Class<?>) typeC);
     }
 
     public abstract void installDefaultLanguageCompletions(String language) throws ScriptException;
