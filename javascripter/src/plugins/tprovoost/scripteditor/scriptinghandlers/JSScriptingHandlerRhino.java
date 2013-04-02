@@ -2624,7 +2624,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
          * This formatter uses beautify.js by Einar Lielmanis, <einar@jsbeautifier.org>
          * http://jsbeautifier.org/
          */
-        InputStream is = PluginLoader.getResourceAsStream("plugins/tprovoost/scripteditor/resources/beautify.js");
+        InputStream is = PluginLoader
+                .getResourceAsStream("plugins/tprovoost/scripteditor/resources/beautify/beautify.js");
         Reader reader = new BufferedReader(new InputStreamReader(is));
         Context context = Context.enter();
         context.setLanguageVersion(Context.VERSION_1_6);
@@ -2694,6 +2695,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         Object result = fct.call(context, scope, scope, new Object[] {textArea.getText(), properties});
 
         String finalText = result.toString();
+        int caretPos = textArea.getCaretPosition();
         textArea.setText(finalText);
+        if (caretPos > 0 && caretPos < finalText.length())
+            textArea.setCaretPosition(caretPos);
     }
 }
