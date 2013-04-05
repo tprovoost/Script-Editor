@@ -22,11 +22,16 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rtextarea.Gutter;
 import org.mozilla.javascript.Context;
 import org.python.antlr.PythonTree;
+import org.python.antlr.ast.Attribute;
+import org.python.antlr.ast.Call;
+import org.python.antlr.ast.Name;
 import org.python.antlr.base.mod;
+import org.python.core.AstList;
 import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
 import org.python.core.PyException;
+import org.python.core.PyObject;
 import org.python.core.PyString;
 import org.python.core.PyStringMap;
 import org.python.core.PySystemState;
@@ -169,10 +174,12 @@ public class PythonScriptingHandler extends ScriptingHandler
         {
             switch (tree.getAntlrType())
             {
+                case 9:
                 case 46:
                     // assign
                     String name = tree.getChild(0).getText();
-                    Class<?> type = getType(name);
+                    Class<?> type = resolveType(tree.getChild(1));
+                    type = getType(name);
                     VariableCompletion c = new VariableCompletion(provider, name, type == null ? "" : type.getName());
                     c.setDefinedIn(fileName);
                     c.setSummary("variable");
@@ -186,9 +193,123 @@ public class PythonScriptingHandler extends ScriptingHandler
                     if (!alreadyExists)
                         variableCompletions.add(c);
                     break;
+                case 24:
+                    // import from
+                    // TODO
+                    // System.out.println("importFrom" + tree);
+                    break;
             }
         }
         provider.addCompletions(variableCompletions);
+    }
+
+    private Class<?> resolveType(PythonTree child)
+    {
+        if (child instanceof Call)
+        {
+            return resolveCallType(child);
+        }
+        return null;
+    }
+
+    private Class<?> resolveCallType(PythonTree child)
+    {
+        String function = buildFunction(child);
+        return null;
+    }
+
+    private String buildFunction(PythonTree child)
+    {
+        String callName = "";
+
+        callName = buildFunctionRecursive(callName, child);
+        if (!callName.isEmpty())
+        {
+            // removes the last dot
+            if (callName.startsWith("."))
+                callName = callName.substring(1);
+        }
+        return callName;
+    }
+
+    private String buildFunctionRecursive(String callName, PythonTree n)
+    {
+        if (n != null)
+        {
+            int type = n.getAntlrType();
+            if (n instanceof Call)
+            {
+                Call fn = ((Call) n);
+                String args = "";
+                args += "(";
+                for (int i = 0; i < ((AstList) fn.getArgs()).size(); ++i)
+                {
+                    Object obj = ((AstList) fn.getArgs()).get(i);
+                    System.out.println(obj);
+                    // if (i != 0)
+                    // args += ",";
+                    // VariableType typeC = getRealType(arg);
+                    // if (typeC != null && typeC.getClazz() != null)
+                    // args += typeC.getClazz().getName();
+                    // else
+                    // args += "unknown";
+                    // i++;
+                }
+                args += ")";
+                String functionName = "";
+                PyObject target = fn.getFunc();
+                String toReturn = "";
+                if (target instanceof Attribute)
+                {
+                    Attribute att = ((Attribute) target);
+                    PyObject name = att.getAttr();
+                    toReturn = functionName + name + args + "." + callName;
+                    return buildFunctionRecursive(toReturn, (PythonTree) (att.getValue()));
+                }
+                else if (target instanceof Name)
+                {
+                    toReturn = functionName + ((Name) target).getInternalId() + "." + callName;
+                }
+                // if (targetType == Token.NAME)
+                // {
+                // functionName = target.getString();
+                // toReturn = functionName + args;
+                // }
+                // else if (targetType == Token.GETPROP)
+                // {
+                // functionName = ((PropertyGet) target).getRight().getString();
+                // toReturn = buildFunctionRecursive(elem, ((PropertyGet) target).getLeft()) + "." +
+                // functionName
+                // + args;
+                // }
+                // else if (targetType == Token.GETELEM)
+                // {
+                // ElementGet get = (ElementGet) target;
+                // elem = buildFunctionRecursive("", get.getElement());
+                // functionName = elem.substring(0, elem.indexOf('('));
+                // String targetName = buildFunctionRecursive("", get.getTarget());
+                // toReturn = targetName + "." + elem;
+                // }
+                // else
+                // toReturn = elem;
+                // int rp = fn.getRp();
+                // if (rp != -1)
+                // {
+                // rp = n.getAbsolutePosition() + rp + 1;
+                // if (DEBUG)
+                // System.out.println("function found:" + functionName);
+                // IcyFunctionBlock fb = new IcyFunctionBlock(functionName, rp, null);
+                // functionBlocksToResolve.add(fb);
+                // }
+                return toReturn;
+            }
+            else if (n instanceof Name)
+            {
+                callName = ((Name) n).getInternalId() + "." + callName;
+            }
+
+        }
+        return callName;
     }
 
     public void dumpTree(mod node)
