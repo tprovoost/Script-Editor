@@ -11,7 +11,6 @@ import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
-import icy.roi.BooleanMask2D;
 import icy.system.FileDrop;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
@@ -22,7 +21,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -490,6 +488,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public synchronized void installLanguage(final String language)
     {
+        final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+        
         consoleOutput.setText("");
 
         // Autocompletion is done with the following item
@@ -504,7 +504,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         if (provider == null)
         {
             provider = new IcyCompletionProvider();
-            provider.setAutoActivationRules(false, ".");
+            boolean autoActivate = prefWin.isFullAutoCompleteEnabled();
+            provider.setAutoActivationRules(autoActivate, ".");
             ThreadUtil.invokeLater(new Runnable()
             {
 
@@ -556,6 +557,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         // install the text area with the completion system.
         ac.install(textArea);
+        ac.setAutoCompleteSingleChoices(false);
         ac.setParameterAssistanceEnabled(true);
         ac.setAutoActivationEnabled(true);
         ac.setAutoActivationDelay(500);
@@ -654,7 +656,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 if (scriptHandler != null)
                 {
                     scriptHandler.addScriptListener(ScriptingPanel.this);
-                    PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
                     scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
                     scriptHandler.setStrict(prefWin.isStrictModeEnabled());
                     scriptHandler.setForceRun(prefWin.isOverrideEnabled());

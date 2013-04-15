@@ -2,7 +2,7 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.component.IcyTextField;
 import icy.gui.frame.IcyFrame;
-import icy.preferences.IcyPreferences;
+import icy.preferences.PluginPreferences;
 import icy.preferences.XMLPreferences;
 
 import java.awt.BorderLayout;
@@ -25,7 +25,7 @@ public class PreferencesWindow extends IcyFrame
     private static PreferencesWindow singleton = new PreferencesWindow();
     // private JTable table;
     private JPanel panel;
-    private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
+    private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
     // private PreferencesTableModel tableModel;
     private final String PREF_VAR_INTERPRET = "varinterp";
     private final String PREF_OVERRIDE = "override";
@@ -33,6 +33,7 @@ public class PreferencesWindow extends IcyFrame
     private final String PREF_STRICT = "strictmode";
     private final String PREF_INDENT_SPACES = "indent";
     private final String PREF_INDENT_SPACES_VALUE = "nbSpaces";
+    private final String PREF_FULL_AUTOCOMPLETE = "fullautocomplete";
     private IcyTextField tfSpacesTab;
     private JCheckBox cboxVarInterp;
     private JCheckBox cboxOverride;
@@ -41,14 +42,11 @@ public class PreferencesWindow extends IcyFrame
     private JCheckBox cboxSoft;
     private boolean release = false;
     private JCheckBox cboxAdvanced;
+    private JCheckBox cboxFullAutocomplete;
 
     private PreferencesWindow()
     {
         super("Script Editor Preferences", false, true, false, true);
-        // if (!release)
-        // tableModel = new PreferencesTableModel();
-        // else
-        // tableModel = new PreferencesTableModel(release);
         setContentPane(createGUI());
     }
 
@@ -120,6 +118,19 @@ public class PreferencesWindow extends IcyFrame
         panel = new JPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         panelCenter.add(panel);
+
+        // -------------------
+        // Full autocomplete
+        // -------------------
+        JPanel panelFullAutoComplete = new JPanel();
+        panel.add(panelFullAutoComplete);
+        panelFullAutoComplete.setLayout(new BoxLayout(panelFullAutoComplete, BoxLayout.X_AXIS));
+        JLabel lblFullAutocomplete = new JLabel("Enable Auto Complete after any character");
+        panelFullAutoComplete.add(lblFullAutocomplete);
+        cboxFullAutocomplete = new JCheckBox("");
+
+        panelFullAutoComplete.add(cboxFullAutocomplete);
+        panelFullAutoComplete.add(Box.createHorizontalGlue());
 
         // -------------------
         // Var interpretation
@@ -247,15 +258,18 @@ public class PreferencesWindow extends IcyFrame
                 tfSpacesTab.setEnabled(cboxSoft.isSelected());
             }
         });
-
         return toReturn;
+    }
+
+    public boolean isFullAutoCompleteEnabled()
+    {
+        return cboxFullAutocomplete.isSelected();
     }
 
     public boolean isVarInterpretationEnabled()
     {
         if (release)
             return false;
-        // return (Boolean) tableModel.getValueAt(0, 1);
         return cboxVarInterp.isSelected();
     }
 
@@ -263,7 +277,6 @@ public class PreferencesWindow extends IcyFrame
     {
         if (release)
             return true;
-        // return (Boolean) tableModel.getValueAt(1, 1);
         return cboxOverride.isSelected();
     }
 
@@ -271,7 +284,6 @@ public class PreferencesWindow extends IcyFrame
     {
         if (release)
             return false;
-        // return (Boolean) tableModel.getValueAt(2, 1);
         return cboxAutoVerif.isSelected();
     }
 
@@ -279,7 +291,6 @@ public class PreferencesWindow extends IcyFrame
     {
         if (release)
             return false;
-        // return (Boolean) tableModel.getValueAt(3, 1);
         return cboxStrict.isSelected();
     }
 
@@ -351,6 +362,7 @@ public class PreferencesWindow extends IcyFrame
         prefs.putBoolean(PREF_VERIF, isAutoBuildEnabled());
         prefs.putBoolean(PREF_STRICT, isStrictModeEnabled());
         prefs.putBoolean(PREF_INDENT_SPACES, isIndentSpacesEnabled());
+        prefs.putBoolean(PREF_FULL_AUTOCOMPLETE, isFullAutoCompleteEnabled());
         prefs.putInt(PREF_INDENT_SPACES_VALUE, indentSpacesCount());
     }
 
@@ -360,6 +372,7 @@ public class PreferencesWindow extends IcyFrame
         cboxOverride.setSelected(prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE));
         cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.TRUE));
         cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
+        cboxFullAutocomplete.setSelected(prefs.getBoolean(PREF_FULL_AUTOCOMPLETE, Boolean.TRUE));
 
         boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE);
         cboxSoft.setSelected(active);
@@ -367,4 +380,5 @@ public class PreferencesWindow extends IcyFrame
             tfSpacesTab.setEnabled(true);
         tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
     }
+
 }

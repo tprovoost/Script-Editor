@@ -664,7 +664,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                     // check in the local variables if it is a variable
                     // if it is : propose depending on the variable type
                     VariableType type = handler.getVariableDeclaration(command);
-                    if (type != null || (type = engineVariables.get(command)) != null)
+                    if ((type != null && type.getClazz() != null)
+                            || ((type = engineVariables.get(command)) != null && type.getClazz() != null))
                     {
                         // ----------------------------
                         // VARIABLE ACCESS
@@ -789,7 +790,8 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     private void populateClassTypes(VariableType type2, Type t, String text, List<Completion> retVal, boolean staticOnly)
     {
         Class<?> type = type2.getClazz();
-        if (type == null) {
+        if (type == null)
+        {
             return;
         }
         if (!Modifier.isPublic(type.getModifiers()))

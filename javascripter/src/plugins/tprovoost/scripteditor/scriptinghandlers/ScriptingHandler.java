@@ -1085,8 +1085,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         public AutoVerify()
         {
-            timer = new Timer(2000, this);
-            timer.setRepeats(false);
+            timer = new Timer(1000, this);
+            timer.setRepeats(true);
         }
 
         @Override
