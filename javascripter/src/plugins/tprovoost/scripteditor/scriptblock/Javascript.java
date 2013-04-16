@@ -88,7 +88,7 @@ public class Javascript extends Plugin implements Block
     }
 
     @Override
-    public void declareInput(final VarList inputMap)
+    public void declareInput(VarList inputMap)
     {
         if (this.inputMap == null)
             this.inputMap = inputMap;
@@ -114,7 +114,7 @@ public class Javascript extends Plugin implements Block
                 myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] {Object.class, Object[].class,
                         Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class,
                         String.class, File.class, File[].class}));
-                inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                Javascript.this.inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
             }
         });
         triggerInput.setReferencingPolicy(VarReferencingPolicy.NONE);

@@ -1086,7 +1086,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public AutoVerify()
         {
             timer = new Timer(1000, this);
-            timer.setRepeats(true);
+            timer.setRepeats(false);
         }
 
         @Override
@@ -1123,6 +1123,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void changedUpdate(DocumentEvent e)
         {
             lastChange = true;
+            // System.out.println("changedUpdate");
             if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
                 timer.restart();
         }
@@ -1131,7 +1132,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void actionPerformed(ActionEvent e)
         {
             lastChange = false;
-            interpret(textArea.getText());
+            interpret(false);
         }
 
         @Override
