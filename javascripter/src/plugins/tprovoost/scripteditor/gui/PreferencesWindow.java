@@ -125,21 +125,36 @@ public class PreferencesWindow extends IcyFrame
         JPanel panelFullAutoComplete = new JPanel();
         panel.add(panelFullAutoComplete);
         panelFullAutoComplete.setLayout(new BoxLayout(panelFullAutoComplete, BoxLayout.X_AXIS));
-        JLabel lblFullAutocomplete = new JLabel("Enable Auto Complete after any character");
+        JLabel lblFullAutocomplete = new JLabel("Enable Auto Complete after any character typed: ");
         panelFullAutoComplete.add(lblFullAutocomplete);
         cboxFullAutocomplete = new JCheckBox("");
 
         panelFullAutoComplete.add(cboxFullAutocomplete);
         panelFullAutoComplete.add(Box.createHorizontalGlue());
 
+        // ------------------
+        // Auto verification
+        // ------------------
+        JPanel panelAutoVerif = new JPanel();
+        // if (!release)
+        panel.add(panelAutoVerif);
+        panelAutoVerif.setLayout(new BoxLayout(panelAutoVerif, BoxLayout.X_AXIS));
+
+        JLabel lblAutoVerif = new JLabel("Enable auto verification (javascript)*: ");
+        panelAutoVerif.add(lblAutoVerif);
+
+        cboxAutoVerif = new JCheckBox("");
+        panelAutoVerif.add(cboxAutoVerif);
+        panelAutoVerif.add(Box.createHorizontalGlue());
+
         // -------------------
         // Var interpretation
         // -------------------
         JPanel panelVarInterp = new JPanel();
-        if (!release)
-            panel.add(panelVarInterp);
+        // if (!release)
+        // panel.add(panelVarInterp);
         panelVarInterp.setLayout(new BoxLayout(panelVarInterp, BoxLayout.X_AXIS));
-        JLabel lblVarInterp = new JLabel("Enable variable interpretation (beta)*");
+        JLabel lblVarInterp = new JLabel("Enable variable interpretation*: ");
         panelVarInterp.add(lblVarInterp);
         cboxVarInterp = new JCheckBox("");
 
@@ -151,10 +166,10 @@ public class PreferencesWindow extends IcyFrame
         // -----------------------------------
         JPanel panelOverride = new JPanel();
         panelOverride.setLayout(new BoxLayout(panelOverride, BoxLayout.X_AXIS));
-        if (!release)
-            panel.add(panelOverride);
+        // if (!release)
+        panel.add(panelOverride);
 
-        JLabel lblOverride = new JLabel("Override verification (javascript)");
+        JLabel lblOverride = new JLabel("Override verification (javascript): ");
         panelOverride.add(lblOverride);
 
         cboxOverride = new JCheckBox("");
@@ -163,30 +178,15 @@ public class PreferencesWindow extends IcyFrame
         panelOverride.add(Box.createHorizontalGlue());
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        // ------------------
-        // Auto verification
-        // ------------------
-        JPanel panelAutoVerif = new JPanel();
-        if (!release)
-            panel.add(panelAutoVerif);
-        panelAutoVerif.setLayout(new BoxLayout(panelAutoVerif, BoxLayout.X_AXIS));
-
-        JLabel lblAutoVerif = new JLabel("Enable auto verification (javascript/beta)*");
-        panelAutoVerif.add(lblAutoVerif);
-
-        cboxAutoVerif = new JCheckBox("");
-        panelAutoVerif.add(cboxAutoVerif);
-        panelAutoVerif.add(Box.createHorizontalGlue());
-
         // ------------
         // Strict mode
         // ------------
         JPanel panelAdvancedMode = new JPanel();
-        if (!release)
-            panel.add(panelAdvancedMode);
+        // if (!release)
+        panel.add(panelAdvancedMode);
         panelAdvancedMode.setLayout(new BoxLayout(panelAdvancedMode, BoxLayout.X_AXIS));
 
-        JLabel lblAdvancedMode = new JLabel("Enable methods (javascript/beta)*");
+        JLabel lblAdvancedMode = new JLabel("Enable methods (javascript/beta)*: ");
         panelAdvancedMode.add(lblAdvancedMode);
 
         cboxAdvanced = new JCheckBox("");
@@ -216,7 +216,7 @@ public class PreferencesWindow extends IcyFrame
         panelSoft.setLayout(new BoxLayout(panelSoft, BoxLayout.X_AXIS));
         panel.add(panelSoft);
 
-        JLabel lblSoft = new JLabel("Soft tabs");
+        JLabel lblSoft = new JLabel("Use Soft tabs (spaces instead of tabulations): ");
         panelSoft.add(lblSoft);
 
         cboxSoft = new JCheckBox("");
@@ -231,7 +231,7 @@ public class PreferencesWindow extends IcyFrame
         panel.add(panelSpacesTab);
         panelSpacesTab.setLayout(new BoxLayout(panelSpacesTab, BoxLayout.X_AXIS));
 
-        JLabel lblSpacesTab = new JLabel("Spaces count for soft tabs");
+        JLabel lblSpacesTab = new JLabel("Spaces count for soft tabs: ");
         panelSpacesTab.add(lblSpacesTab);
 
         tfSpacesTab = new IcyTextField();

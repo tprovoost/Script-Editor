@@ -101,19 +101,22 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         @Override
         public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
         {
-            Document doc = errorOutput.getDocument();
-            try
+            if (errorOutput != null)
             {
-                Style style = errorOutput.getStyle("warning");
-                if (style == null)
-                    style = errorOutput.addStyle("warning", null);
-                StyleConstants.setForeground(style, Color.blue);
-                String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
-                        + lineOffset + ")";
-                doc.insertString(doc.getLength(), text + "\n", style);
-            }
-            catch (BadLocationException e)
-            {
+                Document doc = errorOutput.getDocument();
+                try
+                {
+                    Style style = errorOutput.getStyle("warning");
+                    if (style == null)
+                        style = errorOutput.addStyle("warning", null);
+                    StyleConstants.setForeground(style, Color.blue);
+                    String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                            + lineOffset + ")";
+                    doc.insertString(doc.getLength(), text + "\n", style);
+                }
+                catch (BadLocationException e)
+                {
+                }
             }
         }
 
@@ -164,6 +167,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         @Override
         public void error(String message, String sourceName, int line, String lineSource, int lineOffset)
         {
+            String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
+                    + lineOffset + ")";
+            exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
             if (errorOutput != null)
             {
                 Document doc = errorOutput.getDocument();
@@ -175,9 +181,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         style = errorOutput.addStyle("error", null);
                         StyleConstants.setForeground(style, Color.red);
                     }
-                    String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
-                            + lineOffset + ")";
-                    exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
                     doc.insertString(doc.getLength(), lastErrortext + "\n", style);
                 }
                 catch (BadLocationException e)

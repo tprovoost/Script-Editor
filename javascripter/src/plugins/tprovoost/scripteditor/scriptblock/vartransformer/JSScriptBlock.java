@@ -1,7 +1,7 @@
 package plugins.tprovoost.scripteditor.scriptblock.vartransformer;
 
-import sun.org.mozilla.javascript.internal.Context;
-import sun.org.mozilla.javascript.internal.NativeArray;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
 
 public class JSScriptBlock
 {
