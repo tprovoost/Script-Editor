@@ -204,6 +204,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         sun.org.mozilla.javascript.internal.Context context = sun.org.mozilla.javascript.internal.Context.enter();
         context.setApplicationClassLoader(PluginLoader.getLoader());
         context.setErrorReporter(errorReporter);
+        // context.setOptimizationLevel(-1);
         try
         {
             ScriptableObject scriptable = new ImporterTopLevel(context);

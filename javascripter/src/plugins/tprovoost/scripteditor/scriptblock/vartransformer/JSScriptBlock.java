@@ -1,7 +1,9 @@
 package plugins.tprovoost.scripteditor.scriptblock.vartransformer;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeArray;
+
+import sun.org.mozilla.javascript.internal.NativeArray;
+import sun.org.mozilla.javascript.internal.NativeJavaObject;
 
 public class JSScriptBlock
 {
@@ -11,7 +13,11 @@ public class JSScriptBlock
         Object toReturn = o;
         if (o instanceof NativeArray)
         {
-            toReturn = Context.jsToJava(o, Object[].class);
+            toReturn = convertNativeArraytoJSArray((NativeArray) o);
+        }
+        else if (o instanceof NativeJavaObject)
+        {
+            return ((NativeJavaObject) o).unwrap();
         }
         else
         {
@@ -37,6 +43,17 @@ public class JSScriptBlock
         // {
         // toReturn = ((NativeJavaArray) toReturn).unwrap();
         // }
+        return toReturn;
+    }
+
+    public static Object convertNativeArraytoJSArray(NativeArray array)
+    {
+        int len = (int) array.getLength();
+        Object[] toReturn = new Object[len];
+        for (int i = 0; i < array.getLength(); ++i)
+        {
+            toReturn[i] = transformScriptOutput(array.get(i, null));
+        }
         return toReturn;
     }
 }

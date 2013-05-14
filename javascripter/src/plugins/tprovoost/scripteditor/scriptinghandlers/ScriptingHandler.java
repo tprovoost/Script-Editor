@@ -788,6 +788,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         ScriptEngine engine = getEngine();
         if (engine != null)
         {
+            // remove everything from current engine
+            clearEngine(engine);
+
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
             ArrayList<Method> functions = engineHandler.getFunctions();
             String newEngineType = ScriptEngineHandler.getLanguageName(engine.getFactory());
@@ -804,6 +807,15 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             engine.getContext().setErrorWriter(pw);
         }
         return engine;
+    }
+
+    private void clearEngine(ScriptEngine engine)
+    {
+        Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
+        for (String s : bindings.keySet())
+        {
+            bindings.put(s, null);
+        }
     }
 
     /**
@@ -827,6 +839,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     @Override
     public void keyTyped(KeyEvent e)
     {
+        // System.out.println("coucou");
     }
 
     @Override
@@ -845,6 +858,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 {
                     break;
                 }
+                break;
 
             case KeyEvent.VK_R:
                 if (e.isControlDown())
@@ -1220,6 +1234,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
                 engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
                 BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
+                frame.setEngine(evalEngine);
                 frame.update();
             }
             catch (ThreadDeath td)

@@ -1,6 +1,7 @@
 package plugins.tprovoost.scripteditor.scriptingconsole;
 
 import icy.gui.frame.IcyFrame;
+import icy.system.thread.ThreadUtil;
 
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
@@ -24,6 +25,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 
 import sun.org.mozilla.javascript.internal.IdScriptableObject;
 import sun.org.mozilla.javascript.internal.NativeArray;
+import sun.org.mozilla.javascript.internal.NativeJavaObject;
 
 public class BindingsScriptFrame extends IcyFrame
 {
@@ -47,26 +49,25 @@ public class BindingsScriptFrame extends IcyFrame
             public void actionPerformed(ActionEvent arg0)
             {
                 Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-                Object o = listVariables.getValueAt(listVariables.getSelectedRow(), 0);
-                Object val = listVariables.getValueAt(listVariables.getSelectedRow(), 1);
-                try
+                int selectedRow = listVariables.getSelectedRow();
+                Object o = listVariables.getValueAt(selectedRow, 0);
+                Object val = listVariables.getValueAt(selectedRow, 1);
+                if (val instanceof NativeArray)
                 {
-                    if (val instanceof NativeArray)
+                    for (int i = 0; i < ((NativeArray) val).getLength(); ++i)
                     {
-                        for (int i = 0; i < ((NativeArray) val).getLength(); ++i)
-                        {
-                            ((NativeArray) val).delete(i);
-                        }
+                        ((NativeArray) val).delete(i);
                     }
-                    else if (val instanceof IdScriptableObject)
-                    {
-                    }
-                    engine.eval(o + " = null");
                 }
-                catch (ScriptException e)
+                else if (val instanceof IdScriptableObject)
                 {
-                    e.printStackTrace();
+                    ((IdScriptableObject) val).delete(0);
                 }
+                else if (val instanceof NativeJavaObject)
+                {
+                    ((NativeJavaObject) val).delete(0);
+                }
+                bindings.put((String) o, null);
                 bindings.remove(o);
             }
         });
@@ -119,8 +120,16 @@ public class BindingsScriptFrame extends IcyFrame
             ScriptEngine engine = ScriptEngineHandler.getEngine(languageName);
             if (engine != this.engine)
                 this.engine = engine;
-            model.fireTableDataChanged();
-            listVariables.repaint();
+            ThreadUtil.invokeLater(new Runnable()
+            {
+
+                @Override
+                public void run()
+                {
+                    model.fireTableDataChanged();
+                    listVariables.repaint();
+                }
+            });
         }
     }
 
