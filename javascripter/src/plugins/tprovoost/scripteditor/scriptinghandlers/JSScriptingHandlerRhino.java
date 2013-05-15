@@ -272,7 +272,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             c.setDefinedIn(mainInterface);
             c.setReturnValueDescription("The focused sequence is returned.");
             c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-            provider.addCompletion(c);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(c, list))
+                provider.addCompletion(c);
+
             engineFunctions.put("getSequence", new VariableType(Sequence.class));
         }
         catch (ScriptException e)
@@ -287,7 +294,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             c.setDefinedIn(mainInterface);
             c.setShortDescription("Returns the current image viewed in the focused sequence.");
             c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
-            provider.addCompletion(c);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(c, list))
+                provider.addCompletion(c);
+
             engineFunctions.put("getImage", new VariableType(IcyBufferedImage.class));
         }
         catch (ScriptException e)
@@ -301,7 +315,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
             vc.setDefinedIn(mainInterface);
             vc.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-            provider.addCompletion(vc);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(vc, list))
+                provider.addCompletion(vc);
+
             engineVariables.put("gui", new VariableType(MainInterface.class));
         }
         catch (ScriptException e)
@@ -1206,6 +1227,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return null;
     }
 
+    @SuppressWarnings("unused")
     private VariableType resolveCallTypeOld(AstNode n, String text, boolean noerror)
     {
         VariableType toReturn = null;
