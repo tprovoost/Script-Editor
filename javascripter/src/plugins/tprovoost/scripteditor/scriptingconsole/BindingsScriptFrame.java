@@ -6,11 +6,11 @@ import icy.system.thread.ThreadUtil;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Set;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -22,10 +22,10 @@ import javax.swing.WindowConstants;
 import javax.swing.table.AbstractTableModel;
 
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
-
 import sun.org.mozilla.javascript.internal.IdScriptableObject;
 import sun.org.mozilla.javascript.internal.NativeArray;
 import sun.org.mozilla.javascript.internal.NativeJavaObject;
+import sun.org.mozilla.javascript.internal.Scriptable;
 
 public class BindingsScriptFrame extends IcyFrame
 {
@@ -59,16 +59,14 @@ public class BindingsScriptFrame extends IcyFrame
                         ((NativeArray) val).delete(i);
                     }
                 }
-                else if (val instanceof IdScriptableObject)
+                else if (val instanceof IdScriptableObject || val instanceof NativeJavaObject)
                 {
-                    ((IdScriptableObject) val).delete(0);
-                }
-                else if (val instanceof NativeJavaObject)
-                {
-                    ((NativeJavaObject) val).delete(0);
+                    Scriptable scope = ((NativeJavaObject) val).getParentScope();
+                    scope.put((String) o, scope, null);
                 }
                 bindings.put((String) o, null);
                 bindings.remove(o);
+                update();
             }
         });
         JButton btnRefresh = new JButton("Refresh");
@@ -122,7 +120,6 @@ public class BindingsScriptFrame extends IcyFrame
                 this.engine = engine;
             ThreadUtil.invokeLater(new Runnable()
             {
-
                 @Override
                 public void run()
                 {
@@ -175,18 +172,23 @@ public class BindingsScriptFrame extends IcyFrame
         @Override
         public Object getValueAt(int rowIndex, int columnIndex)
         {
-            if (engine == null)
-                return null;
-            if (columnIndex == 0)
+            Set<String> keyset = engine.getBindings(ScriptContext.ENGINE_SCOPE).keySet();
+            if (rowIndex >= 0 && rowIndex < keyset.size())
             {
-                return engine.getBindings(ScriptContext.ENGINE_SCOPE).keySet().toArray()[rowIndex];
+                if (engine == null)
+                    return null;
+                if (columnIndex == 0)
+                {
+                    return keyset.toArray()[rowIndex];
+                }
+                else
+                {
+                    Object o = engine.getBindings(ScriptContext.ENGINE_SCOPE).values().toArray()[rowIndex];
+                    // Class<?> clazz = o.getClass();
+                    return o;
+                }
             }
-            else
-            {
-                Object o = engine.getBindings(ScriptContext.ENGINE_SCOPE).values().toArray()[rowIndex];
-                // Class<?> clazz = o.getClass();
-                return o;
-            }
+            return null;
         }
     }
 

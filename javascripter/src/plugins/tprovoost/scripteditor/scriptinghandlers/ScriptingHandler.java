@@ -761,7 +761,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 // errorOutput.append(str + "\n");
                 // errorOutput.append("New Engine created" + "\n");
                 // errorOutput.append(str + "\n");
-                errorOutput.setText("");
+                if (PreferencesWindow.getPreferencesWindow().isAutoClearOutputEnabled())
+                {
+                    errorOutput.setText("");
+                }
                 // g.dispose();
             }
             ScriptEngine engine = createNewEngine();
@@ -816,6 +819,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             bindings.put(s, null);
         }
+        System.gc();
     }
 
     /**

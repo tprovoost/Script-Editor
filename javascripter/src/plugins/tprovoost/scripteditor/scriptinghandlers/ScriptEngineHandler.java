@@ -15,6 +15,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -244,10 +246,14 @@ public class ScriptEngineHandler implements PluginInstallerListener
             sfc.setParams(fParams);
             sfc.setRelevance(2);
 
-            if (engineFunctions != null) {
+            if (engineFunctions != null)
+            {
                 Class<?> returnType = method.getReturnType();
                 if (VariableType.isGeneric(returnType))
-                    engineFunctions.put(functionName, new VariableType(returnType, VariableType.getType(method.getGenericReturnType().toString())));
+                    engineFunctions
+                            .put(functionName,
+                                    new VariableType(returnType, VariableType.getType(method.getGenericReturnType()
+                                            .toString())));
                 else
                     engineFunctions.put(functionName, new VariableType(returnType));
             }
@@ -324,5 +330,18 @@ public class ScriptEngineHandler implements PluginInstallerListener
         if (languageName.contentEquals("python"))
             return "Python";
         return languageName;
+    }
+
+    public static void clearEngines()
+    {
+        for (ScriptEngine engine : engines.values())
+        {
+            Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+            for (String s : bindings.keySet())
+            {
+                bindings.put(s, null);
+            }
+            bindings.clear();
+        }
     }
 }

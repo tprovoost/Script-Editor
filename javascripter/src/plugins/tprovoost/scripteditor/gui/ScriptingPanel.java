@@ -489,7 +489,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     public synchronized void installLanguage(final String language)
     {
         final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
-        
+
         consoleOutput.setText("");
 
         // Autocompletion is done with the following item
@@ -564,7 +564,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         ac.setShowDescWindow(true);
         ac.setExternalURLHandler(new ExternalURLHandler()
         {
-
             @Override
             public void urlClicked(HyperlinkEvent e, Completion c, DescWindowCallback callback)
             {

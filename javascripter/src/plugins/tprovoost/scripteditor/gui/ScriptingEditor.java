@@ -72,6 +72,11 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         @Override
         public void icyFrameClosing(IcyFrameEvent e)
         {
+            if (IcyFrame.getAllFrames(ScriptingEditor.class).size() == 1)
+            {
+                ScriptEngineHandler.clearEngines();
+                BindingsScriptFrame.getInstance().setVisible(false);
+            }
             closeAll();
             PreferencesWindow.getPreferencesWindow().removeFrameListener(ScriptingEditor.this);
         }
