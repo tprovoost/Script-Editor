@@ -18,6 +18,7 @@ import japa.parser.ast.body.MethodDeclaration;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -46,8 +47,10 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -75,6 +78,7 @@ import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
@@ -114,8 +118,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Auto-completion system. Uses provider item. */
     private IcyAutoCompletion ac;
 
-    public JButton btnRun;
-    private JButton btnRunNew;
+    public JMenuItem btnRun;
+    private JSplitButton btnSplitRun;
     public JButton btnStop;
     private ScriptingEditor editor;
     private boolean integrated;
@@ -440,7 +444,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 public void run()
                 {
                     btnRun.setEnabled(false);
-                    btnRunNew.setEnabled(false);
+                    btnSplitRun.setEnabled(false);
                 }
             });
             return;
@@ -701,12 +705,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         public PanelOptions(String language)
         {
             // final JButton btnBuild = new JButton("Verify");
-            btnRun = new IcyButton(new IcyIcon("playback_play", 16));
-            btnRun.setToolTipText("Run the script in the current context.");
+            btnRun = new JMenuItem("Run in Current Context", new IcyIcon(imgPlayback2, 16));
+            btnRun.setToolTipText("All variables in the bindings are re-usable.");
 
-            // btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
-            btnRunNew = new IcyButton(new IcyIcon("playback_play", 16));
-            btnRunNew.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+            btnSplitRun = new JSplitButton("  ", new IcyIcon("playback_play", 16));
+            btnSplitRun.setPreferredSize(new Dimension(45, 20));
+            btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+
+            JMenuItem btnRunNew2 = new JMenuItem("Run in New Context", new IcyIcon("playback_play", 16));
+            btnRunNew2
+                    .setToolTipText("Creates a new context and run the script. The previous context and its bindings will be lost.");
+
+            JPopupMenu popupRun = new JPopupMenu();
+            popupRun.add(btnRunNew2);
+            popupRun.add(btnRun);
+            btnSplitRun.setPopupMenu(popupRun);
 
             btnStop = new IcyButton(new IcyIcon("square_shape", 16));
             btnStop.setToolTipText("Stops the current script.");
@@ -750,22 +763,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (integrated)
                 return;
 
-            // btnBuild.addActionListener(new ActionListener()
-            // {
-            //
-            // @Override
-            // public void actionPerformed(ActionEvent e)
-            // {
-            // if (scriptHandler != null)
-            // {
-            // scriptHandler.interpret(false);
-            // }
-            // else
-            // System.out.println("Script Handler null.");
-            // }
-            // });
-            // add(btnBuild);
-
             btnRun.addActionListener(new ActionListener()
             {
 
@@ -782,7 +779,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         public void run()
                         {
                             btnRun.setEnabled(false);
-                            btnRunNew.setEnabled(false);
+                            btnSplitRun.setEnabled(false);
                             btnStop.setEnabled(true);
                         }
                     });
@@ -797,32 +794,27 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 }
             });
 
-            btnRunNew.addActionListener(new ActionListener()
+            btnSplitRun.addSplitButtonActionListener(new SplitButtonActionListener()
+            {
+
+                @Override
+                public void splitButtonClicked(ActionEvent e)
+                {
+                }
+
+                @Override
+                public void buttonClicked(ActionEvent e)
+                {
+                    runInSame();
+                }
+            });
+            btnRunNew2.addActionListener(new ActionListener()
             {
 
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    if (scriptHandler == null)
-                        return;
-                    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
-                    ThreadUtil.invokeLater(new Runnable()
-                    {
-
-                        @Override
-                        public void run()
-                        {
-                            btnRun.setEnabled(false);
-                            btnRunNew.setEnabled(false);
-                            btnStop.setEnabled(true);
-                        }
-                    });
-                    // consoleOutput.setText("");
-                    scriptHandler.setNewEngine(true);
-                    scriptHandler.setForceRun(prefs.isOverrideEnabled());
-                    scriptHandler.setStrict(prefs.isStrictModeEnabled());
-                    scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
-                    scriptHandler.interpret(true);
+                    runInSame();
                 }
             });
 
@@ -842,12 +834,34 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             });
 
             add(Box.createHorizontalStrut(STRUT_SIZE * 3));
-            add(btnRunNew);
-            // add(Box.createHorizontalStrut(STRUT_SIZE));
-            // add(btnRun);
+            add(btnSplitRun);
             add(Box.createHorizontalStrut(STRUT_SIZE));
             add(btnStop);
             add(Box.createHorizontalGlue());
+        }
+
+        protected void runInSame()
+        {
+            if (scriptHandler == null)
+                return;
+            PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+            ThreadUtil.invokeLater(new Runnable()
+            {
+
+                @Override
+                public void run()
+                {
+                    btnRun.setEnabled(false);
+                    btnSplitRun.setEnabled(false);
+                    btnStop.setEnabled(true);
+                }
+            });
+            // consoleOutput.setText("");
+            scriptHandler.setNewEngine(true);
+            scriptHandler.setForceRun(prefs.isOverrideEnabled());
+            scriptHandler.setStrict(prefs.isStrictModeEnabled());
+            scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+            scriptHandler.interpret(true);
         }
     }
 
@@ -946,7 +960,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             public void run()
             {
                 btnRun.setEnabled(true);
-                btnRunNew.setEnabled(true);
+                btnSplitRun.setEnabled(true);
                 btnStop.setEnabled(false);
             }
         });
