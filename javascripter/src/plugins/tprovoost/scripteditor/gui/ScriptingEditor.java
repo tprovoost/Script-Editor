@@ -16,20 +16,29 @@ import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
+import icy.util.EventUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -37,16 +46,25 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.WindowConstants;
+import javax.swing.border.BevelBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.text.Document;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
+import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
+import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
@@ -55,18 +73,31 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
  * 
  * @author tprovoost
  */
-public class ScriptingEditor extends IcyFrame implements IcyFrameListener
+public class ScriptingEditor extends IcyFrame implements IcyFrameListener, ActionListener
 {
+
+    // Scripting Panels
     private JTabbedPane tabbedPane;
     private JButton addPaneButton;
-    private static String currentDirectoryPath = "";
+
+    // Console
+    private JScrollPane scrollpane;
+    private JTextPane consoleOutput;
+    private Scriptingconsole console;
+    private JButton btnClearConsole;
+    protected boolean scrollLocked;
+
+    // Preferences and recent files
+    private JMenu menuOpenRecent;
     private ArrayList<String> previousFiles = new ArrayList<String>();
+    private static String currentDirectoryPath = "";
     private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
     private static final int MAX_RECENT_FILES = 20;
     private static final String STRING_LAST_DIRECTORY = "lastDirectory";
     private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
-    private JMenu menuOpenRecent;
+
     private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
+
     private IcyFrameListener frameListener = new IcyFrameAdapter()
     {
         @Override
@@ -171,9 +202,102 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
                 createNewPane();
             }
         });
+
+        consoleOutput = new JTextPane();
+        consoleOutput.setPreferredSize(new Dimension(400, 200));
+        consoleOutput.setEditable(false);
+        consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+
+        // HANDLE RIGHT CLICK POPUP MENU
+        consoleOutput.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                if (EventUtil.isRightMouseButton(e))
+                {
+                    JPopupMenu popup = new JPopupMenu();
+                    JMenuItem itemCopy = new JMenuItem("Copy");
+                    itemCopy.addActionListener(new ActionListener()
+                    {
+
+                        @Override
+                        public void actionPerformed(ActionEvent e)
+                        {
+                            consoleOutput.copy();
+                        }
+                    });
+                    popup.add(itemCopy);
+                    popup.show(consoleOutput, e.getX(), e.getY());
+                    e.consume();
+                }
+            }
+        });
+
+        // Create the scrollpane around the output
+        scrollpane = new JScrollPane(consoleOutput);
+        scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        scrollpane.setAutoscrolls(true);
+        final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
+
+        // LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
+        scrollbar.addAdjustmentListener(new AdjustmentListener()
+        {
+
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent e)
+            {
+                if (scrollbar.getValueIsAdjusting())
+                {
+                    if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+                        setScrollLocked(false);
+                    else
+                        setScrollLocked(true);
+                }
+                if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
+                {
+                    Document doc = consoleOutput.getDocument();
+                    consoleOutput.setCaretPosition(doc.getLength() - 1);
+                }
+            }
+
+        });
+        scrollpane.addMouseWheelListener(new MouseWheelListener()
+        {
+
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+                    setScrollLocked(false);
+                else
+                    setScrollLocked(true);
+            }
+        });
+
+        if (btnClearConsole != null)
+            btnClearConsole.removeActionListener(ScriptingEditor.this);
+        btnClearConsole = new JButton("Clear");
+        btnClearConsole.addActionListener(ScriptingEditor.this);
+
         createNewPane();
 
-        mainPanel.add(tabbedPane);
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(scrollpane, BorderLayout.CENTER);
+
+        JPanel panelSouth = new JPanel(new BorderLayout());
+        panelSouth.add(console, BorderLayout.CENTER);
+        panelSouth.add(btnClearConsole, BorderLayout.EAST);
+        bottomPanel.add(panelSouth, BorderLayout.SOUTH);
+
+        JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabbedPane, bottomPanel);
+        split.setDividerLocation(0.75d);
+        split.setResizeWeight(0.75d);
+        split.setOneTouchExpandable(true);
+        add(split, BorderLayout.CENTER);
+
+        mainPanel.add(split);
         setContentPane(mainPanel);
 
         // ----------------------
@@ -842,6 +966,37 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         return currentDirectoryPath;
     }
 
+    public void changeConsoleLanguage(String language)
+    {
+        // the Console uses the same engine but another script handler
+        if (language.contentEquals("Python"))
+        {
+            console = new PythonScriptingconsole();
+        }
+        else
+        {
+            console = new Scriptingconsole();
+        }
+
+        // set the language for the console too.
+        console.setLanguage(language);
+
+        // a reference to the output.
+        console.setOutput(consoleOutput);
+
+        console.setFont(consoleOutput.getFont());
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e)
+    {
+        if (e.getSource() == btnClearConsole)
+        {
+            if (console != null)
+                console.clear();
+        }
+    }
+
     public void addRecentFile(File f)
     {
         String path = f.getAbsolutePath();
@@ -915,6 +1070,16 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
         return "";
     }
 
+    private synchronized boolean isScrollLocked()
+    {
+        return scrollLocked;
+    }
+
+    private synchronized void setScrollLocked(boolean scrollLocked)
+    {
+        this.scrollLocked = scrollLocked;
+    }
+
     @Override
     public void icyFrameIconified(IcyFrameEvent e)
     {
@@ -943,6 +1108,14 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener
     @Override
     public void icyFrameExternalized(IcyFrameEvent e)
     {
+    }
+
+    /**
+     * @return the consoleOutput
+     */
+    public JTextPane getConsoleOutput()
+    {
+        return consoleOutput;
     }
 
 }
