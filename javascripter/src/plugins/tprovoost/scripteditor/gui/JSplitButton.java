@@ -51,6 +51,11 @@ import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 public class JSplitButton extends JButton implements MouseMotionListener, MouseListener, ActionListener, Serializable
 {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
     private int separatorSpacing = 4;
     private int splitWidth = 22;
     private int arrowSize = 8;
@@ -352,7 +357,7 @@ public class JSplitButton extends JButton implements MouseMotionListener, MouseL
     {
         int w = img.getWidth();
         int h = img.getHeight();
-        BufferedImage dimg = dimg = new BufferedImage(w, h, img.getType());
+        BufferedImage dimg = new BufferedImage(w, h, img.getType());
         Graphics2D g = dimg.createGraphics();
         g.rotate(Math.toRadians(angle), w / 2, h / 2);
         g.drawImage(img, null, 0, 0);
@@ -417,12 +422,12 @@ public class JSplitButton extends JButton implements MouseMotionListener, MouseL
         }
         else if (alwaysDropDown)
         {
-            popupMenu.show(this, getWidth() - (int) popupMenu.getPreferredSize().getWidth(), getHeight());
+            popupMenu.show(this, 0, getHeight());
             fireButtonClicked(e);
         }
         else if (onSplit)
         {
-            popupMenu.show(this, getWidth() - (int) popupMenu.getPreferredSize().getWidth(), getHeight());
+            popupMenu.show(this, 0, getHeight());
             fireSplitbuttonClicked(e);
         }
         else
