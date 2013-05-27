@@ -215,6 +215,7 @@ public class PythonScriptingHandler extends ScriptingHandler
     private Class<?> resolveCallType(PythonTree child)
     {
         String function = buildFunction(child);
+        System.out.println("fun: " + function);
         return null;
     }
 
@@ -236,7 +237,7 @@ public class PythonScriptingHandler extends ScriptingHandler
     {
         if (n != null)
         {
-            int type = n.getAntlrType();
+            // int type = n.getAntlrType();
             if (n instanceof Call)
             {
                 Call fn = ((Call) n);

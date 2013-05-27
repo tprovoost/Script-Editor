@@ -506,7 +506,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             @Override
             public void run()
             {
-                editor.changeConsoleLanguage(language);
+                if (editor != null)
+                    editor.changeConsoleLanguage(language);
 
                 // add the scripting handler, which handles the compilation
                 // and the parsing of the code for advanced features.
@@ -519,7 +520,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     // scriptHandler = new JSScriptingHandlerSimple(provider, textArea,
                     // pane.getGutter(), true);
                     // }
-                    if (!integrated)
+                    if (!integrated && editor != null)
                         scriptHandler.setOutput(editor.getConsoleOutput());
 
                 }

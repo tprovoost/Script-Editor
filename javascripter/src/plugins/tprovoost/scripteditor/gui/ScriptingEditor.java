@@ -11,7 +11,7 @@ import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
-import icy.preferences.IcyPreferences;
+import icy.preferences.PluginPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
 import icy.system.SystemUtil;
@@ -94,7 +94,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
     private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
     private static final int MAX_RECENT_FILES = 20;
     private static final String STRING_LAST_DIRECTORY = "lastDirectory";
-    private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
+    private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
 
     private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
 

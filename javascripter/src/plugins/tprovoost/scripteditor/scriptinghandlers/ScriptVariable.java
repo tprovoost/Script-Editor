@@ -48,6 +48,7 @@ public class ScriptVariable
         private int endScopeOffset;
         private VariableType type;
 
+        @SuppressWarnings("unused")
         public ScriptVariableScope(int declarationOffset, int endScopeOffset, Class<?> type)
         {
             this(declarationOffset, endScopeOffset, new VariableType(type));
