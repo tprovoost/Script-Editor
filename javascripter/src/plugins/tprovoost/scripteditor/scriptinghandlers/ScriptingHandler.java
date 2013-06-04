@@ -98,6 +98,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     /** Contains all declared variables in the script. */
     protected HashMap<String, ScriptVariable> localVariables;
 
+    protected HashMap<String, ScriptVariable> externalVariables = new HashMap<String, ScriptVariable>();
+
     /** Contains all declared variables in the script. */
     protected HashMap<String, VariableType> localFunctions = new HashMap<String, VariableType>();
 
@@ -294,6 +296,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     public HashMap<Integer, IcyFunctionBlock> getBlockFunctions()
     {
         return blockFunctions;
+    }
+
+    public HashMap<String, ScriptVariable> getExternalVariables()
+    {
+        return externalVariables;
     }
 
     /**
@@ -711,6 +718,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             Context.exit();
         }
+    }
+
+    protected void addExternalVariables()
+    {
+        for (String s : externalVariables.keySet())
+        {
+            ScriptVariable sv = externalVariables.get(s);
+            String type = sv.getVariableClassType(0).getClazz().getName();
+            VariableCompletion c = new VariableCompletion(provider, s, type);
+            c.setRelevance(RELEVANCE_HIGH);
+            variableCompletions.add(c);
+        }
+        localVariables.putAll(externalVariables);
     }
 
     @SuppressWarnings("unchecked")

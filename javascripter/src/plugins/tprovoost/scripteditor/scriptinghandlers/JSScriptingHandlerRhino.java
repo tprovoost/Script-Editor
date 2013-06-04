@@ -431,7 +431,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public void registerImports()
     {
         String s = textArea.getText();
-        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.|\\$)+)\\)");
+        Pattern patternClasses = Pattern.compile("importClass\\(\\s*(Packages\\.|)((\\w|\\.|\\$)+)\\s*\\)");
         Matcher m = patternClasses.matcher(s);
         int offset = 0;
         while (m.find(offset))
@@ -658,10 +658,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         for (Completion c : variableCompletions)
             provider.removeCompletion(c);
         variableCompletions.clear();
+        
         // functionBlocksToResolve.clear();
         if (DEBUG)
             dumpTree(root, root, 1, "");
 
+        addExternalVariables();
+        
         // start variable registration
         registerVariables(root, root, s);
 

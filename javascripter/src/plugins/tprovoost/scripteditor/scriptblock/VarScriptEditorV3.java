@@ -42,16 +42,12 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
     public Dimension getPreferredSize()
     {
         return super.getPreferredSize();
-        // System.out.println(getEditorComponent().getSize());
-        // System.out.println(getEditorComponent().getPreferredSize());
-        // return getEditorComponent().getSize();
     }
 
     @Override
     protected JComponent createEditorComponent()
     {
         panelIn = new ScriptingPanel(null, "Internal Editor", "JavaScript", true);
-
         panelOut = new ScriptingPanel(null, "External Editor", "JavaScript", true);
         panelOut.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 

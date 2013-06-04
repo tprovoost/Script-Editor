@@ -6,6 +6,7 @@ import icy.sequence.Sequence;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
@@ -23,7 +24,9 @@ import plugins.adufour.vars.lang.VarTrigger;
 import plugins.adufour.vars.util.VarReferencingPolicy;
 import plugins.tprovoost.scripteditor.scriptblock.vartransformer.JSScriptBlock;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 
 public class Javascript extends Plugin implements Block
 {
@@ -115,6 +118,8 @@ public class Javascript extends Plugin implements Block
                         Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class,
                         String.class, File.class, File[].class}));
                 Javascript.this.inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                registerVariables();
+
             }
         });
         triggerInput.setReferencingPolicy(VarReferencingPolicy.NONE);
@@ -142,6 +147,7 @@ public class Javascript extends Plugin implements Block
                         Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class,
                         String.class, File.class, File[].class}));
                 outputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                registerVariables();
             }
         });
         triggerOutput.setReferencingPolicy(VarReferencingPolicy.NONE);
@@ -171,6 +177,24 @@ public class Javascript extends Plugin implements Block
                 File.class, File[].class}));
         outputMap.add(name, myVariable);
         outputIdx++;
+        registerVariables();
+    }
+
+    private void registerVariables()
+    {
+        ScriptingHandler handler = inputScript.getEditor().getScriptHandler();
+        HashMap<String, ScriptVariable> variables = handler.getExternalVariables();
+        variables.clear();
+        for (Var<?> v : inputMap)
+        {
+            if (v instanceof VarMutable)
+                variables.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+        }
+        for (Var<?> v : outputMap)
+        {
+            if (v instanceof VarMutable)
+                variables.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+        }
     }
 
 }

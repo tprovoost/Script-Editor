@@ -6,6 +6,15 @@ public class ScriptVariable
 {
     private ArrayList<ScriptVariableScope> variableScopes = new ArrayList<ScriptVariableScope>();
 
+    public ScriptVariable()
+    {
+    }
+
+    public ScriptVariable(VariableType returnType)
+    {
+        addType(0, returnType);
+    }
+
     public void addType(int offsetBegin, VariableType returnType)
     {
         addType(offsetBegin, -1, returnType);
