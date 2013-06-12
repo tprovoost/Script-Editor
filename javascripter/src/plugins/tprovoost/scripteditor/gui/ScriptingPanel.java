@@ -82,6 +82,7 @@ import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
+import plugins.tprovoost.scripteditor.scriptblock.Javascript;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
@@ -195,6 +196,26 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         // set the default theme: eclipse.
         setTheme("eclipse");
         textArea.requestFocus();
+    }
+
+    /**
+     * Getter for the provider
+     * 
+     * @return
+     */
+    public IcyCompletionProvider getProvider()
+    {
+        return provider;
+    }
+
+    /**
+     * Setter for the provider.
+     * 
+     * @param provider
+     */
+    public void setProvider(IcyCompletionProvider provider)
+    {
+        this.provider = provider;
     }
 
     public RSyntaxTextArea getTextArea()
@@ -652,6 +673,18 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     }
 
     /**
+     * Setter for the handler.
+     * Should only be used for reference to the same script handler in different panels. For
+     * instance with the {@link Javascript} block.
+     * 
+     * @param scriptHandler
+     */
+    public void setScriptHandler(ScriptingHandler scriptHandler)
+    {
+        this.scriptHandler = scriptHandler;
+    }
+
+    /**
      * Get the defaut save location.
      * 
      * @return
@@ -988,4 +1021,5 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
         }
     }
+
 }

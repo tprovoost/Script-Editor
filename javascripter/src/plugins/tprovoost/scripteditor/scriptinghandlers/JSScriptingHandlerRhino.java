@@ -658,13 +658,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         for (Completion c : variableCompletions)
             provider.removeCompletion(c);
         variableCompletions.clear();
-        
+
         // functionBlocksToResolve.clear();
         if (DEBUG)
             dumpTree(root, root, 1, "");
 
+        // register external variables prio to detection.
+        // Otherwise, references to external variables will not
+        // be detected.
         addExternalVariables();
-        
+
         // start variable registration
         registerVariables(root, root, s);
 

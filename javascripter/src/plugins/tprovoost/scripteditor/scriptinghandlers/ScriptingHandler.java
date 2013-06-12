@@ -9,6 +9,7 @@ import icy.plugin.abstract_.Plugin;
 import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
+import icy.util.EventUtil;
 
 import java.awt.Color;
 import java.awt.EventQueue;
@@ -725,7 +726,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         for (String s : externalVariables.keySet())
         {
             ScriptVariable sv = externalVariables.get(s);
-            String type = sv.getVariableClassType(0).getClazz().getName();
+            String type = sv.getVariableClassType(0).toString();
             VariableCompletion c = new VariableCompletion(provider, s, type);
             c.setRelevance(RELEVANCE_HIGH);
             variableCompletions.add(c);
@@ -871,26 +872,32 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         switch (e.getKeyCode())
         {
+            case KeyEvent.VK_F:
+                if (EventUtil.isControlDown(e) && EventUtil.isShiftDown(e))
+                {
+                    format();
+                }
+                break;
             case KeyEvent.VK_ENTER:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                 {
                     interpret(false);
                     e.consume();
                     break;
                 }
-                else if (e.isShiftDown())
+                else if (EventUtil.isShiftDown(e))
                 {
                     break;
                 }
                 break;
 
             case KeyEvent.VK_R:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                     interpret(true);
                 break;
 
             case KeyEvent.VK_M:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                 {
                     Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
                     for (String s : bindings.keySet())

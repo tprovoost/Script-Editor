@@ -41,14 +41,14 @@ public class VarScript extends VarString
 
     public void evaluate() throws ScriptException
     {
-        ScriptingHandler handler = getEditor().getScriptHandler();
+        ScriptingHandler handler = getEditor().getPanelIn().getScriptHandler();
         ScriptEngine engine = handler.getEngine();
         handler.eval(engine, getValue());
     }
 
     public ScriptEngine getEngine()
     {
-        return getEditor().getScriptHandler().getEngine();
+        return getEditor().getPanelIn().getScriptHandler().getEngine();
     }
 
     public VarScriptEditorV3 getEditor()

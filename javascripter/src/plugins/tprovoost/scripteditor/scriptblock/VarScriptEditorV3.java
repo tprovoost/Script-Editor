@@ -23,7 +23,6 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.adufour.vars.gui.swing.SwingVarEditor;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 public class VarScriptEditorV3 extends SwingVarEditor<String>
 {
@@ -142,9 +141,14 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
         panelIn.getTextArea().setText(newValue);
     }
 
-    public ScriptingHandler getScriptHandler()
+    public ScriptingPanel getPanelIn()
     {
-        return panelIn.getScriptHandler();
+        return panelIn;
+    }
+
+    public ScriptingPanel getPanelOut()
+    {
+        return panelOut;
     }
 
 }
