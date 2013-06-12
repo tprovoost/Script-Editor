@@ -120,6 +120,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
             return closeAll();
         }
     };
+    private JPanel panelSouth;
 
     public ScriptingEditor()
     {
@@ -286,7 +287,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(scrollpane, BorderLayout.CENTER);
 
-        JPanel panelSouth = new JPanel(new BorderLayout());
+        panelSouth = new JPanel(new BorderLayout());
         panelSouth.add(console, BorderLayout.CENTER);
         panelSouth.add(btnClearConsole, BorderLayout.EAST);
         bottomPanel.add(panelSouth, BorderLayout.SOUTH);
@@ -985,6 +986,14 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
         console.setOutput(consoleOutput);
 
         console.setFont(consoleOutput.getFont());
+
+        if (panelSouth != null)
+        {
+            panelSouth.removeAll();
+            panelSouth.add(console, BorderLayout.CENTER);
+            panelSouth.add(btnClearConsole, BorderLayout.EAST);
+            panelSouth.revalidate();
+        }
     }
 
     @Override

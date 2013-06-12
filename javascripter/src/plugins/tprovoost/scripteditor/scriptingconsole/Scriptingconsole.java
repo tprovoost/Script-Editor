@@ -82,6 +82,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         }
         else if (language.contentEquals("Python"))
         {
+            provider = new IcyCompletionProvider();
             provider.installDefaultCompletions("Python");
             scriptHandler = new PythonScriptingHandler(provider, this, null, false);
         }

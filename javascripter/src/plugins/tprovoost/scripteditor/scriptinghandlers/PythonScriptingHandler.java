@@ -51,7 +51,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         super(provider, "Python", textArea, gutter, autocompilation);
         this.engine = getEngine();
     }
-
+    
     @Override
     public void eval(ScriptEngine engine, String s) throws ScriptException
     {
