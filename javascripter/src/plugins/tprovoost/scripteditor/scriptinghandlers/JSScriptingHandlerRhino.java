@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ import org.mozilla.javascript.ast.AstRoot;
 import org.mozilla.javascript.ast.Block;
 import org.mozilla.javascript.ast.ElementGet;
 import org.mozilla.javascript.ast.ExpressionStatement;
+import org.mozilla.javascript.ast.ForLoop;
 import org.mozilla.javascript.ast.FunctionCall;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.IfStatement;
@@ -99,19 +101,22 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         @Override
         public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
         {
-            Document doc = errorOutput.getDocument();
-            try
+            if (errorOutput != null)
             {
-                Style style = errorOutput.getStyle("warning");
-                if (style == null)
-                    style = errorOutput.addStyle("warning", null);
-                StyleConstants.setForeground(style, Color.blue);
-                String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
-                        + lineOffset + ")";
-                doc.insertString(doc.getLength(), text + "\n", style);
-            }
-            catch (BadLocationException e)
-            {
+                Document doc = errorOutput.getDocument();
+                try
+                {
+                    Style style = errorOutput.getStyle("warning");
+                    if (style == null)
+                        style = errorOutput.addStyle("warning", null);
+                    StyleConstants.setForeground(style, Color.blue);
+                    String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column ("
+                            + lineOffset + ")";
+                    doc.insertString(doc.getLength(), text + "\n", style);
+                }
+                catch (BadLocationException e)
+                {
+                }
             }
         }
 
@@ -162,6 +167,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         @Override
         public void error(String message, String sourceName, int line, String lineSource, int lineOffset)
         {
+            String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
+                    + lineOffset + ")";
+            exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
             if (errorOutput != null)
             {
                 Document doc = errorOutput.getDocument();
@@ -173,9 +181,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                         style = errorOutput.addStyle("error", null);
                         StyleConstants.setForeground(style, Color.red);
                     }
-                    String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column ("
-                            + lineOffset + ")";
-                    exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
                     doc.insertString(doc.getLength(), lastErrortext + "\n", style);
                 }
                 catch (BadLocationException e)
@@ -199,6 +204,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         sun.org.mozilla.javascript.internal.Context context = sun.org.mozilla.javascript.internal.Context.enter();
         context.setApplicationClassLoader(PluginLoader.getLoader());
         context.setErrorReporter(errorReporter);
+        // context.setOptimizationLevel(-1);
         try
         {
             ScriptableObject scriptable = new ImporterTopLevel(context);
@@ -243,8 +249,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
-        HashMap<String, Class<?>> engineFunctions = engineHandler.getEngineFunctions();
-        HashMap<String, Class<?>> engineVariables = engineHandler.getEngineVariables();
+        HashMap<String, VariableType> engineFunctions = engineHandler.getEngineFunctions();
+        HashMap<String, VariableType> engineVariables = engineHandler.getEngineVariables();
 
         // IMPORT PACKAGES
         try
@@ -266,8 +272,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             c.setDefinedIn(mainInterface);
             c.setReturnValueDescription("The focused sequence is returned.");
             c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-            provider.addCompletion(c);
-            engineFunctions.put("getSequence", Sequence.class);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(c, list))
+                provider.addCompletion(c);
+
+            engineFunctions.put("getSequence", new VariableType(Sequence.class));
         }
         catch (ScriptException e)
         {
@@ -281,8 +294,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             c.setDefinedIn(mainInterface);
             c.setShortDescription("Returns the current image viewed in the focused sequence.");
             c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
-            provider.addCompletion(c);
-            engineFunctions.put("getImage", IcyBufferedImage.class);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(c, list))
+                provider.addCompletion(c);
+
+            engineFunctions.put("getImage", new VariableType(IcyBufferedImage.class));
         }
         catch (ScriptException e)
         {
@@ -295,8 +315,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
             vc.setDefinedIn(mainInterface);
             vc.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
-            provider.addCompletion(vc);
-            engineVariables.put("gui", MainInterface.class);
+
+            // check if does not exist already
+            // if not, add it to provider
+            @SuppressWarnings("unchecked")
+            List<Completion> list = provider.getCompletionByInputText("gui");
+            if (list == null || !IcyCompletionProvider.exists(vc, list))
+                provider.addCompletion(vc);
+
+            engineVariables.put("gui", new VariableType(MainInterface.class));
         }
         catch (ScriptException e)
         {
@@ -304,8 +331,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         }
 
         // ADD JS FUNCTIONS
-        engineFunctions.put("importClass", void.class);
-        engineFunctions.put("importPackage", void.class);
+        engineFunctions.put("importClass", new VariableType(void.class));
+        engineFunctions.put("importPackage", new VariableType(void.class));
 
         // IMPORT PLUGINS FUNCTIONS
         try
@@ -404,7 +431,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     public void registerImports()
     {
         String s = textArea.getText();
-        Pattern patternClasses = Pattern.compile("importClass\\((Packages\\.|)((\\w|\\.|\\$)+)\\)");
+        Pattern patternClasses = Pattern.compile("importClass\\(\\s*(Packages\\.|)((\\w|\\.|\\$)+)\\s*\\)");
         Matcher m = patternClasses.matcher(s);
         int offset = 0;
         while (m.find(offset))
@@ -476,6 +503,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     /**
      * Static because of the call in the autocomplete.
+     * FIXME
      * 
      * @param tc
      */
@@ -630,9 +658,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         for (Completion c : variableCompletions)
             provider.removeCompletion(c);
         variableCompletions.clear();
+
         // functionBlocksToResolve.clear();
         if (DEBUG)
             dumpTree(root, root, 1, "");
+
+        // register external variables prio to detection.
+        // Otherwise, references to external variables will not
+        // be detected.
+        addExternalVariables();
 
         // start variable registration
         registerVariables(root, root, s);
@@ -707,6 +741,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     private ArrayList<Completion> generateCompletion(AstNode n, AstRoot root, String text) throws ScriptException
     {
         ArrayList<Completion> toReturn = new ArrayList<Completion>();
+        AstNode expression = null;
         switch (n.getType())
         {
             case Token.VAR:
@@ -724,12 +759,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     // not with Literals.
                     if (target.getType() == Token.NAME)
                     {
-                        Class<?> type = null;
+                        VariableType type = null;
                         if (init != null)
                             type = getRealType(init);
                         String typeString = "";
                         if (type != null)
-                            typeString = IcyCompletionProvider.getType(type, true);
+                            typeString = type.toString();
                         VariableCompletion c = new VariableCompletion(provider, target.getString(), typeString);
                         c.setSummary("variable");
                         c.setDefinedIn("script");
@@ -742,16 +777,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 break;
             case Token.EXPR_VOID:
             case Token.EXPR_RESULT:
-            {
-                AstNode expression = ((ExpressionStatement) n).getExpression();
+                expression = ((ExpressionStatement) n).getExpression();
+                ;
+            case Token.ASSIGN:
+                if (expression == null)
+                    expression = (Assignment) n;
                 if (expression instanceof Assignment)
                 {
                     AstNode left = ((Assignment) expression).getLeft();
                     AstNode right = ((Assignment) expression).getRight();
-                    Class<?> type = getRealType(right);
+                    VariableType type = getRealType(right);
                     String typeString = "";
                     if (type != null)
-                        typeString = IcyCompletionProvider.getType(type, true);
+                        typeString = type.toString();
                     VariableCompletion c = null;
                     if (left.getType() == Token.NAME)
                         c = new VariableCompletion(provider, left.getString(), typeString);
@@ -775,7 +813,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     // Do nothing
                 }
-            }
+
                 break;
 
             case Token.BLOCK:
@@ -817,7 +855,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 fc.setParams(params);
                 fc.setDefinedIn("script");
                 fc.setRelevance(RELEVANCE_HIGH);
-                localFunctions.put(fn.getName(), Void.class);
+                localFunctions.put(fn.getName(), new VariableType(Void.class));
                 toReturn.add(fc);
                 registerVariables(fn.getBody(), root, text);
                 break;
@@ -829,6 +867,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 break;
             case Token.DO:
             case Token.FOR:
+            {
+                ForLoop fl = (ForLoop) n;
+                registerVariables(fl.getInitializer(), root, text);
+            }
             case Token.WHILE:
                 registerVariables(((Loop) n).getBody(), root, text);
                 break;
@@ -845,8 +887,356 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return toReturn;
     }
 
-    private Class<?> resolveCallType(AstNode n, String text, boolean noerror)
+    // 22/03/13 1608
+    private VariableType resolveCallType(AstNode n, String text, boolean noerror)
     {
+        VariableType toReturn = null;
+        ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
+        int offset = n.getAbsolutePosition();
+        String s = buildFunction2(n);
+        // System.out.println(s);
+        boolean containsNew = s.contains("new ");
+        if (containsNew)
+        {
+            s = s.substring("new ".length());
+        }
+
+        // create a regex pattern
+        Pattern p = Pattern.compile("\\w(\\w|\\.|\\[|\\])*\\((\\w|\\.|\\[|,|\\]|\\(|\\)| )*\\)");
+        Matcher match = p.matcher(s);
+
+        int idxP1 = 0;
+        int idxP2;
+        int decal = 0;
+        boolean isField = false;
+        if (match.find(0))
+        {
+            // TODO handle spot.points
+            String firstCall = match.group(0);
+            idxP1 = firstCall.indexOf('(');
+            idxP2 = firstCall.indexOf(')');
+            decal += idxP2 + 1;
+            int lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+            VariableType vt = null;
+
+            // get the className (or binding function name if it is the
+            // case)
+            String classNameOrFunctionNameOrVariable;
+            if (lastDot != -1)
+                classNameOrFunctionNameOrVariable = firstCall.substring(0, lastDot);
+            else if (idxP1 != -1)
+                classNameOrFunctionNameOrVariable = firstCall.substring(0, idxP1);
+            else
+                classNameOrFunctionNameOrVariable = firstCall.substring(0);
+
+            if (classNameOrFunctionNameOrVariable.contains("."))
+            {
+                // is it a class?
+                Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+                if (clazz != null)
+                    vt = new VariableType(clazz);
+                else
+                {
+                    String res[] = classNameOrFunctionNameOrVariable.split("\\.");
+                    classNameOrFunctionNameOrVariable = res[0];
+                    isField = true;
+                    for (int i = 1; i < res.length; ++i)
+                    {
+                        lastDot = classNameOrFunctionNameOrVariable.length() + 1;
+                        decal = classNameOrFunctionNameOrVariable.length() + 1;
+                    }
+                }
+            }
+
+            if (vt == null)
+            {
+                // --------------------------
+                // TEST IF IS FUNCTION BINDED
+                // --------------------------
+                vt = localFunctions.get(classNameOrFunctionNameOrVariable);
+            }
+            if (vt == null)
+            {
+                vt = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions()
+                        .get(classNameOrFunctionNameOrVariable);
+                if (classNameOrFunctionNameOrVariable.contentEquals("println")
+                        || classNameOrFunctionNameOrVariable.contentEquals("print"))
+                    vt = new VariableType(void.class);
+            }
+
+            // -------------------------------------------
+            // IT IS SOMETHING ELSE, PERFORM VARIOUS TESTS
+            // -------------------------------------------
+
+            // is it a script defined variable?
+            if (vt == null)
+                vt = getVariableDeclaration(classNameOrFunctionNameOrVariable, offset);
+
+            // is it an engine variable?
+            if (vt == null)
+                vt = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
+
+            // is it a class?
+            if (vt == null)
+            {
+                Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+                if (clazz != null)
+                    vt = new VariableType(clazz);
+            }
+
+            // unknown type
+            if (vt == null)
+            {
+                System.out.println("Unknown: " + classNameOrFunctionNameOrVariable + " at line: " + n.getLineno());
+                return null;
+            }
+
+            // the first type!
+            Class<?> returnType = vt.getClazz();
+
+            if (returnType == null)
+                return null;
+
+            String call;
+            if (decal < idxP1)
+                call = firstCall.substring(lastDot + 1);
+            else
+                call = firstCall.substring(lastDot + 1, idxP1);
+
+            // FIND THE CORRESPONDING METHOD
+            String genericType = vt.getType();
+            if (lastDot != -1)
+            {
+                if (!isField)
+                {
+                    try
+                    {
+                        // generate the Class<?> arguments
+                        Class<?> clazzes[];
+
+                        // get the arguments
+                        String argsString = firstCall.substring(idxP1 + 1, idxP2);
+
+                        // separate arguments
+                        String[] args = argsString.split(",");
+
+                        if (argsString.isEmpty())
+                        {
+                            clazzes = new Class<?>[0];
+                        }
+                        else
+                        {
+                            clazzes = new Class<?>[args.length];
+                            for (int i = 0; i < clazzes.length; ++i)
+                                clazzes[i] = resolveClassDeclaration(args[i]);
+                            clazzes = getGenericNumberTypes(text, n, vt.getClazz(),
+                                    firstCall.substring(lastDot + 1, idxP1), clazzes);
+                        }
+                        Method m = resolveMethod(returnType, call, clazzes);
+
+                        String genericReturnType = m.getGenericReturnType().toString();
+                        if (Pattern.matches("(\\[*)E", genericReturnType) && !genericType.isEmpty())
+                        {
+                            try
+                            {
+                                // TOOD array
+                                returnType = ClassUtil.findClass(genericType);
+                                genericType = "";
+                            }
+                            catch (ClassNotFoundException e)
+                            {
+                            }
+                        }
+                        else
+                        {
+                            // set the new return type.
+                            returnType = m.getReturnType();
+                            if (returnType.getTypeParameters().length > 0)
+                            {
+                                genericType = VariableType.getType(m.getGenericReturnType().toString());
+                            }
+                        }
+                    }
+                    catch (SecurityException e1)
+                    {
+                    }
+                    catch (NoSuchMethodException e1)
+                    {
+                        try
+                        {
+                            Field f = returnType.getField(call);
+                            returnType = f.getType();
+                        }
+                        catch (SecurityException e)
+                        {
+                        }
+                        catch (NoSuchFieldException e)
+                        {
+                            return null;
+                        }
+                    }
+                }
+                else
+                {
+                    // TODO
+                    // System.out.println("not a method");
+                    Field f;
+                    try
+                    {
+                        String next = firstCall.substring(decal);
+                        next = next.substring(0, next.indexOf('.'));
+                        decal += next.length();
+                        f = returnType.getField(next);
+                        returnType = f.getType();
+                    }
+                    catch (SecurityException e)
+                    {
+                    }
+                    catch (NoSuchFieldException e)
+                    {
+                    }
+                }
+
+            }
+
+            // Create the VariableType containing the result.
+            toReturn = new VariableType(returnType, genericType);
+
+            // Pop the function Block and set its type.
+            IcyFunctionBlock fb = functionBlocksToResolve.pop();
+            fb.setReturnType(toReturn);
+
+            if (DEBUG)
+                System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
+                        + text.substring(offset));
+
+            // Add the function block to the index of blockFunctions.
+            blockFunctions.put(fb.getStartOffset(), fb);
+
+            // iterate over the next functions, based on the returnType
+            while (match.find(decal) && !(firstCall = match.group()).isEmpty())
+            {
+                if (returnType == void.class)
+                {
+                    System.out.println("Void return, impossible to call something else on it. at line:"
+                            + +n.getLineno());
+                }
+                idxP1 = firstCall.indexOf('(');
+                idxP2 = firstCall.indexOf(')');
+                decal += idxP2 + 2; // account for ) and .
+                String argsString = firstCall.substring(idxP1 + 1, idxP2);
+                String[] args = argsString.split(",");
+                Class<?>[] clazzes;
+                if (argsString.isEmpty())
+                {
+                    clazzes = new Class<?>[0];
+                }
+                else
+                {
+                    clazzes = new Class<?>[args.length];
+                    for (int i = 0; i < clazzes.length; ++i)
+                        clazzes[i] = resolveClassDeclaration(args[i]);
+                    lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+                    if (lastDot < 0)
+                    {
+                        lastDot = -1; // in case of new for instance.
+                    }
+                    clazzes = getGenericNumberTypes(text, n, returnType, firstCall.substring(lastDot + 1, idxP1),
+                            clazzes);
+                }
+                String call2;
+                // if (lastDot != -1)
+                // call2 = firstCall.substring(lastDot + 1, idxP1);
+                // else
+                call2 = firstCall.substring(0, idxP1);
+                if (call2.contentEquals("newInstance"))
+                {
+                    try
+                    {
+                        returnType.getConstructor(clazzes);
+                    }
+                    catch (SecurityException e)
+                    {
+                    }
+                    catch (NoSuchMethodException e)
+                    {
+                    }
+                }
+                else
+                {
+                    Method m;
+                    try
+                    {
+                        m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
+                        // Check if the return type is E or [E or [[E, etc. That means that 'E'
+                        // corresponds
+                        // to the previous generic Type.
+                        String genericReturnType = m.getGenericReturnType().toString();
+                        if (Pattern.matches("(\\[*)E", genericReturnType) && !genericType.isEmpty())
+                        {
+                            try
+                            {
+                                // TOOD array
+                                returnType = ClassUtil.findClass(genericType);
+                                genericType = "";
+                            }
+                            catch (ClassNotFoundException e)
+                            {
+                            }
+                        }
+                        else
+                        {
+                            // set the new return type.
+                            returnType = m.getReturnType();
+                            if (returnType.getTypeParameters().length > 0)
+                            {
+                                genericType = VariableType.getType(m.getGenericReturnType().toString());
+                            }
+                        }
+                    }
+                    catch (SecurityException e1)
+                    {
+                    }
+                    catch (NoSuchMethodException e1)
+                    {
+                        try
+                        {
+                            Field f = returnType.getField(call);
+                            returnType = f.getType();
+                        }
+                        catch (SecurityException e)
+                        {
+                        }
+                        catch (NoSuchFieldException e)
+                        {
+                            return null;
+                        }
+                    }
+
+                }
+                if (functionBlocksToResolve.isEmpty())
+                    return null;
+                // get the last function block to resolve and set its type
+                fb = functionBlocksToResolve.pop();
+                toReturn = new VariableType(returnType, genericType);
+                fb.setReturnType(toReturn);
+
+                if (DEBUG)
+                    System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
+                            + text.substring(offset));
+
+                // add the Function Block to the index of blockFunctions.
+                blockFunctions.put(fb.getStartOffset(), fb);
+            }
+            return toReturn;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unused")
+    private VariableType resolveCallTypeOld(AstNode n, String text, boolean noerror)
+    {
+        VariableType toReturn = null;
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
         int offset = n.getAbsolutePosition();
         String s = buildFunction2(n);
@@ -866,69 +1256,189 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         int decal = 0;
         if (match.find(0))
         {
+            // TODO handle spot.points
             String firstCall = match.group(0);
-            try
+            idxP1 = firstCall.indexOf('(');
+            idxP2 = firstCall.indexOf(')');
+            decal += idxP2 + 1;
+            int lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+            VariableType vt = null;
+
+            // get the className (or binding function name if it is the
+            // case)
+            String classNameOrFunctionNameOrVariable;
+            if (lastDot != -1)
+                classNameOrFunctionNameOrVariable = firstCall.substring(0, lastDot);
+            else if (idxP1 != -1)
+                classNameOrFunctionNameOrVariable = firstCall.substring(0, idxP1);
+            else
+                classNameOrFunctionNameOrVariable = firstCall.substring(0);
+
+            if (classNameOrFunctionNameOrVariable.contains("."))
             {
+                // is it a class?
+                Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+                if (clazz != null)
+                    vt = new VariableType(clazz);
+                else
+                {
+                    String res[] = classNameOrFunctionNameOrVariable.split("\\.");
+                    classNameOrFunctionNameOrVariable = res[0];
+                    for (int i = 1; i < res.length; ++i)
+                    {
+                        lastDot = classNameOrFunctionNameOrVariable.length() + 1;
+                        decal = classNameOrFunctionNameOrVariable.length() + 1;
+                    }
+                }
+            }
+
+            // get the arguments
+            String argsString = firstCall.substring(idxP1 + 1, idxP2);
+
+            // separate arguments
+            String[] args = argsString.split(",");
+
+            // --------------------------
+            // TEST IF IS FUNCTION BINDED
+            // --------------------------
+            vt = localFunctions.get(classNameOrFunctionNameOrVariable);
+            if (vt == null)
+            {
+                vt = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions()
+                        .get(classNameOrFunctionNameOrVariable);
+                if (classNameOrFunctionNameOrVariable.contentEquals("println")
+                        || classNameOrFunctionNameOrVariable.contentEquals("print"))
+                    vt = new VariableType(void.class);
+            }
+
+            // -------------------------------------------
+            // IT IS SOMETHING ELSE, PERFORM VARIOUS TESTS
+            // -------------------------------------------
+
+            // is it a script defined variable?
+            if (vt == null)
+                vt = getVariableDeclaration(classNameOrFunctionNameOrVariable, offset);
+
+            // is it an engine variable?
+            if (vt == null)
+                vt = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
+
+            // is it a class?
+            if (vt == null)
+            {
+                Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+                if (clazz != null)
+                    vt = new VariableType(clazz);
+            }
+
+            // unknown type
+            if (vt == null)
+            {
+                System.out.println("Unknown: " + classNameOrFunctionNameOrVariable + " at line: " + n.getLineno());
+                return null;
+            }
+
+            // generate the Class<?> arguments
+            Class<?> clazzes[];
+            if (argsString.isEmpty())
+            {
+                clazzes = new Class<?>[0];
+            }
+            else
+            {
+                clazzes = new Class<?>[args.length];
+                for (int i = 0; i < clazzes.length; ++i)
+                    clazzes[i] = resolveClassDeclaration(args[i]);
+                clazzes = getGenericNumberTypes(text, n, vt.getClazz(), firstCall.substring(lastDot + 1, idxP1),
+                        clazzes);
+            }
+
+            // the first type!
+            Class<?> returnType = vt.getClazz();
+
+            String call;
+            if (decal < idxP1)
+                call = firstCall.substring(lastDot + 1);
+            else
+                call = firstCall.substring(lastDot + 1, idxP1);
+
+            // FIND THE CORRESPONDING METHOD
+            String genericType = vt.getType();
+            if (lastDot != -1)
+            {
+                try
+                {
+                    Method m = resolveMethod(returnType, call, clazzes);
+
+                    String genericReturnType = m.getGenericReturnType().toString();
+                    if (Pattern.matches("(\\[*)E", genericReturnType) && !genericType.isEmpty())
+                    {
+                        try
+                        {
+                            // TOOD array
+                            returnType = ClassUtil.findClass(genericType);
+                            genericType = "";
+                        }
+                        catch (ClassNotFoundException e)
+                        {
+                        }
+                    }
+                    else
+                    {
+                        // set the new return type.
+                        returnType = m.getReturnType();
+                        if (returnType.getTypeParameters().length > 0)
+                        {
+                            genericType = VariableType.getType(m.getGenericReturnType().toString());
+                        }
+                    }
+                }
+                catch (SecurityException e1)
+                {
+                }
+                catch (NoSuchMethodException e1)
+                {
+                    try
+                    {
+                        Field f = returnType.getField(call);
+                        returnType = f.getType();
+                    }
+                    catch (SecurityException e)
+                    {
+                    }
+                    catch (NoSuchFieldException e)
+                    {
+                        return null;
+                    }
+                }
+            }
+            // Create the VariableType containing the result.
+            toReturn = new VariableType(returnType, genericType);
+
+            // Pop the function Block and set its type.
+            IcyFunctionBlock fb = functionBlocksToResolve.pop();
+            fb.setReturnType(toReturn);
+
+            if (DEBUG)
+                System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
+                        + text.substring(offset));
+
+            // Add the function block to the index of blockFunctions.
+            blockFunctions.put(fb.getStartOffset(), fb);
+
+            // iterate over the next functions, based on the returnType
+            while (match.find(decal) && !(firstCall = match.group()).isEmpty())
+            {
+                if (returnType == void.class)
+                {
+                    System.out.println("Void return, impossible to call something else on it. at line:"
+                            + +n.getLineno());
+                }
                 idxP1 = firstCall.indexOf('(');
                 idxP2 = firstCall.indexOf(')');
-                decal += idxP2 + 1;
-                int lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
-                Class<?> clazz = null;
-
-                // get the className (or binding function name if it is the
-                // case)
-                String classNameOrFunctionNameOrVariable;
-                if (lastDot != -1)
-                    classNameOrFunctionNameOrVariable = firstCall.substring(0, lastDot);
-                else
-                    classNameOrFunctionNameOrVariable = firstCall.substring(0, idxP1);
-
-                // get the arguments
-                String argsString = firstCall.substring(idxP1 + 1, idxP2);
-
-                // separate arguments
-                String[] args = argsString.split(",");
-
-                // --------------------------
-                // TEST IF IS FUNCTION BINDED
-                // --------------------------
-                clazz = localFunctions.get(classNameOrFunctionNameOrVariable);
-                if (clazz == null)
-                {
-                    clazz = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions()
-                            .get(classNameOrFunctionNameOrVariable);
-                    if (classNameOrFunctionNameOrVariable.contentEquals("println")
-                            || classNameOrFunctionNameOrVariable.contentEquals("print"))
-                        clazz = void.class;
-                }
-
-                // -------------------------------------------
-                // IT IS SOMETHING ELSE, PERFORM VARIOUS TESTS
-                // -------------------------------------------
-
-                // is it a script defined variable?
-                if (clazz == null)
-                    clazz = getVariableDeclaration(classNameOrFunctionNameOrVariable, offset);
-
-                // is it an engine variable?
-                if (clazz == null)
-                    clazz = engineHandler.getEngineVariables().get(classNameOrFunctionNameOrVariable);
-
-                // is it a class?
-                if (clazz == null)
-                {
-                    clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
-                }
-
-                // unknown type
-                if (clazz == null)
-                {
-                    System.out.println("Unknown: " + classNameOrFunctionNameOrVariable + " at line: " + n.getLineno());
-                    return null;
-                }
-
-                // generate the Class<?> arguments
-                Class<?> clazzes[];
+                decal += idxP2 + 2; // account for ) and .
+                argsString = firstCall.substring(idxP1 + 1, idxP2);
+                args = argsString.split(",");
                 if (argsString.isEmpty())
                 {
                     clazzes = new Class<?>[0];
@@ -938,96 +1448,98 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     clazzes = new Class<?>[args.length];
                     for (int i = 0; i < clazzes.length; ++i)
                         clazzes[i] = resolveClassDeclaration(args[i]);
-                    clazzes = getGenericNumberTypes(text, n, clazz, firstCall.substring(lastDot + 1, idxP1), clazzes);
+                    lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
+                    if (lastDot < 0)
+                    {
+                        lastDot = -1; // in case of new for instance.
+                    }
+                    clazzes = getGenericNumberTypes(text, n, returnType, firstCall.substring(lastDot + 1, idxP1),
+                            clazzes);
                 }
-
-                // the first type!
-                Class<?> returnType = clazz;
-
-                String call = firstCall.substring(lastDot + 1, idxP1);
-                Method m = null;
-                if (lastDot != -1)
+                String call2;
+                // if (lastDot != -1)
+                // call2 = firstCall.substring(lastDot + 1, idxP1);
+                // else
+                call2 = firstCall.substring(0, idxP1);
+                if (call2.contentEquals("newInstance"))
                 {
-                    // Static access to a class
-                    m = resolveMethod(clazz, call, clazzes);
-                    returnType = m.getReturnType();
+                    try
+                    {
+                        returnType.getConstructor(clazzes);
+                    }
+                    catch (SecurityException e)
+                    {
+                    }
+                    catch (NoSuchMethodException e)
+                    {
+                    }
                 }
-                IcyFunctionBlock fb = functionBlocksToResolve.pop();
-                fb.setReturnType(returnType);
-                if (m != null)
-                    fb.setMethod(m);
+                else
+                {
+                    Method m;
+                    try
+                    {
+                        m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
+                        // Check if the return type is E or [E or [[E, etc. That means that 'E'
+                        // corresponds
+                        // to the previous generic Type.
+                        String genericReturnType = m.getGenericReturnType().toString();
+                        if (Pattern.matches("(\\[*)E", genericReturnType) && !genericType.isEmpty())
+                        {
+                            try
+                            {
+                                // TOOD array
+                                returnType = ClassUtil.findClass(genericType);
+                                genericType = "";
+                            }
+                            catch (ClassNotFoundException e)
+                            {
+                            }
+                        }
+                        else
+                        {
+                            // set the new return type.
+                            returnType = m.getReturnType();
+                            if (returnType.getTypeParameters().length > 0)
+                            {
+                                genericType = VariableType.getType(m.getGenericReturnType().toString());
+                            }
+                        }
+                    }
+                    catch (SecurityException e1)
+                    {
+                    }
+                    catch (NoSuchMethodException e1)
+                    {
+                        try
+                        {
+                            Field f = returnType.getField(call);
+                            returnType = f.getType();
+                        }
+                        catch (SecurityException e)
+                        {
+                        }
+                        catch (NoSuchFieldException e)
+                        {
+                            return null;
+                        }
+                    }
+
+                }
+
+                // get the last function block to resolve and set its type
+                fb = functionBlocksToResolve.pop();
+                toReturn = new VariableType(returnType, genericType);
+                fb.setReturnType(toReturn);
+
                 if (DEBUG)
                     System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
                             + text.substring(offset));
+
+                // add the Function Block to the index of blockFunctions.
                 blockFunctions.put(fb.getStartOffset(), fb);
-                // iterate over the next functions, based on the returnType
-                while (match.find(decal) && !(firstCall = match.group()).isEmpty())
-                {
-                    if (returnType == void.class)
-                    {
-                        System.out.println("Void return, impossible to call something else on it. at line:"
-                                + +n.getLineno());
-                    }
-                    idxP1 = firstCall.indexOf('(');
-                    idxP2 = firstCall.indexOf(')');
-                    decal += idxP2 + 2; // account for ) and .
-                    argsString = firstCall.substring(idxP1 + 1, idxP2);
-                    args = argsString.split(",");
-                    if (argsString.isEmpty())
-                    {
-                        clazzes = new Class<?>[0];
-                    }
-                    else
-                    {
-                        clazzes = new Class<?>[args.length];
-                        for (int i = 0; i < clazzes.length; ++i)
-                            clazzes[i] = resolveClassDeclaration(args[i]);
-                        lastDot = firstCall.substring(0, idxP1).lastIndexOf('.');
-                        if (lastDot < 0)
-                        {
-                            lastDot = -1; // in case of new for instance.
-                        }
-                        clazzes = getGenericNumberTypes(text, n, returnType, firstCall.substring(lastDot + 1, idxP1),
-                                clazzes);
-                    }
-                    String call2;
-                    // if (lastDot != -1)
-                    // call2 = firstCall.substring(lastDot + 1, idxP1);
-                    // else
-                    call2 = firstCall.substring(0, idxP1);
-                    if (call2.contentEquals("newInstance"))
-                    {
-                        clazz.getConstructor(clazzes);
-                    }
-                    else
-                    {
-                        m = resolveMethod(returnType, firstCall.substring(0, idxP1), clazzes);
-                        returnType = m.getReturnType();
-                    }
-                    fb = functionBlocksToResolve.pop();
-                    fb.setReturnType(returnType);
-                    if (m != null)
-                        fb.setMethod(m);
-                    if (DEBUG)
-                        System.out.println("function edited: (" + (fb.getStartOffset() + n.getPosition()) + ") "
-                                + text.substring(offset));
-                    blockFunctions.put(fb.getStartOffset(), fb);
-                }
-                return returnType;
             }
-            catch (SecurityException e)
-            {
-            }
-            catch (NoSuchMethodException e)
-            {
-                String message = e.getLocalizedMessage();
-                int line = n.getLineno();
-                System.out.println("Var Detection: no such method: " + message + " at line " + line);
-                org.mozilla.javascript.EvaluatorException exception = new org.mozilla.javascript.EvaluatorException(
-                        message, "", line);
-                ignoredLines.put(line - 1, exception);
-                updateGutter();
-            }
+            return toReturn;
         }
         return null;
     }
@@ -1189,7 +1701,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         if (type == Token.NAME)
         {
             String varname = node.getString();
-            return getVariableDeclaration(varname, node.getAbsolutePosition());
+            VariableType clazz = getVariableDeclaration(varname, node.getAbsolutePosition());
+            return clazz == null ? null : clazz.getClazz();
         }
         else if (type == Token.GETELEM)
         {
@@ -1247,7 +1760,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         return clazz.getMethod(name, parameterTypes);
     }
 
-    protected void addVariableDeclaration(String name, Class<?> type, int offset)
+    protected void addVariableDeclaration(String name, VariableType type, int offset)
     {
         ScriptVariable vc = localVariables.get(name);
         if (vc == null)
@@ -1259,7 +1772,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
     }
 
     // TODO use for variables with Token.VAR variables.
-    protected void addVariableDeclaration(String name, Class<?> type, int offsetBegin, int offsetEnd)
+    protected void addVariableDeclaration(String name, VariableType type, int offsetBegin, int offsetEnd)
     {
         ScriptVariable vc = localVariables.get(name);
         if (vc == null)
@@ -1312,8 +1825,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
     // FIXME
     /**
-     * This is a workaround on functions and their Java equivalent. However, this doesn't work
-     * properly, as those Classes have different methods.
+     * This is a workaround for JS functions and their Java equivalent. However, this doesn't work
+     * properly, as those Classes have different methods (Java String and JS String have different
+     * methods).
      * 
      * @param type
      * @return
@@ -1582,9 +2096,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 {
                     if (i != 0)
                         args += ",";
-                    Class<?> typeC = getRealType(arg);
-                    if (typeC != null)
-                        args += typeC.getName();
+                    VariableType typeC = getRealType(arg);
+                    if (typeC != null && typeC.getClazz() != null)
+                        args += typeC.getClazz().getName();
                     else
                         args += "unknown";
                     i++;
@@ -1660,7 +2174,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
      * @return
      * @throws ScriptException
      */
-    public Class<?> getRealType(AstNode n)
+    public VariableType getRealType(AstNode n)
     {
         if (n == null)
             return null;
@@ -1669,27 +2183,27 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
             case Token.ADD:
                 // test if string
                 InfixExpression expr = (InfixExpression) n;
-                Class<?> typeLeft = getRealType(expr.getLeft());
-                Class<?> typeRight = getRealType(expr.getRight());
-                if (typeLeft == String.class || typeRight == String.class)
-                    return String.class;
+                VariableType typeLeft = getRealType(expr.getLeft());
+                VariableType typeRight = getRealType(expr.getRight());
+                if ((typeLeft != null && typeLeft.getClazz() == String.class)
+                        || (typeRight != null && typeRight.getClazz() == String.class))
+                    return new VariableType(String.class);
             case Token.DIV:
             case Token.SUB:
             case Token.MUL:
             case Token.NUMBER:
-                return Number.class;
+                return new VariableType(Number.class);
             case Token.STRING:
-                return String.class;
+                return new VariableType(String.class);
             case Token.TRUE:
             case Token.FALSE:
-                return boolean.class;
+                return new VariableType(boolean.class);
             case Token.NAME:
                 return getVariableDeclaration(n.getString(), n.getAbsolutePosition());
             case Token.CALL:
-                Class<?> res = resolveCallType(n, currentText, false);
-                return res;
+                return resolveCallType(n, currentText, false);
             case Token.FUNCTION:
-                return Void.class;
+                return new VariableType(Void.class);
             case Token.GETPROP:
             {
                 // class wanted
@@ -1701,7 +2215,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     // Class<?> clazz = resolveArrayItemTypeComponent(target);
                     // clazz = createArrayItemType(clazz, target);
                     if (rightStr.contentEquals("length"))
-                        return int.class;
+                        return new VariableType(int.class);
                 }
                 else
                 {
@@ -1709,19 +2223,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                     String className = generateClassName(n, "");
                     Class<?> clazz = resolveClassDeclaration(className);
                     if (clazz != null)
-                        return clazz;
+                        return new VariableType(clazz);
                     // try if it is an enum
                     int idx = className.lastIndexOf('.');
                     if (idx != -1)
                     {
                         clazz = resolveClassDeclaration(className.substring(0, idx));
-                        return clazz;
+                        return clazz == null ? null : new VariableType(clazz);
                     }
                 }
                 break;
             }
             case Token.ARRAYLIT:
-                return Object[].class;
+                return new VariableType(Object[].class);
             case Token.NEW:
             {
                 NewExpression nexp = (NewExpression) n;
@@ -1729,7 +2243,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 if (target != null)
                 {
                     String className = generateClassName(target, "");
-                    return resolveClassDeclaration(className);
+                    Class<?> clazz = resolveClassDeclaration(className);
+                    return clazz == null ? null : new VariableType(clazz);
                 }
             }
             case Token.GETELEM:
@@ -1741,7 +2256,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
                 Class<?> clazz = resolveArrayItemTypeComponent(target);
                 if (clazz != null)
                     clazz = createArrayItemType(clazz, target);
-                return clazz;
+                return clazz == null ? null : new VariableType(clazz);
             }
         }
         return null;
@@ -2141,7 +2656,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
          * This formatter uses beautify.js by Einar Lielmanis, <einar@jsbeautifier.org>
          * http://jsbeautifier.org/
          */
-        InputStream is = PluginLoader.getResourceAsStream("plugins/tprovoost/scripteditor/resources/beautify.js");
+        InputStream is = PluginLoader
+                .getResourceAsStream("plugins/tprovoost/scripteditor/resources/beautify/beautify.js");
         Reader reader = new BufferedReader(new InputStreamReader(is));
         Context context = Context.enter();
         context.setLanguageVersion(Context.VERSION_1_6);
@@ -2211,6 +2727,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
         Object result = fct.call(context, scope, scope, new Object[] {textArea.getText(), properties});
 
         String finalText = result.toString();
+        int caretPos = textArea.getCaretPosition();
         textArea.setText(finalText);
+        if (caretPos > 0 && caretPos < finalText.length())
+            textArea.setCaretPosition(caretPos);
     }
 }

@@ -9,6 +9,7 @@ import icy.plugin.abstract_.Plugin;
 import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
+import icy.util.EventUtil;
 
 import java.awt.Color;
 import java.awt.EventQueue;
@@ -98,8 +99,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     /** Contains all declared variables in the script. */
     protected HashMap<String, ScriptVariable> localVariables;
 
+    protected HashMap<String, ScriptVariable> externalVariables = new HashMap<String, ScriptVariable>();
+
     /** Contains all declared variables in the script. */
-    protected HashMap<String, Class<?>> localFunctions = new HashMap<String, Class<?>>();
+    protected HashMap<String, VariableType> localFunctions = new HashMap<String, VariableType>();
 
     /** Contains all declared importPackages in the script. */
     protected ArrayList<String> scriptDeclaredImports = new ArrayList<String>();
@@ -281,7 +284,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         }
     }
 
-    public HashMap<String, Class<?>> getLocalFunctions()
+    public HashMap<String, VariableType> getLocalFunctions()
     {
         return localFunctions;
     }
@@ -296,13 +299,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         return blockFunctions;
     }
 
+    public HashMap<String, ScriptVariable> getExternalVariables()
+    {
+        return externalVariables;
+    }
+
     /**
      * Get the variable type.
      * 
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name)
+    public VariableType getVariableDeclaration(String name)
     {
         return getVariableDeclaration(name, textArea.getCaretPosition());
     }
@@ -315,7 +323,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * @param name
      * @return
      */
-    public Class<?> getVariableDeclaration(String name, int offset)
+    public VariableType getVariableDeclaration(String name, int offset)
     {
         boolean isArray = name.contains("[");
         String originalName = name;
@@ -326,20 +334,23 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         ScriptVariable sv = localVariables.get(name);
         if (sv == null)
             return null;
-        Class<?> type = sv.getVariableClassType(offset);
+        VariableType type = sv.getVariableClassType(offset);
+        Class<?> typeC = null;
         if (type == null)
         {
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
             type = engineHandler.getEngineVariables().get(name);
         }
         if (type != null)
+            typeC = type.getClazz();
+        if (typeC != null)
         {
             if (isArray)
             {
                 int occ = originalName.split("\\[").length - 1;
                 for (int i = 0; i < occ; ++i)
                 {
-                    type = type.getComponentType();
+                    typeC = typeC.getComponentType();
                 }
             }
             // else if (type.getTypeParameters().length > 0)
@@ -351,7 +362,14 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             // }
             // }
         }
-        return type;
+        if (type != null)
+        {
+            VariableType vt = new VariableType(typeC);
+            vt.setType(type.getType());
+            return vt;
+
+        }
+        return new VariableType((Class<?>) typeC);
     }
 
     public abstract void installDefaultLanguageCompletions(String language) throws ScriptException;
@@ -703,6 +721,19 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         }
     }
 
+    protected void addExternalVariables()
+    {
+        for (String s : externalVariables.keySet())
+        {
+            ScriptVariable sv = externalVariables.get(s);
+            String type = sv.getVariableClassType(0).toString();
+            VariableCompletion c = new VariableCompletion(provider, s, type);
+            c.setRelevance(RELEVANCE_HIGH);
+            variableCompletions.add(c);
+        }
+        localVariables.putAll(externalVariables);
+    }
+
     @SuppressWarnings("unchecked")
     private synchronized void clearScriptVariables()
     {
@@ -751,7 +782,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 // errorOutput.append(str + "\n");
                 // errorOutput.append("New Engine created" + "\n");
                 // errorOutput.append(str + "\n");
-                errorOutput.setText("");
+                if (PreferencesWindow.getPreferencesWindow().isAutoClearOutputEnabled())
+                {
+                    errorOutput.setText("");
+                }
                 // g.dispose();
             }
             ScriptEngine engine = createNewEngine();
@@ -778,6 +812,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         ScriptEngine engine = getEngine();
         if (engine != null)
         {
+            // remove everything from current engine
+            clearEngine(engine);
+
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
             ArrayList<Method> functions = engineHandler.getFunctions();
             String newEngineType = ScriptEngineHandler.getLanguageName(engine.getFactory());
@@ -794,6 +831,16 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             engine.getContext().setErrorWriter(pw);
         }
         return engine;
+    }
+
+    private void clearEngine(ScriptEngine engine)
+    {
+        Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
+        for (String s : bindings.keySet())
+        {
+            bindings.put(s, null);
+        }
+        System.gc();
     }
 
     /**
@@ -817,6 +864,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     @Override
     public void keyTyped(KeyEvent e)
     {
+        // System.out.println("coucou");
     }
 
     @Override
@@ -824,25 +872,32 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         switch (e.getKeyCode())
         {
+            case KeyEvent.VK_F:
+                if (EventUtil.isControlDown(e) && EventUtil.isShiftDown(e))
+                {
+                    format();
+                }
+                break;
             case KeyEvent.VK_ENTER:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                 {
                     interpret(false);
                     e.consume();
                     break;
                 }
-                else if (e.isShiftDown())
+                else if (EventUtil.isShiftDown(e))
                 {
                     break;
                 }
+                break;
 
             case KeyEvent.VK_R:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                     interpret(true);
                 break;
 
             case KeyEvent.VK_M:
-                if (e.isControlDown())
+                if (EventUtil.isControlDown(e))
                 {
                     Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
                     for (String s : bindings.keySet())
@@ -1075,7 +1130,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
         public AutoVerify()
         {
-            timer = new Timer(2000, this);
+            timer = new Timer(1000, this);
             timer.setRepeats(false);
         }
 
@@ -1113,6 +1168,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void changedUpdate(DocumentEvent e)
         {
             lastChange = true;
+            // System.out.println("changedUpdate");
             if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
                 timer.restart();
         }
@@ -1121,7 +1177,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         public void actionPerformed(ActionEvent e)
         {
             lastChange = false;
-            interpret(textArea.getText());
+            interpret(false);
         }
 
         @Override
@@ -1209,6 +1265,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 engineHandler.getEngineDeclaredImportClasses().addAll(scriptDeclaredImportClasses);
                 engineHandler.getEngineDeclaredImports().addAll(scriptDeclaredImports);
                 BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
+                frame.setEngine(evalEngine);
                 frame.update();
             }
             catch (ThreadDeath td)

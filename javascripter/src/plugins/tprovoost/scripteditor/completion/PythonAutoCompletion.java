@@ -1,5 +1,8 @@
 package plugins.tprovoost.scripteditor.completion;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import icy.util.ClassUtil;
 
 import javax.swing.text.Document;
@@ -19,7 +22,7 @@ public class PythonAutoCompletion extends IcyAutoCompletion
     {
         super(provider);
     }
-    
+
     @Override
     protected String getReplacementText(Completion c, Document doc, int start, int len)
     {
@@ -142,11 +145,29 @@ public class PythonAutoCompletion extends IcyAutoCompletion
             else
                 resultingImport += "as " + packageName;
         }
-        // resultingImport += "\n";
+        resultingImport += "\n";
 
         // add at the beginning
-        tc.setText(resultingImport + "\n" + tc.getText());
+        tc.setText(resultingImport + tc.getText());
         return resultingImport;
+    }
+
+    @Override
+    public boolean classAlreadyImported(String neededClass)
+    {
+        String text = getTextComponent().getText();
+
+        // test if contains the class or if contains the importPackage enclosing
+        // the class
+        Pattern p = Pattern.compile("from\\s" + ClassUtil.getPackageName(neededClass) + "\\simport\\s" + ClassUtil.getSimpleClassName(neededClass));
+        Matcher m = p.matcher(text);        
+        if (m.find()) {
+            return true;
+        }
+        // Do more tests?
+        
+        // Not found by default.
+        return false;
     }
 
 }

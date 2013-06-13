@@ -47,6 +47,7 @@ import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 
 public class IcyCompletionProvider extends DefaultCompletionProvider
 {
@@ -141,7 +142,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
     {
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
-        HashMap<String, Class<?>> listFunction = engineHandler.getEngineFunctions();
+        HashMap<String, VariableType> listFunction = engineHandler.getEngineFunctions();
         HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
 
         ArrayList<String> clazzes;
@@ -197,7 +198,15 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         addCompletion(new BasicJavaClassCompletion(this, clazz));
 
                     if (listFunction != null)
-                        listFunction.put(sfc.getMethodCall().substring("packages.".length()), method.getReturnType());
+                    {
+                        Class<?> returnType = method.getReturnType();
+                        if (VariableType.isGeneric(returnType))
+                            listFunction.put(sfc.getMethodCall().substring("packages.".length()), new VariableType(
+                                    returnType, VariableType.getType(method.getGenericReturnType().toString())));
+                        else
+                            listFunction.put(sfc.getMethodCall().substring("packages.".length()), new VariableType(
+                                    returnType));
+                    }
                     if (engineTypesMethod != null)
                     {
                         ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
@@ -478,7 +487,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         int lastIdx = text.lastIndexOf('.');
 
         ScriptEngineHandler engineHandler = ScriptEngineHandler.getLastEngineHandler();
-        HashMap<String, Class<?>> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
+        HashMap<String, VariableType> engineVariables = ScriptEngineHandler.getLastEngineHandler().getEngineVariables();
 
         // Cannot work directly because returns null on the provider.
         HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = engineHandler.getEngineTypesMethod();
@@ -648,14 +657,15 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            populateClassTypes(clazz, text, retVal, true);
+                            populateClassTypes(new VariableType(clazz), text, retVal, true);
                         }
                     }
 
                     // check in the local variables if it is a variable
                     // if it is : propose depending on the variable type
-                    if ((clazz = handler.getVariableDeclaration(command)) != null
-                            || (clazz = engineVariables.get(command)) != null)
+                    VariableType type = handler.getVariableDeclaration(command);
+                    if ((type != null && type.getClazz() != null)
+                            || ((type = engineVariables.get(command)) != null && type.getClazz() != null))
                     {
                         // ----------------------------
                         // VARIABLE ACCESS
@@ -677,7 +687,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         }
                         else
                         {
-                            populateClassTypes(clazz, text, retVal);
+                            populateClassTypes(type, text, retVal);
                         }
                     }
                     else
@@ -693,8 +703,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
                         IcyFunctionBlock fb = localFunctions.get(startOffset);
                         if (fb != null)
                         {
-                            // TODO With Type instead of clazz
-                            clazz = fb.getReturnType();
+                            clazz = fb.getReturnType().getClazz();
                             methods = engineTypesMethod.get(clazz);
                             if (methods != null && !advanced)
                             {
@@ -768,18 +777,23 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
     }
 
-    private void populateClassTypes(Class<?> type, String text, List<Completion> retVal)
+    private void populateClassTypes(VariableType type, String text, List<Completion> retVal)
     {
         populateClassTypes(type, null, text, retVal, false);
     }
 
-    private void populateClassTypes(Class<?> type, String text, List<Completion> retVal, boolean staticOnly)
+    private void populateClassTypes(VariableType type, String text, List<Completion> retVal, boolean staticOnly)
     {
         populateClassTypes(type, null, text, retVal, staticOnly);
     }
 
-    private void populateClassTypes(Class<?> type, Type t, String text, List<Completion> retVal, boolean staticOnly)
+    private void populateClassTypes(VariableType type2, Type t, String text, List<Completion> retVal, boolean staticOnly)
     {
+        Class<?> type = type2.getClazz();
+        if (type == null)
+        {
+            return;
+        }
         if (!Modifier.isPublic(type.getModifiers()))
             return;
         ArrayList<Completion> listFields = new ArrayList<Completion>();
@@ -840,7 +854,15 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             // continue;
             if (!staticOnly)
             {
-                ScriptFunctionCompletion fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                ScriptFunctionCompletion fc;
+                if (Pattern.matches("(\\[*)E", m.getGenericReturnType().toString()))
+                {
+                    fc = new ScriptFunctionCompletion(this, m.getName(), m, type2);
+                }
+                else
+                {
+                    fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                }
                 if (Modifier.isStatic(mod))
                     fc.setRelevance(ScriptingHandler.RELEVANCE_LOW);
                 else
@@ -865,7 +887,15 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
             }
             else if (Modifier.isStatic(mod))
             {
-                ScriptFunctionCompletion fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                ScriptFunctionCompletion fc;
+                if (Pattern.matches("(\\[*)E", m.getGenericReturnType().toString()))
+                {
+                    fc = new ScriptFunctionCompletion(this, m.getName(), m, type2);
+                }
+                else
+                {
+                    fc = new ScriptFunctionCompletion(this, m.getName(), m);
+                }
                 fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
 
                 // TODO relevance assignment = type / expr = void

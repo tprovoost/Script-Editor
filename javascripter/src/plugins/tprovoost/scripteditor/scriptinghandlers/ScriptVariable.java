@@ -6,12 +6,21 @@ public class ScriptVariable
 {
     private ArrayList<ScriptVariableScope> variableScopes = new ArrayList<ScriptVariableScope>();
 
-    public void addType(int offsetBegin, Class<?> returnType)
+    public ScriptVariable()
+    {
+    }
+
+    public ScriptVariable(VariableType returnType)
+    {
+        addType(0, returnType);
+    }
+
+    public void addType(int offsetBegin, VariableType returnType)
     {
         addType(offsetBegin, -1, returnType);
     }
 
-    public void addType(int offsetBegin, int offsetEnd, Class<?> returnType)
+    public void addType(int offsetBegin, int offsetEnd, VariableType returnType)
     {
         if (!variableScopes.isEmpty())
         {
@@ -22,22 +31,22 @@ public class ScriptVariable
         variableScopes.add(new ScriptVariableScope(offsetBegin, offsetEnd, returnType));
     }
 
-    public Class<?> getVariableClassType(int offset)
+    public VariableType getVariableClassType(int offset)
     {
         for (ScriptVariableScope svc : variableScopes)
         {
-            Class<?> clazz = svc.getType(offset);
-            if (clazz != null)
-                return clazz;
+            VariableType type = svc.getType(offset);
+            if (type != null)
+                return type;
         }
         return null;
     }
 
-    public Class<?> getVariableLastClassType()
+    public VariableType getVariableLastClassType()
     {
         if (!variableScopes.isEmpty())
         {
-            return variableScopes.get(variableScopes.size() - 1).cType;
+            return variableScopes.get(variableScopes.size() - 1).type;
         }
         return null;
     }
@@ -46,22 +55,26 @@ public class ScriptVariable
     {
         private int declarationOffset;
         private int endScopeOffset;
-        private Class<?> cType;
+        private VariableType type;
 
-        // private Type type;
-
+        @SuppressWarnings("unused")
         public ScriptVariableScope(int declarationOffset, int endScopeOffset, Class<?> type)
+        {
+            this(declarationOffset, endScopeOffset, new VariableType(type));
+        }
+
+        public ScriptVariableScope(int declarationOffset, int endScopeOffset, VariableType type)
         {
             this.declarationOffset = declarationOffset;
             this.endScopeOffset = endScopeOffset;
-            this.cType = type;
+            this.type = type;
             variableScopes.add(this);
         }
 
-        public Class<?> getType(int offset)
+        public VariableType getType(int offset)
         {
             if (offset >= declarationOffset && (endScopeOffset == -1 || offset < endScopeOffset))
-                return cType;
+                return type;
             return null;
         }
     }

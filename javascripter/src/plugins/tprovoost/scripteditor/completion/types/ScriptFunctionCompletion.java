@@ -24,6 +24,7 @@ import org.fife.ui.autocomplete.CompletionProvider;
 
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
+import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 
 public class ScriptFunctionCompletion extends JavaFunctionCompletion
 {
@@ -44,6 +45,12 @@ public class ScriptFunctionCompletion extends JavaFunctionCompletion
     {
         super(provider, name, method.getReturnType().isArray() ? method.getReturnType().getCanonicalName() : method
                 .getReturnType().getName());
+        this.method = method;
+    }
+    
+    public ScriptFunctionCompletion(CompletionProvider provider, String name, Method method, VariableType type)
+    {
+        super(provider, name, type.getType());
         this.method = method;
     }
 

@@ -269,6 +269,8 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener
         if (searchOrReplaceFromHere(replace, forward))
             return true;
         RSyntaxTextArea textArea = getTextArea();
+        if (textArea == null)
+            return false;
         int caret = textArea.getCaretPosition();
         textArea.setCaretPosition(forward ? 0 : textArea.getDocument().getLength());
         if (searchOrReplaceFromHere(replace, forward))

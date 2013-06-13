@@ -3,9 +3,11 @@ package plugins.tprovoost.scripteditor.scriptblock;
 import icy.plugin.abstract_.Plugin;
 import icy.roi.ROI;
 import icy.sequence.Sequence;
+import icy.system.thread.ThreadUtil;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
@@ -14,18 +16,21 @@ import javax.script.ScriptException;
 
 import plugins.adufour.blocks.lang.Block;
 import plugins.adufour.blocks.util.VarList;
+import plugins.adufour.blocks.util.VarListListener;
 import plugins.adufour.vars.gui.model.TypeSelectionModel;
 import plugins.adufour.vars.gui.model.ValueSelectionModel;
 import plugins.adufour.vars.lang.Var;
-import plugins.adufour.vars.lang.VarMutable;
 import plugins.adufour.vars.lang.VarString;
 import plugins.adufour.vars.lang.VarTrigger;
+import plugins.adufour.vars.util.TypeChangeListener;
 import plugins.adufour.vars.util.VarReferencingPolicy;
 import plugins.tprovoost.scripteditor.scriptblock.vartransformer.JSScriptBlock;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 
-public class Javascript extends Plugin implements Block
+public class Javascript extends Plugin implements Block, VarListListener
 {
     ArrayList<String> languagesInstalled = new ArrayList<String>();
 
@@ -38,6 +43,10 @@ public class Javascript extends Plugin implements Block
 
     private int inputIdx = 0;
     private int outputIdx = 0;
+
+    private VarTrigger triggerInput;
+
+    private VarTrigger triggerOutput;
 
     public Javascript()
     {
@@ -54,7 +63,7 @@ public class Javascript extends Plugin implements Block
     @Override
     public void run()
     {
-        ScriptingHandler handler = inputScript.getEditor().getScriptHandler();
+        ScriptingHandler handler = inputScript.getEditor().getPanelIn().getScriptHandler();
         ScriptEngine engine = handler.createNewEngine();
         // String language = inputScript.getEditor().panelIn.getLanguage();
 
@@ -88,60 +97,86 @@ public class Javascript extends Plugin implements Block
     }
 
     @Override
-    public void declareInput(final VarList inputMap)
+    public void declareInput(VarList inputMap)
     {
         if (this.inputMap == null)
             this.inputMap = inputMap;
-        final VarTrigger triggerInput = new VarTrigger("Add Input", new VarTrigger.TriggerListener()
+        inputMap.addVarListListener(this);
+        triggerInput = new VarTrigger("Add Input", new VarTrigger.TriggerListener()
         {
 
             @Override
             public void valueChanged(Var<Integer> source, Integer oldValue, Integer newValue)
             {
+                registerVariables();
             }
 
             @Override
             public void referenceChanged(Var<Integer> source, Var<? extends Integer> oldReference,
                     Var<? extends Integer> newReference)
             {
+                registerVariables();
             }
 
             @Override
             public void triggered(VarTrigger source)
             {
-                String name = "input" + inputIdx++;
-                VarMutable myVariable = new VarMutable(name, Object.class);
+                String name = "input" + inputIdx;
+                VarMutableScript myVariable = new VarMutableScript(name, Object.class);
                 myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] {Object.class, Object[].class,
                         Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class,
                         String.class, File.class, File[].class}));
-                inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                myVariable.addTypeChangeListener(new TypeChangeListener()
+                {
+
+                    @Override
+                    public void typeChanged(Object source, Class<?> oldType, Class<?> newType)
+                    {
+                        registerVariables();
+                    }
+                });
+                Javascript.this.inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                registerVariables();
+
             }
         });
         triggerInput.setReferencingPolicy(VarReferencingPolicy.NONE);
 
-        final VarTrigger triggerOutput = new VarTrigger("Add output", new VarTrigger.TriggerListener()
+        triggerOutput = new VarTrigger("Add output", new VarTrigger.TriggerListener()
         {
 
             @Override
             public void valueChanged(Var<Integer> source, Integer oldValue, Integer newValue)
             {
+                registerVariables();
             }
 
             @Override
             public void referenceChanged(Var<Integer> source, Var<? extends Integer> oldReference,
                     Var<? extends Integer> newReference)
             {
+                registerVariables();
             }
 
             @Override
             public void triggered(VarTrigger source)
             {
-                String name = "output" + outputIdx++;
-                VarMutable myVariable = new VarMutable(name, Object.class);
+                String name = "output" + outputIdx;
+                VarMutableScript myVariable = new VarMutableScript(name, Object.class);
                 myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] {Object.class, Object[].class,
                         Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class,
                         String.class, File.class, File[].class}));
+                myVariable.addTypeChangeListener(new TypeChangeListener()
+                {
+
+                    @Override
+                    public void typeChanged(Object source, Class<?> oldType, Class<?> newType)
+                    {
+                        registerVariables();
+                    }
+                });
                 outputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+                registerVariables();
             }
         });
         triggerOutput.setReferencingPolicy(VarReferencingPolicy.NONE);
@@ -152,11 +187,20 @@ public class Javascript extends Plugin implements Block
         inputMap.add(triggerInput);
         inputMap.add(triggerOutput);
 
-        String name = "input" + inputIdx++;
-        VarMutable myVariable = new VarMutable(name, Object.class);
+        String name = "input" + inputIdx;
+        VarMutableScript myVariable = new VarMutableScript(name, Object.class);
         myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] {Object.class, Object[].class,
                 Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class,
                 File.class, File[].class}));
+        myVariable.addTypeChangeListener(new TypeChangeListener()
+        {
+
+            @Override
+            public void typeChanged(Object source, Class<?> oldType, Class<?> newType)
+            {
+                registerVariables();
+            }
+        });
         inputMap.add(name, myVariable);
     }
 
@@ -164,13 +208,74 @@ public class Javascript extends Plugin implements Block
     public void declareOutput(final VarList outputMap)
     {
         this.outputMap = outputMap;
+        outputMap.addVarListListener(this);
         String name = "output" + outputIdx;
-        VarMutable myVariable = new VarMutable(name, Object.class);
+        VarMutableScript myVariable = new VarMutableScript(name, Object.class);
         myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] {Object.class, Object[].class,
                 Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class,
                 File.class, File[].class}));
+        myVariable.addTypeChangeListener(new TypeChangeListener()
+        {
+
+            @Override
+            public void typeChanged(Object source, Class<?> oldType, Class<?> newType)
+            {
+                registerVariables();
+            }
+        });
         outputMap.add(name, myVariable);
-        outputIdx++;
+        registerVariables();
     }
 
+    private void registerVariables()
+    {
+        final ScriptingHandler handlerIn = inputScript.getEditor().getPanelIn().getScriptHandler();
+        final ScriptingHandler handlerOut = inputScript.getEditor().getPanelOut().getScriptHandler();
+
+        HashMap<String, ScriptVariable> variablesInt = handlerIn.getExternalVariables();
+        HashMap<String, ScriptVariable> variablesExt = handlerOut.getExternalVariables();
+
+        variablesInt.clear();
+        variablesExt.clear();
+        for (Var<?> v : inputMap)
+        {
+            if (v instanceof VarMutableScript)
+            {
+                variablesInt.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+                variablesExt.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+            }
+        }
+        for (Var<?> v : outputMap)
+        {
+            if (v instanceof VarMutableScript)
+            {
+                variablesInt.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+                variablesExt.put(v.getName(), new ScriptVariable(new VariableType(v.getType())));
+            }
+        }
+        ThreadUtil.invokeLater(new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                handlerIn.interpret(false);
+                handlerOut.interpret(false);
+            }
+        });
+    }
+
+    @Override
+    public void variableAdded(VarList list, Var<?> variable)
+    {
+        if (list == inputMap && variable != triggerInput && variable != inputScript && variable != triggerOutput)
+            inputIdx++;
+        else if (list == outputMap)
+            outputIdx++;
+    }
+
+    @Override
+    public void variableRemoved(VarList list, Var<?> variable)
+    {
+    }
 }

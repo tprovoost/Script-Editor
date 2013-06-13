@@ -15,6 +15,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -47,8 +49,8 @@ public class ScriptEngineHandler implements PluginInstallerListener
     /*
      * ------------ non static ------------
      */
-    private HashMap<String, Class<?>> engineVariables = new HashMap<String, Class<?>>();
-    private HashMap<String, Class<?>> engineFunctions = new HashMap<String, Class<?>>();
+    private HashMap<String, VariableType> engineVariables = new HashMap<String, VariableType>();
+    private HashMap<String, VariableType> engineFunctions = new HashMap<String, VariableType>();
     private ArrayList<String> engineDeclaredImports = new ArrayList<String>();
     private ArrayList<String> engineDeclaredImportClasses = new ArrayList<String>();
     private HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>> engineTypesMethod = new HashMap<Class<?>, ArrayList<ScriptFunctionCompletion>>();;
@@ -119,12 +121,12 @@ public class ScriptEngineHandler implements PluginInstallerListener
         return engineDeclaredImports;
     }
 
-    public HashMap<String, Class<?>> getEngineFunctions()
+    public HashMap<String, VariableType> getEngineFunctions()
     {
         return engineFunctions;
     }
 
-    public HashMap<String, Class<?>> getEngineVariables()
+    public HashMap<String, VariableType> getEngineVariables()
     {
         return engineVariables;
     }
@@ -245,7 +247,16 @@ public class ScriptEngineHandler implements PluginInstallerListener
             sfc.setRelevance(2);
 
             if (engineFunctions != null)
-                engineFunctions.put(functionName, method.getReturnType());
+            {
+                Class<?> returnType = method.getReturnType();
+                if (VariableType.isGeneric(returnType))
+                    engineFunctions
+                            .put(functionName,
+                                    new VariableType(returnType, VariableType.getType(method.getGenericReturnType()
+                                            .toString())));
+                else
+                    engineFunctions.put(functionName, new VariableType(returnType));
+            }
             if (engineTypesMethod != null)
             {
                 ArrayList<ScriptFunctionCompletion> methodsExisting = engineTypesMethod.get(clazz);
@@ -319,5 +330,18 @@ public class ScriptEngineHandler implements PluginInstallerListener
         if (languageName.contentEquals("python"))
             return "Python";
         return languageName;
+    }
+
+    public static void clearEngines()
+    {
+        for (ScriptEngine engine : engines.values())
+        {
+            Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+            for (String s : bindings.keySet())
+            {
+                bindings.put(s, null);
+            }
+            bindings.clear();
+        }
     }
 }

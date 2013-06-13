@@ -13,26 +13,18 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
 import icy.system.thread.ThreadUtil;
-import icy.util.EventUtil;
 import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.MethodDeclaration;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -59,20 +51,15 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextPane;
-import javax.swing.border.BevelBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DescWindowCallback;
@@ -91,12 +78,12 @@ import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
+import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
+import plugins.tprovoost.scripteditor.scriptblock.Javascript;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
-import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
-import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
@@ -104,7 +91,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, ActionListener
+public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
 {
     /** */
     private static final long serialVersionUID = 1L;
@@ -132,18 +119,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     /** Auto-completion system. Uses provider item. */
     private IcyAutoCompletion ac;
 
-    private JScrollPane scrollpane;
-    private JTextPane consoleOutput;
-    private Scriptingconsole console;
-    private JButton btnClearConsole;
-
-    public JButton btnRun;
-    private JButton btnRunNew;
+    public JMenuItem btnRun;
+    private JSplitButton btnSplitRun;
     public JButton btnStop;
     private ScriptingEditor editor;
     private boolean integrated;
-
-    protected boolean scrollLocked;
 
     public ScriptingPanel(ScriptingEditor editor, String name, String language)
     {
@@ -164,78 +144,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         this.integrated = integrated;
         setLayout(new BorderLayout());
 
-        consoleOutput = new JTextPane();
-        consoleOutput.setPreferredSize(new Dimension(400, 200));
-        consoleOutput.setEditable(false);
-        consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-
-        // HANDLE RIGHT CLICK POPUP MENU
-        consoleOutput.addMouseListener(new MouseAdapter()
-        {
-            @Override
-            public void mouseClicked(MouseEvent e)
-            {
-                if (EventUtil.isRightMouseButton(e))
-                {
-                    JPopupMenu popup = new JPopupMenu();
-                    JMenuItem itemCopy = new JMenuItem("Copy");
-                    itemCopy.addActionListener(new ActionListener()
-                    {
-
-                        @Override
-                        public void actionPerformed(ActionEvent e)
-                        {
-                            consoleOutput.copy();
-                        }
-                    });
-                    popup.add(itemCopy);
-                    popup.show(consoleOutput, e.getX(), e.getY());
-                    e.consume();
-                }
-            }
-        });
-
-        // Create the scrollpane around the output
-        scrollpane = new JScrollPane(consoleOutput);
-        scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-        scrollpane.setAutoscrolls(true);
-        final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
-
-        // LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
-        scrollbar.addAdjustmentListener(new AdjustmentListener()
-        {
-
-            @Override
-            public void adjustmentValueChanged(AdjustmentEvent e)
-            {
-                if (scrollbar.getValueIsAdjusting())
-                {
-                    if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
-                        setScrollLocked(false);
-                    else
-                        setScrollLocked(true);
-                }
-                if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
-                {
-                    Document doc = consoleOutput.getDocument();
-                    consoleOutput.setCaretPosition(doc.getLength() - 1);
-                }
-            }
-
-        });
-        scrollpane.addMouseWheelListener(new MouseWheelListener()
-        {
-
-            @Override
-            public void mouseWheelMoved(MouseWheelEvent e)
-            {
-                if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
-                    setScrollLocked(false);
-                else
-                    setScrollLocked(true);
-            }
-        });
         // creates the text area and set it up
         textArea = new RSyntaxTextArea(20, 60);
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
@@ -290,6 +198,26 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         textArea.requestFocus();
     }
 
+    /**
+     * Getter for the provider
+     * 
+     * @return
+     */
+    public IcyCompletionProvider getProvider()
+    {
+        return provider;
+    }
+
+    /**
+     * Setter for the provider.
+     * 
+     * @param provider
+     */
+    public void setProvider(IcyCompletionProvider provider)
+    {
+        this.provider = provider;
+    }
+
     public RSyntaxTextArea getTextArea()
     {
         return textArea;
@@ -308,16 +236,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     public void setSyntax(String syntaxType)
     {
         textArea.setSyntaxEditingStyle(syntaxType);
-    }
-
-    private synchronized boolean isScrollLocked()
-    {
-        return scrollLocked;
-    }
-
-    private synchronized void setScrollLocked(boolean scrollLocked)
-    {
-        this.scrollLocked = scrollLocked;
     }
 
     /**
@@ -488,7 +406,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
      */
     public synchronized void installLanguage(final String language)
     {
-        consoleOutput.setText("");
+        final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+
+        // if (editor != null && editor.getConsoleOutput() != null)
+        // editor.getConsoleOutput().setText("");
 
         // Autocompletion is done with the following item
         if (scriptHandler != null)
@@ -502,7 +423,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         if (provider == null)
         {
             provider = new IcyCompletionProvider();
-            provider.setAutoActivationRules(false, ".");
+            boolean autoActivate = prefWin.isFullAutoCompleteEnabled();
+            provider.setAutoActivationRules(autoActivate, ".");
             ThreadUtil.invokeLater(new Runnable()
             {
 
@@ -543,7 +465,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 public void run()
                 {
                     btnRun.setEnabled(false);
-                    btnRunNew.setEnabled(false);
+                    btnSplitRun.setEnabled(false);
                 }
             });
             return;
@@ -554,13 +476,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 
         // install the text area with the completion system.
         ac.install(textArea);
+        ac.setAutoCompleteSingleChoices(false);
         ac.setParameterAssistanceEnabled(true);
         ac.setAutoActivationEnabled(true);
         ac.setAutoActivationDelay(500);
         ac.setShowDescWindow(true);
         ac.setExternalURLHandler(new ExternalURLHandler()
         {
-
             @Override
             public void urlClicked(HyperlinkEvent e, Completion c, DescWindowCallback callback)
             {
@@ -587,7 +509,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         clazz = cons.getDeclaringClass();
                         final ClassSource cs = ClassSource.getClassSource(clazz);
                         ConstructorDeclaration cd = cs.getConstructors().get(cons.toGenericString());
-                        openSource(clazz, cd.getBeginLine() - 1, cd.getEndLine() - 1);
+                        if (cd != null)
+                            openSource(clazz, cd.getBeginLine() - 1, cd.getEndLine() - 1);
+                        else
+                            System.out.println(clazz);
                     }
                 }
                 else
@@ -602,24 +527,8 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             @Override
             public void run()
             {
-                // the ScriptHandler in the Console is independant, so it needs
-                // to have
-                if (language.contentEquals("Python"))
-                {
-                    console = new PythonScriptingconsole();
-                }
-                else
-                {
-                    console = new Scriptingconsole();
-                }
-
-                // set the language for the console too.
-                console.setLanguage(language);
-
-                // a reference to the output.
-                console.setOutput(consoleOutput);
-
-                console.setFont(consoleOutput.getFont());
+                if (editor != null)
+                    editor.changeConsoleLanguage(language);
 
                 // add the scripting handler, which handles the compilation
                 // and the parsing of the code for advanced features.
@@ -632,15 +541,15 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     // scriptHandler = new JSScriptingHandlerSimple(provider, textArea,
                     // pane.getGutter(), true);
                     // }
-                    if (!integrated)
-                        scriptHandler.setOutput(consoleOutput);
+                    if (!integrated && editor != null)
+                        scriptHandler.setOutput(editor.getConsoleOutput());
 
                 }
                 else if (language.contentEquals("Python"))
                 {
                     scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
                     if (!integrated)
-                        scriptHandler.setOutput(consoleOutput);
+                        scriptHandler.setOutput(editor.getConsoleOutput());
                 }
                 else
                 {
@@ -649,7 +558,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 if (scriptHandler != null)
                 {
                     scriptHandler.addScriptListener(ScriptingPanel.this);
-                    PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
                     scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
                     scriptHandler.setStrict(prefWin.isStrictModeEnabled());
                     scriptHandler.setForceRun(prefWin.isOverrideEnabled());
@@ -660,10 +568,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     BindingsScriptFrame frame = BindingsScriptFrame.getInstance();
                     frame.setEngine(scriptHandler.getEngine());
                 }
-                if (btnClearConsole != null)
-                    btnClearConsole.removeActionListener(ScriptingPanel.this);
-                btnClearConsole = new JButton("Clear");
-                btnClearConsole.addActionListener(ScriptingPanel.this);
                 rebuildGUI();
                 textArea.requestFocus();
             }
@@ -769,6 +673,18 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     }
 
     /**
+     * Setter for the handler.
+     * Should only be used for reference to the same script handler in different panels. For
+     * instance with the {@link Javascript} block.
+     * 
+     * @param scriptHandler
+     */
+    public void setScriptHandler(ScriptingHandler scriptHandler)
+    {
+        this.scriptHandler = scriptHandler;
+    }
+
+    /**
      * Get the defaut save location.
      * 
      * @return
@@ -795,24 +711,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
     private void rebuildGUI()
     {
         removeAll();
-        if (!integrated)
-        {
-            JPanel bottomPanel = new JPanel(new BorderLayout());
-            bottomPanel.add(scrollpane, BorderLayout.CENTER);
-
-            JPanel panelSouth = new JPanel(new BorderLayout());
-            panelSouth.add(console, BorderLayout.CENTER);
-            panelSouth.add(btnClearConsole, BorderLayout.EAST);
-            bottomPanel.add(panelSouth, BorderLayout.SOUTH);
-
-            JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane, bottomPanel);
-            split.setDividerLocation(0.75d);
-            split.setResizeWeight(0.75d);
-            split.setOneTouchExpandable(true);
-            add(split, BorderLayout.CENTER);
-        }
-        else
-            add(pane);
+        add(pane);
 
         if (editor != null)
             add(options, BorderLayout.NORTH);
@@ -840,12 +739,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         public PanelOptions(String language)
         {
             // final JButton btnBuild = new JButton("Verify");
-            btnRun = new IcyButton(new IcyIcon("playback_play", 16));
-            btnRun.setToolTipText("Run the script in the current context.");
+            btnRun = new JMenuItem("Run in Current Context", new IcyIcon(imgPlayback2, 16));
+            btnRun.setToolTipText("All variables in the bindings are re-usable.");
 
-            // btnRunNew = new IcyButton(new IcyIcon(imgPlayback2, 16));
-            btnRunNew = new IcyButton(new IcyIcon("playback_play", 16));
-            btnRunNew.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+            btnSplitRun = new JSplitButton("  ", new IcyIcon("playback_play", 16));
+            btnSplitRun.setPreferredSize(new Dimension(45, 20));
+            btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+
+            JMenuItem btnRunNew2 = new JMenuItem("Run in New Context", new IcyIcon("playback_play", 16));
+            btnRunNew2
+                    .setToolTipText("Creates a new context and run the script. The previous context and its bindings will be lost.");
+
+            JPopupMenu popupRun = new JPopupMenu();
+            popupRun.add(btnRunNew2);
+            popupRun.add(btnRun);
+            btnSplitRun.setPopupMenu(popupRun);
 
             btnStop = new IcyButton(new IcyIcon("square_shape", 16));
             btnStop.setToolTipText("Stops the current script.");
@@ -889,22 +797,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (integrated)
                 return;
 
-            // btnBuild.addActionListener(new ActionListener()
-            // {
-            //
-            // @Override
-            // public void actionPerformed(ActionEvent e)
-            // {
-            // if (scriptHandler != null)
-            // {
-            // scriptHandler.interpret(false);
-            // }
-            // else
-            // System.out.println("Script Handler null.");
-            // }
-            // });
-            // add(btnBuild);
-
             btnRun.addActionListener(new ActionListener()
             {
 
@@ -921,7 +813,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                         public void run()
                         {
                             btnRun.setEnabled(false);
-                            btnRunNew.setEnabled(false);
+                            btnSplitRun.setEnabled(false);
                             btnStop.setEnabled(true);
                         }
                     });
@@ -936,32 +828,27 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 }
             });
 
-            btnRunNew.addActionListener(new ActionListener()
+            btnSplitRun.addSplitButtonActionListener(new SplitButtonActionListener()
+            {
+
+                @Override
+                public void splitButtonClicked(ActionEvent e)
+                {
+                }
+
+                @Override
+                public void buttonClicked(ActionEvent e)
+                {
+                    runInSame();
+                }
+            });
+            btnRunNew2.addActionListener(new ActionListener()
             {
 
                 @Override
                 public void actionPerformed(ActionEvent e)
                 {
-                    if (scriptHandler == null)
-                        return;
-                    PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
-                    ThreadUtil.invokeLater(new Runnable()
-                    {
-
-                        @Override
-                        public void run()
-                        {
-                            btnRun.setEnabled(false);
-                            btnRunNew.setEnabled(false);
-                            btnStop.setEnabled(true);
-                        }
-                    });
-                    // consoleOutput.setText("");
-                    scriptHandler.setNewEngine(true);
-                    scriptHandler.setForceRun(prefs.isOverrideEnabled());
-                    scriptHandler.setStrict(prefs.isStrictModeEnabled());
-                    scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
-                    scriptHandler.interpret(true);
+                    runInSame();
                 }
             });
 
@@ -981,12 +868,34 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             });
 
             add(Box.createHorizontalStrut(STRUT_SIZE * 3));
-            add(btnRunNew);
-            // add(Box.createHorizontalStrut(STRUT_SIZE));
-            // add(btnRun);
+            add(btnSplitRun);
             add(Box.createHorizontalStrut(STRUT_SIZE));
             add(btnStop);
             add(Box.createHorizontalGlue());
+        }
+
+        protected void runInSame()
+        {
+            if (scriptHandler == null)
+                return;
+            PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+            ThreadUtil.invokeLater(new Runnable()
+            {
+
+                @Override
+                public void run()
+                {
+                    btnRun.setEnabled(false);
+                    btnSplitRun.setEnabled(false);
+                    btnStop.setEnabled(true);
+                }
+            });
+            // consoleOutput.setText("");
+            scriptHandler.setNewEngine(true);
+            scriptHandler.setForceRun(prefs.isOverrideEnabled());
+            scriptHandler.setStrict(prefs.isStrictModeEnabled());
+            scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+            scriptHandler.interpret(true);
         }
     }
 
@@ -1085,20 +994,10 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             public void run()
             {
                 btnRun.setEnabled(true);
-                btnRunNew.setEnabled(true);
+                btnSplitRun.setEnabled(true);
                 btnStop.setEnabled(false);
             }
         });
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e)
-    {
-        if (e.getSource() == btnClearConsole)
-        {
-            if (console != null)
-                console.clear();
-        }
     }
 
     /**

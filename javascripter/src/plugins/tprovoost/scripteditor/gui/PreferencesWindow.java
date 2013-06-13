@@ -2,7 +2,7 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.component.IcyTextField;
 import icy.gui.frame.IcyFrame;
-import icy.preferences.IcyPreferences;
+import icy.preferences.PluginPreferences;
 import icy.preferences.XMLPreferences;
 
 import java.awt.BorderLayout;
@@ -23,32 +23,30 @@ import javax.swing.border.EmptyBorder;
 public class PreferencesWindow extends IcyFrame
 {
     private static PreferencesWindow singleton = new PreferencesWindow();
-    // private JTable table;
     private JPanel panel;
-    private XMLPreferences prefs = IcyPreferences.pluginsRoot().node("scripteditor");
+    private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
     // private PreferencesTableModel tableModel;
-    private final String PREF_VAR_INTERPRET = "varinterp";
-    private final String PREF_OVERRIDE = "override";
-    private final String PREF_VERIF = "autoverif";
-    private final String PREF_STRICT = "strictmode";
+    // private final String PREF_VAR_INTERPRET = "varinterp";
+    // private final String PREF_OVERRIDE = "override";
+    // private final String PREF_VERIF = "autoverif";
+    // private final String PREF_STRICT = "strictmode";
     private final String PREF_INDENT_SPACES = "indent";
     private final String PREF_INDENT_SPACES_VALUE = "nbSpaces";
+    private final String PREF_FULL_AUTOCOMPLETE = "fullautocomplete";
+    private final String PREF_AUTOCLEAR_OUTPUT = "autoclearoutput";
     private IcyTextField tfSpacesTab;
     private JCheckBox cboxVarInterp;
     private JCheckBox cboxOverride;
     private JCheckBox cboxAutoVerif;
     private JCheckBox cboxStrict;
     private JCheckBox cboxSoft;
-    private boolean release = false;
+    private JCheckBox cboxAutoClearOutput;
     private JCheckBox cboxAdvanced;
+    private JCheckBox cboxFullAutocomplete;
 
     private PreferencesWindow()
     {
         super("Script Editor Preferences", false, true, false, true);
-        // if (!release)
-        // tableModel = new PreferencesTableModel();
-        // else
-        // tableModel = new PreferencesTableModel(release);
         setContentPane(createGUI());
     }
 
@@ -72,7 +70,6 @@ public class PreferencesWindow extends IcyFrame
 
         // JButton btnApply = new JButton("Apply");
         // panelButtons.add(btnApply);
-
         // panelButtons.add(Box.createHorizontalStrut(20));
 
         JButton btnOk = new JButton("OK");
@@ -111,24 +108,47 @@ public class PreferencesWindow extends IcyFrame
         JPanel panelCenter = new JPanel();
         toReturn.add(panelCenter, BorderLayout.CENTER);
 
-        // table = new JTable();
-        // table.setShowGrid(false);
-        // table.setOpaque(false);
-        // table.setModel(tableModel);
-        // table.getColumnModel().getColumn(0).setPreferredWidth(190);
         panelCenter.setLayout(new BorderLayout(0, 0));
         panel = new JPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         panelCenter.add(panel);
 
         // -------------------
-        // Var interpretation
+        // Full autocomplete
         // -------------------
+        JPanel panelFullAutoComplete = new JPanel();
+        panel.add(panelFullAutoComplete);
+        panelFullAutoComplete.setLayout(new BoxLayout(panelFullAutoComplete, BoxLayout.X_AXIS));
+        JLabel lblFullAutocomplete = new JLabel("Enable Auto Complete after any character typed: ");
+        panelFullAutoComplete.add(lblFullAutocomplete);
+        cboxFullAutocomplete = new JCheckBox("");
+
+        panelFullAutoComplete.add(cboxFullAutocomplete);
+        panelFullAutoComplete.add(Box.createHorizontalGlue());
+
+        // ----------------------------------
+        // Auto verification (no longer used)
+        // ----------------------------------
+        JPanel panelAutoVerif = new JPanel();
+        // if (!release)
+        // panel.add(panelAutoVerif);
+        panelAutoVerif.setLayout(new BoxLayout(panelAutoVerif, BoxLayout.X_AXIS));
+
+        JLabel lblAutoVerif = new JLabel("Enable auto verification (javascript)*: ");
+        panelAutoVerif.add(lblAutoVerif);
+
+        cboxAutoVerif = new JCheckBox("");
+        panelAutoVerif.add(cboxAutoVerif);
+        panelAutoVerif.add(Box.createHorizontalGlue());
+
+        // ----------------------------------
+        // Var interpretation(no longer used)
+        // ----------------------------------
         JPanel panelVarInterp = new JPanel();
-        if (!release)
-            panel.add(panelVarInterp);
+        // if (!release)
+        // panel.add(panelVarInterp);
         panelVarInterp.setLayout(new BoxLayout(panelVarInterp, BoxLayout.X_AXIS));
-        JLabel lblVarInterp = new JLabel("Enable variable interpretation (beta)*");
+        JLabel lblVarInterp = new JLabel("Enable variable interpretation*: ");
         panelVarInterp.add(lblVarInterp);
         cboxVarInterp = new JCheckBox("");
 
@@ -136,14 +156,14 @@ public class PreferencesWindow extends IcyFrame
         panelVarInterp.add(Box.createHorizontalGlue());
 
         // -----------------------------------
-        // Override verification (javascript)
+        // Override verification (javascript) (no longer used)
         // -----------------------------------
         JPanel panelOverride = new JPanel();
         panelOverride.setLayout(new BoxLayout(panelOverride, BoxLayout.X_AXIS));
-        if (!release)
-            panel.add(panelOverride);
+        // if (!release)
+        // panel.add(panelOverride);
 
-        JLabel lblOverride = new JLabel("Override verification (javascript)");
+        JLabel lblOverride = new JLabel("Override verification (javascript): ");
         panelOverride.add(lblOverride);
 
         cboxOverride = new JCheckBox("");
@@ -152,30 +172,15 @@ public class PreferencesWindow extends IcyFrame
         panelOverride.add(Box.createHorizontalGlue());
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        // ------------------
-        // Auto verification
-        // ------------------
-        JPanel panelAutoVerif = new JPanel();
-        if (!release)
-            panel.add(panelAutoVerif);
-        panelAutoVerif.setLayout(new BoxLayout(panelAutoVerif, BoxLayout.X_AXIS));
-
-        JLabel lblAutoVerif = new JLabel("Enable auto verification (javascript/beta)*");
-        panelAutoVerif.add(lblAutoVerif);
-
-        cboxAutoVerif = new JCheckBox("");
-        panelAutoVerif.add(cboxAutoVerif);
-        panelAutoVerif.add(Box.createHorizontalGlue());
-
         // ------------
-        // Strict mode
+        // Enable discovering all methods (no longer used)
         // ------------
         JPanel panelAdvancedMode = new JPanel();
-        if (!release)
-            panel.add(panelAdvancedMode);
+        // if (!release)
+        // panel.add(panelAdvancedMode);
         panelAdvancedMode.setLayout(new BoxLayout(panelAdvancedMode, BoxLayout.X_AXIS));
 
-        JLabel lblAdvancedMode = new JLabel("Enable methods (javascript/beta)*");
+        JLabel lblAdvancedMode = new JLabel("Enable methods (javascript/beta)*: ");
         panelAdvancedMode.add(lblAdvancedMode);
 
         cboxAdvanced = new JCheckBox("");
@@ -183,12 +188,12 @@ public class PreferencesWindow extends IcyFrame
         panelAdvancedMode.add(Box.createHorizontalGlue());
 
         // ------------
-        // Strict mode
+        // Strict mode (no longer used)
         // ------------
         JPanel panelStrict = new JPanel();
         panelStrict.setLayout(new BoxLayout(panelStrict, BoxLayout.X_AXIS));
-        if (!release)
-            panel.add(panelStrict);
+        // if (!release)
+        // panel.add(panelStrict);
 
         JLabel lblStrict = new JLabel("Enable Strict Mode (javascript)");
         panelStrict.add(lblStrict);
@@ -198,6 +203,21 @@ public class PreferencesWindow extends IcyFrame
 
         panelStrict.add(Box.createHorizontalGlue());
 
+        // ------------------
+        // Auto verification
+        // ------------------
+        JPanel panelAutoClearOutput = new JPanel();
+        // if (!release)
+        panel.add(panelAutoClearOutput);
+        panelAutoClearOutput.setLayout(new BoxLayout(panelAutoClearOutput, BoxLayout.X_AXIS));
+
+        JLabel lblAutoClearOutput = new JLabel("Always clear the output when run is clicked: ");
+        panelAutoClearOutput.add(lblAutoClearOutput);
+
+        cboxAutoClearOutput = new JCheckBox("");
+        panelAutoClearOutput.add(cboxAutoClearOutput);
+        panelAutoClearOutput.add(Box.createHorizontalGlue());
+
         // ----------
         // Soft Tabs
         // ----------
@@ -205,7 +225,7 @@ public class PreferencesWindow extends IcyFrame
         panelSoft.setLayout(new BoxLayout(panelSoft, BoxLayout.X_AXIS));
         panel.add(panelSoft);
 
-        JLabel lblSoft = new JLabel("Soft tabs");
+        JLabel lblSoft = new JLabel("Use Soft tabs (spaces instead of tabulations): ");
         panelSoft.add(lblSoft);
 
         cboxSoft = new JCheckBox("");
@@ -220,7 +240,7 @@ public class PreferencesWindow extends IcyFrame
         panel.add(panelSpacesTab);
         panelSpacesTab.setLayout(new BoxLayout(panelSpacesTab, BoxLayout.X_AXIS));
 
-        JLabel lblSpacesTab = new JLabel("Spaces count for soft tabs");
+        JLabel lblSpacesTab = new JLabel("Spaces count for soft tabs: ");
         panelSpacesTab.add(lblSpacesTab);
 
         tfSpacesTab = new IcyTextField();
@@ -232,9 +252,9 @@ public class PreferencesWindow extends IcyFrame
 
         panel.add(Box.createVerticalGlue());
 
-        JLabel lblNeedsRestarting = new JLabel("* needs restarting Script Editor");
-        if (!release)
-            panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
+        // JLabel lblNeedsRestarting = new JLabel("* needs restarting Script Editor");
+        // if (!release)
+        // panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 
         loadPrefs();
 
@@ -247,40 +267,50 @@ public class PreferencesWindow extends IcyFrame
                 tfSpacesTab.setEnabled(cboxSoft.isSelected());
             }
         });
-
         return toReturn;
+    }
+
+    public boolean isFullAutoCompleteEnabled()
+    {
+        // return cboxFullAutocomplete.isSelected();
+        return true;
     }
 
     public boolean isVarInterpretationEnabled()
     {
-        if (release)
-            return false;
-        // return (Boolean) tableModel.getValueAt(0, 1);
-        return cboxVarInterp.isSelected();
+        // if (release)
+        // return false;
+        // return cboxVarInterp.isSelected();
+        return true;
     }
 
     public boolean isOverrideEnabled()
     {
-        if (release)
-            return true;
-        // return (Boolean) tableModel.getValueAt(1, 1);
-        return cboxOverride.isSelected();
+        // if (release)
+        // return true;
+        // return cboxOverride.isSelected();
+        return true;
     }
 
     public boolean isAutoBuildEnabled()
     {
-        if (release)
-            return false;
-        // return (Boolean) tableModel.getValueAt(2, 1);
-        return cboxAutoVerif.isSelected();
+        // if (release)
+        // return false;
+        // return cboxAutoVerif.isSelected();
+        return true;
     }
 
     public boolean isStrictModeEnabled()
     {
-        if (release)
-            return false;
-        // return (Boolean) tableModel.getValueAt(3, 1);
-        return cboxStrict.isSelected();
+        // if (release)
+        // return false;
+        // return cboxStrict.isSelected();
+        return false;
+    }
+
+    public boolean isAutoClearOutputEnabled()
+    {
+        return cboxAutoClearOutput.isSelected();
     }
 
     public boolean isIndentSpacesEnabled()
@@ -346,25 +376,30 @@ public class PreferencesWindow extends IcyFrame
 
     public void savePrefs()
     {
-        prefs.putBoolean(PREF_VAR_INTERPRET, isVarInterpretationEnabled());
-        prefs.putBoolean(PREF_OVERRIDE, isOverrideEnabled());
-        prefs.putBoolean(PREF_VERIF, isAutoBuildEnabled());
-        prefs.putBoolean(PREF_STRICT, isStrictModeEnabled());
+        // prefs.putBoolean(PREF_VAR_INTERPRET, isVarInterpretationEnabled());
+        // prefs.putBoolean(PREF_OVERRIDE, isOverrideEnabled());
+        // prefs.putBoolean(PREF_VERIF, isAutoBuildEnabled());
+        // prefs.putBoolean(PREF_STRICT, isStrictModeEnabled());
         prefs.putBoolean(PREF_INDENT_SPACES, isIndentSpacesEnabled());
+        prefs.putBoolean(PREF_FULL_AUTOCOMPLETE, isFullAutoCompleteEnabled());
+        prefs.putBoolean(PREF_AUTOCLEAR_OUTPUT, isAutoClearOutputEnabled());
         prefs.putInt(PREF_INDENT_SPACES_VALUE, indentSpacesCount());
     }
 
     public void loadPrefs()
     {
-        cboxVarInterp.setSelected(prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.TRUE));
-        cboxOverride.setSelected(prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE));
-        cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.TRUE));
-        cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
+        // cboxVarInterp.setSelected(prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.TRUE));
+        // cboxOverride.setSelected(prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE));
+        // cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.TRUE));
+        // cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
+        cboxFullAutocomplete.setSelected(prefs.getBoolean(PREF_FULL_AUTOCOMPLETE, Boolean.TRUE));
+        cboxAutoClearOutput.setSelected(prefs.getBoolean(PREF_AUTOCLEAR_OUTPUT, true));
 
         boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE);
         cboxSoft.setSelected(active);
-        if (active)
-            tfSpacesTab.setEnabled(true);
+        tfSpacesTab.setEnabled(active);
+
         tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
     }
+
 }

@@ -7,7 +7,7 @@ public class IcyFunctionBlock
 
     private String functionName;
     private int startOffset;
-    private Class<?> returnType;
+    private VariableType returnType;
     private Method m;
 
     /**
@@ -16,7 +16,7 @@ public class IcyFunctionBlock
      * @param endOffset
      * @param returnType
      */
-    public IcyFunctionBlock(String functionName, int startOffset, Class<?> returnType)
+    public IcyFunctionBlock(String functionName, int startOffset, VariableType returnType)
     {
         this.functionName = functionName;
         this.startOffset = startOffset;
@@ -33,7 +33,7 @@ public class IcyFunctionBlock
         return startOffset;
     }
 
-    public Class<?> getReturnType()
+    public VariableType getReturnType()
     {
         return returnType;
     }
@@ -47,7 +47,8 @@ public class IcyFunctionBlock
     // {
     // try
     // {
-    // if (returnType.contains("<"))
+    // int idx = returnType.indexOf('<');
+    // if (idx != -1)
     // {
     // Pattern p = Pattern.compile("(\\w|_)*\\s*<(.*)>");
     // Matcher m = p.matcher(returnType);
@@ -56,6 +57,7 @@ public class IcyFunctionBlock
     // System.out.println("classname: " + m.group(0));
     // System.out.println("Anonymous: " + m.group(2));
     // }
+    // returnType = returnType.substring(0, idx);
     // }
     // setReturnType(ClassUtil.findClass(returnType));
     // }
@@ -65,7 +67,7 @@ public class IcyFunctionBlock
     // }
     // }
 
-    public void setReturnType(Class<?> returnType)
+    public void setReturnType(VariableType returnType)
     {
         this.returnType = returnType;
     }

@@ -23,7 +23,6 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.adufour.vars.gui.swing.SwingVarEditor;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 public class VarScriptEditorV3 extends SwingVarEditor<String>
 {
@@ -42,20 +41,16 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
     public Dimension getPreferredSize()
     {
         return super.getPreferredSize();
-        // System.out.println(getEditorComponent().getSize());
-        // System.out.println(getEditorComponent().getPreferredSize());
-        // return getEditorComponent().getSize();
     }
 
     @Override
     protected JComponent createEditorComponent()
     {
-        panelIn = new ScriptingPanel(null, "Untitled", "JavaScript", true);
-
-        panelOut = new ScriptingPanel(null, "Untitled", "JavaScript", true);
+        panelIn = new ScriptingPanel(null, "Internal Editor", "JavaScript", true);
+        panelOut = new ScriptingPanel(null, "External Editor", "JavaScript", true);
         panelOut.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
-        frame = new IcyFrame("untitled", true, true, true, true);
+        frame = new IcyFrame("External Editor", true, true, true, true);
         frame.setContentPane(panelOut);
         frame.setSize(500, 500);
         frame.setVisible(true);
@@ -69,6 +64,7 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
             public void icyFrameClosing(IcyFrameEvent e)
             {
                 RSyntaxTextArea textArea = panelIn.getTextArea();
+                textArea.setEnabled(true);
                 textArea.setText(panelOut.getTextArea().getText());
                 textArea.repaint();
             }
@@ -83,6 +79,7 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
             public void actionPerformed(ActionEvent e)
             {
                 panelOut.getTextArea().setText(panelIn.getTextArea().getText());
+                panelIn.getTextArea().setEnabled(false);
                 frame.setVisible(true);
                 frame.requestFocus();
             }
@@ -144,9 +141,14 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
         panelIn.getTextArea().setText(newValue);
     }
 
-    public ScriptingHandler getScriptHandler()
+    public ScriptingPanel getPanelIn()
     {
-        return panelIn.getScriptHandler();
+        return panelIn;
+    }
+
+    public ScriptingPanel getPanelOut()
+    {
+        return panelOut;
     }
 
 }
