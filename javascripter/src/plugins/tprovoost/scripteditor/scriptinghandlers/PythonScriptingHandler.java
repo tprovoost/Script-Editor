@@ -51,7 +51,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         super(provider, "Python", textArea, gutter, autocompilation);
         this.engine = getEngine();
     }
-    
+
     @Override
     public void eval(ScriptEngine engine, String s) throws ScriptException
     {
@@ -92,7 +92,7 @@ public class PythonScriptingHandler extends ScriptingHandler
         // run the eval
         try
         {
-            py.exec(s);
+            py.execfile(new File(fileName).getAbsolutePath());
             PyStringMap locals = (PyStringMap) py.getLocals();
             Object[] values = locals.values().toArray();
             Object[] keys = locals.keys().toArray();
@@ -334,7 +334,6 @@ public class PythonScriptingHandler extends ScriptingHandler
     @Override
     public void format()
     {
-        // TODO Auto-generated method stub
 
     }
 

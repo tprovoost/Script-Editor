@@ -90,13 +90,14 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
     // Preferences and recent files
     private JMenu menuOpenRecent;
     private ArrayList<String> previousFiles = new ArrayList<String>();
-    private static String currentDirectoryPath = "";
+    static String currentDirectoryPath = "";
     private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
     private static final int MAX_RECENT_FILES = 20;
     private static final String STRING_LAST_DIRECTORY = "lastDirectory";
     private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
 
     private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
+    private static final String PREF_IDX = "idxTab";
 
     private IcyFrameListener frameListener = new IcyFrameAdapter()
     {
@@ -129,7 +130,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
         currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
 
         // load preferences
-        XMLPreferences openedFiles = prefs.node("openedFiles");
+        final XMLPreferences openedFiles = prefs.node("openedFiles");
         final ArrayList<String> toOpen = new ArrayList<String>();
         for (XMLPreferences key : openedFiles.getChildren())
         {
@@ -327,6 +328,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
                     {
                     }
                 }
+                int idx = openedFiles.getInt(PREF_IDX, 0);
+                tabbedPane.setSelectedIndex(idx);
             }
         });
     }
@@ -350,8 +353,10 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
     {
         if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
         {
+            int idx = tabbedPane.getSelectedIndex();
             // Saving state of the opened files.
             XMLPreferences openedFiles = prefs.node("openedFiles");
+            openedFiles.putInt(PREF_IDX, 0);
             for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
             {
                 Component c = tabbedPane.getComponentAt(i);
@@ -371,6 +376,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
                 if (!closeTab(0))
                     return false;
             }
+            openedFiles.putInt(PREF_IDX, idx);
             setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             close();
         }
@@ -602,13 +608,16 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
                 if (comp instanceof ScriptingPanel)
                 {
                     ScriptingPanel panel = ((ScriptingPanel) comp);
-                    if (panel.getSaveFile() == null)
+                    if (panel.isDirty())
                     {
-                        panel.showSaveFileDialog(currentDirectoryPath);
-                    }
-                    else if (panel.isDirty())
-                    {
-                        panel.saveFile();
+                        if (panel.getSaveFile() == null)
+                        {
+                            panel.showSaveFileDialog(currentDirectoryPath);
+                        }
+                        else
+                        {
+                            panel.saveFile();
+                        }
                     }
                 }
             }
@@ -1126,5 +1135,4 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
     {
         return consoleOutput;
     }
-
 }

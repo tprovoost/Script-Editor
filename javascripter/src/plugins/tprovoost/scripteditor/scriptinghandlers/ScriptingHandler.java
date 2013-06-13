@@ -143,6 +143,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     /** Turn to true if you need to display more information in the console. */
     protected static final boolean DEBUG = false;
 
+    private AutoVerify autoverify = new AutoVerify();
+
     // Different relevance of items. Simplify code, but integer values can
     // always be used.
     public static final int RELEVANCE_MIN = 1;
@@ -199,7 +201,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         this.forceRun = forceRun;
         setLanguage(engineType);
 
-        textArea.getDocument().addDocumentListener(new AutoVerify());
+        textArea.getDocument().addDocumentListener(autoverify);
 
         localVariables = new HashMap<String, ScriptVariable>();
 
@@ -1383,5 +1385,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
      * Formats the text according to the handler.
      */
     public abstract void format();
+
+    public void stopThreads()
+    {
+        textArea.getDocument().removeDocumentListener(autoverify);
+        killScript();
+    }
 
 }

@@ -277,7 +277,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 saveFile = f;
                 saveFileString = s;
                 panelName = f.getName();
-                scriptHandler.setFileName(saveFileString);
+                scriptHandler.setFileName(f.getAbsolutePath());
                 updateTitle();
                 if (editor != null)
                     editor.addRecentFile(f);
@@ -414,6 +414,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         // Autocompletion is done with the following item
         if (scriptHandler != null)
         {
+            scriptHandler.stopThreads();
             scriptHandler.removeScriptListener(this);
             textArea.removeKeyListener(scriptHandler);
             PluginRepositoryLoader.removeListener(scriptHandler);
@@ -561,6 +562,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                     scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
                     scriptHandler.setStrict(prefWin.isStrictModeEnabled());
                     scriptHandler.setForceRun(prefWin.isOverrideEnabled());
+                    scriptHandler.interpret(false);
                     provider.setHandler(scriptHandler);
                     textArea.addKeyListener(scriptHandler);
                     PluginRepositoryLoader.addListener(scriptHandler);
@@ -805,6 +807,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
                 {
                     if (scriptHandler == null)
                         return;
+                    if (!integrated)
+                    {
+                        if (isDirty())
+                        {
+                            if (saveFile == null)
+                            {
+                                if (!showSaveFileDialog(ScriptingEditor.currentDirectoryPath))
+                                    return;
+                            }
+                            else
+                            {
+                                saveFile();
+                            }
+                        }
+                    }
                     PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
                     ThreadUtil.invokeLater(new Runnable()
                     {
@@ -878,6 +895,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         {
             if (scriptHandler == null)
                 return;
+            if (!integrated)
+            {
+                if (isDirty())
+                {
+                    if (saveFile == null)
+                    {
+                        if (!showSaveFileDialog(ScriptingEditor.currentDirectoryPath))
+                            return;
+                    }
+                    else
+                    {
+                        saveFile();
+                    }
+                }
+            }
             PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
             ThreadUtil.invokeLater(new Runnable()
             {
@@ -954,6 +986,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         saveFile = f;
         saveFileString = all;
         textArea.setText(all);
+        scriptHandler.setFileName(f.getAbsolutePath());
         reader.close();
     }
 
