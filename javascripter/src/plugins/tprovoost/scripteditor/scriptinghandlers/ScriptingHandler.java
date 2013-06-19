@@ -28,7 +28,6 @@ import java.util.List;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
-import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
@@ -210,8 +209,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         {
             return;
         }
-        engine.getContext().setWriter(pw);
-        engine.getContext().setErrorWriter(pw);
+        engine.setWriter(pw);
+        engine.setErrorWriter(pw);
     }
 
     /**
@@ -316,8 +315,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
     {
         return getVariableDeclaration(name, textArea.getCaretPosition());
     }
-
-    public abstract void eval(ScriptEngine engine, String s) throws ScriptException;
 
     /**
      * Get a variable declaration according to a specific offset
@@ -819,7 +816,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
             ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
             ArrayList<Method> functions = engineHandler.getFunctions();
-            String newEngineType = ScriptEngineHandler.getLanguageName(engine.getFactory());
+            String newEngineType = engine.getName();
             engine = ScriptEngineHandler.getEngine(newEngineType, true);
             installMethods(engine, functions);
             try
@@ -829,19 +826,15 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             catch (ScriptException e)
             {
             }
-            engine.getContext().setWriter(pw);
-            engine.getContext().setErrorWriter(pw);
+            engine.setWriter(pw);
+            engine.setErrorWriter(pw);
         }
         return engine;
     }
 
     private void clearEngine(ScriptEngine engine)
     {
-        Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
-        for (String s : bindings.keySet())
-        {
-            bindings.put(s, null);
-        }
+        engine.clear();
         System.gc();
     }
 
@@ -899,28 +892,29 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
                 break;
 
             case KeyEvent.VK_M:
-                if (EventUtil.isControlDown(e))
-                {
-                    Bindings bindings = getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
-                    for (String s : bindings.keySet())
-                    {
-                        // try {
-                        // Object o = bindings.get(s);
-                        // if (o instanceof NativeFunction) {
-                        // System.out.print(s + ": ");
-                        // engine.eval("print(" + s + ")");
-                        // } else {
-                        Object o = bindings.get(s);
-                        System.out.println(s + " : " + o);
-                        // }
-                        // } catch (ScriptException e1) {
-                        // System.out.println(s + " : " + bindings.get(s));
-                        // }
-                    }
-                    // for (String s : localVariables.keySet()) {
-                    // System.out.println(s + ": " + localVariables.get(s));
-                    // }
-                }
+			// if (EventUtil.isControlDown(e))
+			// {
+			// Bindings bindings =
+			// getEngine().getBindings(ScriptContext.ENGINE_SCOPE);
+			// for (String s : bindings.keySet())
+			// {
+			// // try {
+			// // Object o = bindings.get(s);
+			// // if (o instanceof NativeFunction) {
+			// // System.out.print(s + ": ");
+			// // engine.eval("print(" + s + ")");
+			// // } else {
+			// Object o = bindings.get(s);
+			// System.out.println(s + " : " + o);
+			// // }
+			// // } catch (ScriptException e1) {
+			// // System.out.println(s + " : " + bindings.get(s));
+			// // }
+			// }
+			// // for (String s : localVariables.keySet()) {
+			// // System.out.println(s + ": " + localVariables.get(s));
+			// // }
+			// }
                 break;
             default:
                 break;
@@ -1116,10 +1110,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
         return null;
     }
 
-    public ScriptEngine getEngine()
-    {
-        return ScriptEngineHandler.getEngine(engineType);
-    }
+    public abstract ScriptEngine getEngine();
 
     /**
      * @author thomasprovoost
@@ -1252,12 +1243,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
             fireEvaluationStarted();
             if (evalEngine != getEngine())
             {
-                evalEngine.getContext().setWriter(pw);
-                evalEngine.getContext().setErrorWriter(pw);
+                evalEngine.setWriter(pw);
+                evalEngine.setErrorWriter(pw);
             }
             try
             {
-                eval(evalEngine, s);
+            	evalEngine.eval(s);
 
                 ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(getEngine());
 

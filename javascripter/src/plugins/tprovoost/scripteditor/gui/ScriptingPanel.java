@@ -84,10 +84,10 @@ import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptblock.Javascript;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
-import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
-import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
+import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 

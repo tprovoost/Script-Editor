@@ -24,10 +24,10 @@ import javax.swing.text.Style;
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
-import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 // import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
+import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
+import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
