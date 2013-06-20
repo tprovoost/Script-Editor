@@ -835,7 +835,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		menuGotoLine.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, ctrlMask));
 		menuEdit.add(menuGotoLine);
 
-		JMenu menuTools = new JMenu("Tools");
+//		JMenu menuTools = new JMenu("Tools");
 		// JMenuItem menuFindClass = new JMenuItem("Find Class...");
 		// menuTools.add(menuFindClass);
 
@@ -889,7 +889,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		toReturn.add(menuFile);
 		toReturn.add(menuEdit);
 		toReturn.add(menuTemplate);
-		toReturn.add(menuTools);
+		// toReturn.add(menuTools);
 		toReturn.add(menuOptions);
 
 		updateRecentFiles();

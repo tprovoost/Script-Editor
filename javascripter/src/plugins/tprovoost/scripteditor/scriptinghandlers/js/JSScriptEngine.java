@@ -73,7 +73,7 @@ public class JSScriptEngine extends ScriptEngine
 		}
 	}
 
-	private class IcyImporterTopLevel extends ImporterTopLevel
+	class IcyImporterTopLevel extends ImporterTopLevel
 	{
 
 		/**
@@ -89,13 +89,11 @@ public class JSScriptEngine extends ScriptEngine
 			defineFunctionProperties(names, IcyImporterTopLevel.class, ScriptableObject.DONTENUM);
 		}
 
-		@SuppressWarnings("unused")
 		public void println(Object o)
 		{
 			getWriter().write(Context.toString(o) + "\n");
 		}
 
-		@SuppressWarnings("unused")
 		public void print(Object o)
 		{
 			getWriter().write(Context.toString(o));

@@ -6,10 +6,9 @@ import icy.system.thread.ThreadUtil;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
 import java.util.Set;
 
-import javax.script.Bindings;
-import javax.script.ScriptContext;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -50,27 +49,24 @@ public class BindingsScriptFrame extends IcyFrame
 			@Override
 			public void actionPerformed(ActionEvent arg0)
 			{
-				// Bindings bindings =
-				// engine.getBindings(ScriptContext.ENGINE_SCOPE);
-				// int selectedRow = listVariables.getSelectedRow();
-				// Object o = listVariables.getValueAt(selectedRow, 0);
-				// Object val = listVariables.getValueAt(selectedRow, 1);
-				// if (val instanceof NativeArray)
-				// {
-				// for (int i = 0; i < ((NativeArray) val).getLength(); ++i)
-				// {
-				// ((NativeArray) val).delete(i);
-				// }
-				// }
-				// else if (val instanceof IdScriptableObject || val instanceof
-				// NativeJavaObject)
-				// {
-				// Scriptable scope = ((NativeJavaObject) val).getParentScope();
-				// scope.put((String) o, scope, null);
-				// }
-				// bindings.put((String) o, null);
-				// bindings.remove(o);
-				// update();
+				HashMap<String, Object> bindings = engine.getBindings();
+				int selectedRow = listVariables.getSelectedRow();
+				Object o = listVariables.getValueAt(selectedRow, 0);
+				Object val = listVariables.getValueAt(selectedRow, 1);
+				if (val instanceof NativeArray)
+				{
+					for (int i = 0; i < ((NativeArray) val).getLength(); ++i)
+					{
+						((NativeArray) val).delete(i);
+					}
+				} else if (val instanceof IdScriptableObject || val instanceof NativeJavaObject)
+				{
+					Scriptable scope = ((NativeJavaObject) val).getParentScope();
+					scope.put((String) o, scope, null);
+				}
+				engine.put((String) o, null);
+				bindings.remove(o);
+				update();
 			}
 		});
 		JButton btnRefresh = new JButton("Refresh");
@@ -164,33 +160,29 @@ public class BindingsScriptFrame extends IcyFrame
 		@Override
 		public int getRowCount()
 		{
-			// if (engine != null)
-			// return
-			// engine.getBindings(ScriptContext.ENGINE_SCOPE).values().size();
+			if (engine != null)
+				return engine.getBindings().values().size();
 			return 0;
 		}
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex)
 		{
-			// Set<String> keyset =
-			// engine.getBindings(ScriptContext.ENGINE_SCOPE).keySet();
-			// if (rowIndex >= 0 && rowIndex < keyset.size())
-			// {
-			// if (engine == null)
-			// return null;
-			// if (columnIndex == 0)
-			// {
-			// return keyset.toArray()[rowIndex];
-			// }
-			// else
-			// {
-			// Object o =
-			// engine.getBindings(ScriptContext.ENGINE_SCOPE).values().toArray()[rowIndex];
-			// // Class<?> clazz = o.getClass();
-			// return o;
-			// }
-			// }
+			Set<String> keyset = engine.getBindings().keySet();
+			if (rowIndex >= 0 && rowIndex < keyset.size())
+			{
+				if (engine == null)
+					return null;
+				if (columnIndex == 0)
+				{
+					return keyset.toArray()[rowIndex];
+				} else
+				{
+					Object o = engine.getBindings().values().toArray()[rowIndex];
+					// Class<?> clazz = o.getClass();
+					return o;
+				}
+			}
 			return null;
 		}
 	}
