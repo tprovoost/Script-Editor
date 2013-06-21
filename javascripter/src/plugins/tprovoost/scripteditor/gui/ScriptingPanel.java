@@ -793,7 +793,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 						return;
 					if (!integrated)
 					{
-						if (isDirty())
+						if (isDirty() && getLanguage().contentEquals("Python"))
 						{
 							if (saveFile == null)
 							{
@@ -880,7 +880,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				return;
 			if (!integrated)
 			{
-				if (isDirty())
+				if (isDirty() && getLanguage().contentEquals("Python"))
 				{
 					if (saveFile == null)
 					{

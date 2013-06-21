@@ -1,10 +1,15 @@
 package plugins.tprovoost.scripteditor.scriptingconsole;
 
 import icy.util.DateUtil;
+import icy.util.GraphicsUtil;
 
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -25,7 +30,11 @@ public class PythonScriptingconsole extends Scriptingconsole
      * 
      */
 	private static final long serialVersionUID = 1L;
+	private static final String STRING_INPUT = ">>> ";
+	private static final String STRING_INPUT_MORE = "... ";
+
 	private InteractiveConsole console;
+	private boolean waitingForMore;
 
 	public PythonScriptingconsole()
 	{
@@ -43,8 +52,26 @@ public class PythonScriptingconsole extends Scriptingconsole
 			PythonScriptingHandler.setInterpreter(console);
 		}
 
+		// setText(STRING_INPUT);
+
 		setMinimumSize(new Dimension(0, 25));
 		setPreferredSize(new Dimension(0, 25));
+
+		Insets insets = getMargin();
+		if (insets != null)
+		{
+			setMargin(new Insets(insets.top, 30, insets.bottom, insets.right));
+		} else
+		{
+			setMargin(new Insets(0, 30, 0, 0));
+		}
+
+	}
+
+	@Override
+	public boolean isEditable()
+	{
+		return super.isEditable();
 	}
 
 	public void setLanguage(String language)
@@ -93,7 +120,10 @@ public class PythonScriptingconsole extends Scriptingconsole
 						Style style = output.getStyle("normal");
 						if (style == null)
 							style = output.addStyle("normal", null);
-						doc.insertString(doc.getLength(), ">>> " + text + "\n", style);
+						if (waitingForMore)
+							doc.insertString(doc.getLength(), STRING_INPUT_MORE + getText() + "\n", style);
+						else
+							doc.insertString(doc.getLength(), STRING_INPUT + getText() + "\n", style);
 					} catch (BadLocationException e2)
 					{
 					}
@@ -101,7 +131,7 @@ public class PythonScriptingconsole extends Scriptingconsole
 					System.out.println(time + ": " + text);
 				try
 				{
-					console.push(text);
+					waitingForMore = console.push(text);
 				} catch (PyException pe)
 				{
 					scriptHandler.getEngine().getWriter().write(pe.toString());
@@ -150,4 +180,18 @@ public class PythonScriptingconsole extends Scriptingconsole
 		console.setErr(pw);
 	}
 
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D) g.create();
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g2.setColor(Color.BLACK);
+		if (waitingForMore)
+			GraphicsUtil.drawCenteredString(g2, STRING_INPUT_MORE, getMargin().left - 10, getHeight() / 2, false);
+		else
+			GraphicsUtil.drawCenteredString(g2, STRING_INPUT, getMargin().left - 10, getHeight() / 2, false);
+		g2.dispose();
+	}
 }
