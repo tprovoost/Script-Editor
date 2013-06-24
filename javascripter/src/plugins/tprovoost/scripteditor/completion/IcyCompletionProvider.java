@@ -25,7 +25,6 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.script.ScriptEngine;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Element;
@@ -45,6 +44,7 @@ import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;

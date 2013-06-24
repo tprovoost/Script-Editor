@@ -1,10 +1,15 @@
 package plugins.tprovoost.scripteditor.scriptingconsole;
 
 import icy.util.DateUtil;
+import icy.util.GraphicsUtil;
 
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -16,147 +21,177 @@ import javax.swing.text.Style;
 import org.python.core.PyException;
 import org.python.util.InteractiveConsole;
 
-import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 public class PythonScriptingconsole extends Scriptingconsole
 {
 
-    /**
+	/**
      * 
      */
-    private static final long serialVersionUID = 1L;
-    private InteractiveConsole console;
+	private static final long serialVersionUID = 1L;
+	private static final String STRING_INPUT = ">>> ";
+	private static final String STRING_INPUT_MORE = "... ";
 
-    public PythonScriptingconsole()
-    {
+	private InteractiveConsole console;
+	private boolean waitingForMore;
 
-        // initialize the global python system state (done once)
-        PythonScriptingHandler.initializer();
+	public PythonScriptingconsole()
+	{
 
-        // Note: there is no way to reset the system state for an InteractiveConsole,
-        // so sys.path (for example) is shared for all instances of them !
-        console = new InteractiveConsole();
+		// initialize the global python system state (done once)
+		PythonScriptingHandler.initializer();
 
-        if (PythonScriptingHandler.getInterpreter() == null)
-        {
-            PythonScriptingHandler.setInterpreter(console);
-        }
+		// Note: there is no way to reset the system state for an
+		// InteractiveConsole,
+		// so sys.path (for example) is shared for all instances of them !
+		console = new InteractiveConsole();
 
-        setMinimumSize(new Dimension(0, 25));
-        setPreferredSize(new Dimension(0, 25));
-    }
+		if (PythonScriptingHandler.getInterpreter() == null)
+		{
+			PythonScriptingHandler.setInterpreter(console);
+		}
 
-    public void setLanguage(String language)
-    {
-    }
+		// setText(STRING_INPUT);
 
-    @Override
-    public void keyTyped(KeyEvent e)
-    {
+		setMinimumSize(new Dimension(0, 25));
+		setPreferredSize(new Dimension(0, 25));
 
-    }
+		Insets insets = getMargin();
+		if (insets != null)
+		{
+			setMargin(new Insets(insets.top, 30, insets.bottom, insets.right));
+		} else
+		{
+			setMargin(new Insets(0, 30, 0, 0));
+		}
 
-    @Override
-    public void keyPressed(KeyEvent e)
-    {
-        String text = getText();
-        switch (e.getKeyCode())
-        {
-            case KeyEvent.VK_UP:
-                if (posInHistory < history.size() - 1)
-                {
-                    ++posInHistory;
-                    setText(history.get(posInHistory));
-                    e.consume();
-                }
-                break;
+	}
 
-            case KeyEvent.VK_DOWN:
-                if (posInHistory > 0)
-                {
-                    --posInHistory;
-                    setText(history.get(posInHistory));
-                    e.consume();
-                }
-                break;
+	@Override
+	public boolean isEditable()
+	{
+		return super.isEditable();
+	}
 
-            case KeyEvent.VK_ENTER:
-                if (!text.isEmpty())
-                {
-                    String time = DateUtil.now("HH:mm:ss");
-                    if (output != null)
-                    {
-                        Document doc = output.getDocument();
-                        try
-                        {
-                            Style style = output.getStyle("normal");
-                            if (style == null)
-                                style = output.addStyle("normal", null);
-                            doc.insertString(doc.getLength(), ">>> " + text + "\n", style);
-                        }
-                        catch (BadLocationException e2)
-                        {
-                        }
-                    }
-                    else
-                        System.out.println(time + ": " + text);
-                    try
-                    {
-                        console.push(text);
-                    }
-                    catch (PyException pe)
-                    {
-                        try
-                        {
-                            scriptHandler.getEngine().getContext().getWriter().write(pe.toString());
-                        }
-                        catch (IOException e1)
-                        {
-                        }
-                    }
-                    history.add(0, text);
-                    setText("");
-                    posInHistory = -1;
-                    BindingsScriptFrame.getInstance().update();
-                    e.consume();
-                }
-                break;
-        }
-    }
+	public void setLanguage(String language)
+	{
+	}
 
-    @Override
-    public void keyReleased(KeyEvent e)
-    {
+	@Override
+	public void keyTyped(KeyEvent e)
+	{
 
-    }
+	}
 
-    public void setOutput(JTextPane outputNew)
-    {
-        output = outputNew;
-        final StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw, true)
-        {
-            @Override
-            public void write(String s)
-            {
-                if (output != null)
-                {
-                    Document doc = output.getDocument();
-                    try
-                    {
-                        Style style = output.getStyle("normal");
-                        if (style == null)
-                            style = output.addStyle("normal", null);
-                        doc.insertString(doc.getLength(), s, style);
-                    }
-                    catch (BadLocationException e2)
-                    {
-                    }
-                }
-            }
-        };
-        console.setOut(pw);
-        console.setErr(pw);
-    }
+	@Override
+	public void keyPressed(KeyEvent e)
+	{
+		String text = getText();
+		switch (e.getKeyCode())
+		{
+		case KeyEvent.VK_UP:
+			if (posInHistory < history.size() - 1)
+			{
+				++posInHistory;
+				setText(history.get(posInHistory));
+				e.consume();
+			}
+			break;
 
+		case KeyEvent.VK_DOWN:
+			if (posInHistory > 0)
+			{
+				--posInHistory;
+				setText(history.get(posInHistory));
+				e.consume();
+			}
+			break;
+
+		case KeyEvent.VK_ENTER:
+			if (!text.isEmpty())
+			{
+				String time = DateUtil.now("HH:mm:ss");
+				if (output != null)
+				{
+					Document doc = output.getDocument();
+					try
+					{
+						Style style = output.getStyle("normal");
+						if (style == null)
+							style = output.addStyle("normal", null);
+						if (waitingForMore)
+							doc.insertString(doc.getLength(), STRING_INPUT_MORE + getText() + "\n", style);
+						else
+							doc.insertString(doc.getLength(), STRING_INPUT + getText() + "\n", style);
+					} catch (BadLocationException e2)
+					{
+					}
+				} else
+					System.out.println(time + ": " + text);
+				try
+				{
+					waitingForMore = console.push(text);
+				} catch (PyException pe)
+				{
+					scriptHandler.getEngine().getWriter().write(pe.toString());
+				}
+				history.add(0, text);
+				setText("");
+				posInHistory = -1;
+				BindingsScriptFrame.getInstance().update();
+				e.consume();
+			}
+			break;
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e)
+	{
+
+	}
+
+	public void setOutput(JTextPane outputNew)
+	{
+		output = outputNew;
+		final StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw, true)
+		{
+			@Override
+			public void write(String s)
+			{
+				if (output != null)
+				{
+					Document doc = output.getDocument();
+					try
+					{
+						Style style = output.getStyle("normal");
+						if (style == null)
+							style = output.addStyle("normal", null);
+						doc.insertString(doc.getLength(), s, style);
+					} catch (BadLocationException e2)
+					{
+					}
+				}
+			}
+		};
+		console.setOut(pw);
+		console.setErr(pw);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D) g.create();
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g2.setColor(Color.BLACK);
+		if (waitingForMore)
+			GraphicsUtil.drawCenteredString(g2, STRING_INPUT_MORE, getMargin().left - 10, getHeight() / 2, false);
+		else
+			GraphicsUtil.drawCenteredString(g2, STRING_INPUT, getMargin().left - 10, getHeight() / 2, false);
+		g2.dispose();
+	}
 }

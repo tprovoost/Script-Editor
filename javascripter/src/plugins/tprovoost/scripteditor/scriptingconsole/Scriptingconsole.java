@@ -17,17 +17,20 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Caret;
 import javax.swing.text.Document;
 import javax.swing.text.Style;
 
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
-import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandlerRhino;
-import plugins.tprovoost.scripteditor.scriptinghandlers.PythonScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 // import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
+import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
+import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
