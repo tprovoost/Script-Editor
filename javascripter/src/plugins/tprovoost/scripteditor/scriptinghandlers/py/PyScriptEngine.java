@@ -12,6 +12,7 @@ import org.python.core.PyStringMap;
 import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
 
+import plugins.tlecomte.jythonForIcy.JythonLibsManager;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class PyScriptEngine extends ScriptEngine
@@ -33,7 +34,12 @@ public class PyScriptEngine extends ScriptEngine
 		PyStringMap dict = new PyStringMap();
 		dict.__setitem__("__name__", new PyString("__main__"));
 
-		py = new PythonInterpreter(dict, new PySystemState());
+		// start with a fresh PySystemState
+		PySystemState sys = new PySystemState();
+		// add path entries for python libs to PySystemState
+		new JythonLibsManager().addDirsToPythonPath(sys);
+		
+		py = new PythonInterpreter(dict, sys);
 	}
 
 	@Override
