@@ -38,7 +38,7 @@ public class PyScriptEngine extends ScriptEngine
 		PySystemState sys = new PySystemState();
 		// add path entries for python libs to PySystemState
 		new JythonLibsManager().addDirsToPythonPath(sys);
-		
+
 		py = new PythonInterpreter(dict, sys);
 	}
 
@@ -54,6 +54,31 @@ public class PyScriptEngine extends ScriptEngine
 		try
 		{
 			py.exec(s);
+			PyStringMap locals = (PyStringMap) py.getLocals();
+			Object[] values = locals.values().toArray();
+			Object[] keys = locals.keys().toArray();
+			bindings.clear();
+			for (int i = 0; i < keys.length; ++i)
+			{
+				bindings.put((String) keys[i], values[i]);
+			}
+		} catch (PyException pe)
+		{
+			getErrorWriter().write(pe.toString());
+		}
+	}
+	
+	public void evalFile(String s) throws ScriptException, PyException
+	{
+		for (String s2 : bindings.keySet())
+		{
+			py.set(s2, bindings.get(s2));
+		}
+		py.setOut(getWriter());
+		py.setErr(getErrorWriter());
+		try
+		{
+			py.execfile(s);
 			PyStringMap locals = (PyStringMap) py.getLocals();
 			Object[] values = locals.values().toArray();
 			Object[] keys = locals.keys().toArray();

@@ -7,7 +7,6 @@ import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Properties;
 
 import javax.script.ScriptException;
@@ -27,11 +26,7 @@ import org.python.core.AstList;
 import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
-import org.python.core.PyException;
 import org.python.core.PyObject;
-import org.python.core.PyString;
-import org.python.core.PyStringMap;
-import org.python.core.PySystemState;
 import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
 
@@ -43,60 +38,16 @@ public class PythonScriptingHandler extends ScriptingHandler
 {
 
 	private static InteractiveInterpreter interpreter;
-	private ScriptEngine engine;
 
 	public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation)
 	{
 		super(provider, "Python", textArea, gutter, autocompilation);
-		this.engine = getEngine();
 	}
 
-	public void eval(ScriptEngine engine, String s) throws ScriptException
+	@Override
+	public void evalEngine(ScriptEngine engine, String s) throws ScriptException
 	{
-		PythonInterpreter py;
-		// tests if new engine or current
-		// TODO
-		if (this.engine == engine && interpreter != null)
-		{
-			// simply run the eval method.
-			// py = new PythonInterpreter();
-			// py.setLocals(interpreter.getLocals());
-			py = interpreter;
-		} else
-		{
-			this.engine = engine;
-			initializer();
-
-			// Set __name__ == "__main__" (useful for python scripting)
-			// Without this, it is "__builtin__"
-			PyStringMap dict = new PyStringMap();
-			dict.__setitem__("__name__", new PyString("__main__"));
-
-			py = new PythonInterpreter(dict, new PySystemState());
-			HashMap<String, Object> bindings = engine.getBindings();
-			for (String s2 : bindings.keySet())
-			{
-				py.set(s2, bindings.get(s2));
-			}
-		}
-		py.setOut(engine.getWriter());
-		py.setErr(engine.getErrorWriter());
-
-		// run the eval
-		try
-		{
-			py.execfile(new File(fileName).getAbsolutePath());
-			PyStringMap locals = (PyStringMap) py.getLocals();
-			Object[] values = locals.values().toArray();
-			Object[] keys = locals.keys().toArray();
-			for (int i = 0; i < keys.length; ++i)
-			{
-				engine.put((String) keys[i], values[i]);
-			}
-		} catch (PyException pe)
-		{
-			engine.getErrorWriter().write(pe.toString());
-		}
+		((PyScriptEngine) engine).evalFile(fileName);
 	}
 
 	public static void setInterpreter(InteractiveInterpreter interpreter)

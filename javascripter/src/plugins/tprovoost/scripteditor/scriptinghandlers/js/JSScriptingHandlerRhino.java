@@ -48,14 +48,10 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ErrorReporter;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ImporterTopLevel;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Parser;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Script;
-import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
@@ -193,42 +189,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		super(provider, "javascript", textArea, gutter, autocompilation);
 	}
 
-	public void eval(ScriptEngine engine, String s) throws ScriptException
+	public void evalEngine(ScriptEngine engine, String s) throws ScriptException
 	{
-		// uses Context from Rhino integrated in JRE or impossibility
-		// to use already defined methods in ScriptEngine, such as println or
-		// getImage
-		Context context = Context.enter();
-		context.setApplicationClassLoader(PluginLoader.getLoader());
-		context.setErrorReporter(errorReporter);
-		// context.setOptimizationLevel(-1);
-		try
-		{
-			ScriptableObject scriptable = new ImporterTopLevel(context);
-			HashMap<String, Object> bs = engine.getBindings();
-			for (String key : bs.keySet())
-			{
-				Object o = bs.get(key);
-				scriptable.put(key, scriptable, o);
-			}
-			Script script = context.compileString(s, "script", 0, null);
-			script.exec(context, scriptable);
-			for (Object o : scriptable.getIds())
-			{
-				String key = (String) o;
-				bs.put(key, scriptable.get(key, scriptable));
-			}
-		} catch (EvaluatorException e)
-		{
-			ignoredLines.put(e.lineNumber(), e);
-			updateGutter();
-		} catch (RhinoException e3)
-		{
-			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
-		} finally
-		{
-			Context.exit();
-		}
+		engine.eval(s);
 	}
 
 	@Override
