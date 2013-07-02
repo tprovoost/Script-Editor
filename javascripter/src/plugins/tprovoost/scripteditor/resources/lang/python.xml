@@ -532,7 +532,7 @@
 			<desc><![CDATA[property(fget=None, fset=None, fdel=None, doc=None) -&gt; property attribute&#x0a;&#x0a;fget is a function to be used for getting an attribute value, and likewise&#x0a;fset is a function for setting, and fdel a function for del'ing, an&#x0a;attribute.  Typical use is to define a managed attribute x:&#x0a;class C(object):&#x0a;    def getx(self): return self._x&#x0a;    def setx(self, value): self._x = value&#x0a;    def delx(self): del self._x&#x0a;    x = property(getx, setx, delx, &quot;I'm the 'x' property.&quot;)&#x0a;&#x0a;Decorators make defining new properties or modifying existing ones easy:&#x0a;class C(object):&#x0a;    @property&#x0a;    def x(self): return self._x&#x0a;    @x.setter&#x0a;    def x(self, value): self._x = value&#x0a;    @x.deleter&#x0a;    def x(self): del self._x]]></desc>
 		</keyword>
 		<keyword name="raise" type="other" definedIn="built-in" />
-		<keyword name="range" type="function" returnType="">
+		<keyword name="range" type="function" returnType="Object[]">
 			<desc><![CDATA[range([start,] stop[, step]) -&gt; list of integers&#x0a;&#x0a;Return a list containing an arithmetic progression of integers.&#x0a;range(i, j) returns [i, i+1, i+2, ..., j-1]; start (!) defaults to 0.&#x0a;When step is given, it specifies the increment (or decrement).&#x0a;For example, range(4) returns [0, 1, 2, 3].  The end point is omitted!&#x0a;These are exactly the valid indices for a list of 4 elements.]]></desc>
 		</keyword>
 		<keyword name="raw_input" type="function" returnType="">

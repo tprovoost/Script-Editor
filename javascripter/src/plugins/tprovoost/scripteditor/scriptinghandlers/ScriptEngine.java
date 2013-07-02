@@ -22,7 +22,7 @@ public abstract class ScriptEngine
 	}
 
 	public abstract void eval(String string) throws ScriptException;
-	
+
 	public PrintWriter getWriter()
 	{
 		return pw;
@@ -47,10 +47,19 @@ public abstract class ScriptEngine
 
 	protected abstract void putInRealEngine(String name, Object value);
 
+	protected abstract void removeFromRealEngine(String name);
+
 	public void put(String name, Object value)
 	{
 		putInRealEngine(name, value);
 		bindings.put(name, value);
+	}
+
+	public void deleteBinding(String name)
+	{
+		put(name, null);
+		bindings.remove(name);
+		removeFromRealEngine(name);
 	}
 
 	public Object get(String name)

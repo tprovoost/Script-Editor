@@ -719,7 +719,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		case Token.EXPR_VOID:
 		case Token.EXPR_RESULT:
 			expression = ((ExpressionStatement) n).getExpression();
-			;
 		case Token.ASSIGN:
 			if (expression == null)
 				expression = (Assignment) n;
@@ -1442,7 +1441,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	 * @param commandEndOffset
 	 * @return
 	 */
-	private Class<?>[] getGenericNumberTypes(String text, AstNode n, Class<?> clazz, String function, Class<?>[] argsClazzes)
+	private static Class<?>[] getGenericNumberTypes(String text, AstNode n, Class<?> clazz, String function, Class<?>[] argsClazzes)
 	{
 		Class<?>[] toReturn = new Class<?>[argsClazzes.length];
 		int offset = n.getAbsolutePosition();
@@ -1609,36 +1608,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		return clazz;
 	}
 
-	private Method resolveMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws SecurityException, NoSuchMethodException
-	{
-		try
-		{
-			return clazz.getMethod(name, parameterTypes);
-		} catch (SecurityException e)
-		{
-		} catch (NoSuchMethodException e)
-		{
-		}
-		L1: for (Method m : clazz.getMethods())
-		{
-			Class<?>[] types = m.getParameterTypes();
-			if (m.getName().contentEquals(name) && types.length == parameterTypes.length)
-			{
-				// check types super etc
-				for (int i = 0; i < types.length; ++i)
-				{
-					// if (types[i] == null || parameterTypes[i] == null ||
-					// !types[i].isAssignableFrom(parameterTypes[i]))
-					if (types[i] != null && parameterTypes[i] != null
-							&& !(parameterTypes[i].isAssignableFrom(types[i]) || types[i].isAssignableFrom(parameterTypes[i])))
-						continue L1;
-				}
-				return m;
-			}
-		}
-		return clazz.getMethod(name, parameterTypes);
-	}
-
 	protected void addVariableDeclaration(String name, VariableType type, int offset)
 	{
 		ScriptVariable vc = localVariables.get(name);
@@ -1704,7 +1673,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	/**
 	 * This is a workaround for JS functions and their Java equivalent. However,
 	 * this doesn't work properly, as those Classes have different methods (Java
-	 * String and JS String have different methods).
+	 * String and JS String have different methods for instance).
 	 * 
 	 * @param type
 	 * @return

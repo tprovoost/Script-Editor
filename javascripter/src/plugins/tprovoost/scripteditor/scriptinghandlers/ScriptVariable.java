@@ -51,7 +51,7 @@ public class ScriptVariable
         return null;
     }
 
-    private class ScriptVariableScope
+    public class ScriptVariableScope
     {
         private int declarationOffset;
         private int endScopeOffset;
@@ -77,7 +77,32 @@ public class ScriptVariable
                 return type;
             return null;
         }
+        
+        public int getDeclarationOffset()
+		{
+			return declarationOffset;
+		}
+        
+        public int getEndScopeOffset()
+		{
+			return endScopeOffset;
+		}
+        
+        public void setDeclarationOffset(int declarationOffset)
+		{
+			this.declarationOffset = declarationOffset;
+		}
+        
+        public void setEndScopeOffset(int endScopeOffset)
+		{
+			this.endScopeOffset = endScopeOffset;
+		}
     }
+    
+    public ArrayList<ScriptVariableScope> getVariableScopes()
+	{
+		return variableScopes;
+	}
 
     public boolean isInScope(int offset)
     {

@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.script.Bindings;
-import javax.script.ScriptContext;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
@@ -48,6 +46,7 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
+import org.mozilla.javascript.ast.AstNode;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
@@ -1337,6 +1336,36 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	{
 		textArea.getDocument().removeDocumentListener(autoverify);
 		killScript();
+	}
+
+	public static Method resolveMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws SecurityException, NoSuchMethodException
+	{
+		try
+		{
+			return clazz.getMethod(name, parameterTypes);
+		} catch (SecurityException e)
+		{
+		} catch (NoSuchMethodException e)
+		{
+		}
+		L1: for (Method m : clazz.getMethods())
+		{
+			Class<?>[] types = m.getParameterTypes();
+			if (m.getName().contentEquals(name) && types.length == parameterTypes.length)
+			{
+				// check types super etc
+				for (int i = 0; i < types.length; ++i)
+				{
+					// if (types[i] == null || parameterTypes[i] == null ||
+					// !types[i].isAssignableFrom(parameterTypes[i]))
+					if (types[i] != null && parameterTypes[i] != null
+							&& !(parameterTypes[i].isAssignableFrom(types[i]) || types[i].isAssignableFrom(parameterTypes[i])))
+						continue L1;
+				}
+				return m;
+			}
+		}
+		return clazz.getMethod(name, parameterTypes);
 	}
 
 }

@@ -6,7 +6,6 @@ import icy.system.thread.ThreadUtil;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
 import java.util.Set;
 
 import javax.swing.Box;
@@ -49,7 +48,6 @@ public class BindingsScriptFrame extends IcyFrame
 			@Override
 			public void actionPerformed(ActionEvent arg0)
 			{
-				HashMap<String, Object> bindings = engine.getBindings();
 				int selectedRow = listVariables.getSelectedRow();
 				Object o = listVariables.getValueAt(selectedRow, 0);
 				Object val = listVariables.getValueAt(selectedRow, 1);
@@ -64,8 +62,7 @@ public class BindingsScriptFrame extends IcyFrame
 					Scriptable scope = ((NativeJavaObject) val).getParentScope();
 					scope.put((String) o, scope, null);
 				}
-				engine.put((String) o, null);
-				bindings.remove(o);
+				engine.deleteBinding((String) o);
 				update();
 			}
 		});

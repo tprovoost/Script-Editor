@@ -167,13 +167,20 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			public void filesDropped(File[] files)
 			{
 				for (File f : files)
+				{
 					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
+					{
 						try
 						{
 							ScriptingPanel.this.editor.openFile(f);
 						} catch (IOException e)
 						{
 						}
+					} else
+					{
+						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
+					}
+				}
 			}
 		});
 		textArea.addHyperlinkListener(new HyperlinkListener()

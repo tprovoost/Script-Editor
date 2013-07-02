@@ -202,6 +202,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 						} catch (IOException e)
 						{
 						}
+					else
+						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
 			}
 		});
 		new FileDrop(getInternalFrame(), new FileDrop.FileDropListener()
@@ -218,6 +220,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 						} catch (IOException e)
 						{
 						}
+					else
+						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
 			}
 		});
 		addPaneButton = new IcyButton(new IcyIcon("plus"));
@@ -241,7 +245,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		consoleOutput = new JTextPane();
 		consoleOutput.setPreferredSize(new Dimension(400, 200));
 		consoleOutput.setEditable(false);
-		consoleOutput.setFont(new Font("Monospaced", Font.PLAIN, 12));
+		consoleOutput.setFont(new Font("sansserif", Font.PLAIN, 12));
 		consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 
 		// HANDLE RIGHT CLICK POPUP MENU

@@ -1,5 +1,8 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers.py;
 
+import icy.file.FileUtil;
+
+import java.io.File;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Properties;
@@ -17,9 +20,8 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class PyScriptEngine extends ScriptEngine
 {
-
-	private boolean initialized = false;
-	PythonInterpreter py;
+	private static boolean initialized = false;
+	private PythonInterpreter py;
 
 	public PyScriptEngine()
 	{
@@ -67,7 +69,7 @@ public class PyScriptEngine extends ScriptEngine
 			getErrorWriter().write(pe.toString());
 		}
 	}
-	
+
 	public void evalFile(String s) throws ScriptException, PyException
 	{
 		for (String s2 : bindings.keySet())
@@ -102,11 +104,20 @@ public class PyScriptEngine extends ScriptEngine
 		Properties postProps = new Properties();
 		Properties sysProps = System.getProperties();
 
-		// set default python.home property as a subdirectory named "python"
+		// set default python.home property as a subdirectory named "Python"
 		// inside Icy dir
 		if (sysProps.getProperty("python.home") == null)
 		{
-			sysProps.put("python.home", "python");
+			String sep = File.separator;
+			String path = FileUtil.getCurrentDirectory() + sep + "plugins" + sep + "tlecomte" + sep + "jythonForIcy";
+			File f = new File(path);
+			if (!f.exists() || !f.isDirectory())
+			{
+				// fallback to current dir if the above path does not exist or
+				// is not a directory
+				path = System.getProperty("user.dir");
+			}
+			sysProps.put("python.home", path);
 		}
 
 		// put System properties (those set with -D on the command line) in
@@ -157,6 +168,12 @@ public class PyScriptEngine extends ScriptEngine
 	protected void putInRealEngine(String name, Object value)
 	{
 		py.set(name, value);
+	}
+
+	@Override
+	protected void removeFromRealEngine(String name)
+	{
+		py.set(name, null);
 	}
 
 }

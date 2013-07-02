@@ -129,4 +129,10 @@ public class JSScriptEngine extends ScriptEngine
 	{
 		scriptable.put(name, scriptable, value);
 	}
+	
+	@Override
+	protected void removeFromRealEngine(String name)
+	{
+		scriptable.delete(name);
+	}
 }
