@@ -52,8 +52,8 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 public class IcyCompletionProvider extends DefaultCompletionProvider
 {
 
-    private ScriptingHandler handler;
-    private boolean advanced = true;
+    protected ScriptingHandler handler;
+    protected boolean advanced = true;
     private static Comparator<Completion> comparatorFull = new Comparator<Completion>()
     {
         @Override
@@ -738,7 +738,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return retVal;
     }
 
-    private void populateWithConstructors(Class<?> clazz, List<Completion> retVal)
+    protected void populateWithConstructors(Class<?> clazz, List<Completion> retVal)
     {
         if (!Modifier.isPublic(clazz.getModifiers()))
             return;
@@ -777,17 +777,17 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         }
     }
 
-    private void populateClassTypes(VariableType type, String text, List<Completion> retVal)
+    protected void populateClassTypes(VariableType type, String text, List<Completion> retVal)
     {
         populateClassTypes(type, null, text, retVal, false);
     }
 
-    private void populateClassTypes(VariableType type, String text, List<Completion> retVal, boolean staticOnly)
+    protected void populateClassTypes(VariableType type, String text, List<Completion> retVal, boolean staticOnly)
     {
         populateClassTypes(type, null, text, retVal, staticOnly);
     }
 
-    private void populateClassTypes(VariableType type2, Type t, String text, List<Completion> retVal, boolean staticOnly)
+    protected void populateClassTypes(VariableType type2, Type t, String text, List<Completion> retVal, boolean staticOnly)
     {
         Class<?> type = type2.getClazz();
         if (type == null)
@@ -922,7 +922,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         retVal.addAll(listEnums);
     }
 
-    private Completion generateSFCCopy(ScriptFunctionCompletion complete, boolean b)
+    protected Completion generateSFCCopy(ScriptFunctionCompletion complete, boolean b)
     {
         Method method = complete.getMethod();
         String shortDescript = complete.getShortDescription();
@@ -940,7 +940,7 @@ public class IcyCompletionProvider extends DefaultCompletionProvider
         return sfcCopy;
     }
 
-    private Completion generateSFCCopy(ScriptFunctionCompletion complete)
+    protected Completion generateSFCCopy(ScriptFunctionCompletion complete)
     {
         return generateSFCCopy(complete, false);
     }

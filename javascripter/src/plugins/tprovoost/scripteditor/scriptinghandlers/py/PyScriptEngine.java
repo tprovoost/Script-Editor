@@ -176,4 +176,9 @@ public class PyScriptEngine extends ScriptEngine
 		py.set(name, null);
 	}
 
+	public PythonInterpreter getPythonInterpreter()
+	{
+		return py;
+	}
+
 }

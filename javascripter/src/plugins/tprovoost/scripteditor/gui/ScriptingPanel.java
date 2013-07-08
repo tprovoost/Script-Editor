@@ -1,7 +1,9 @@
 package plugins.tprovoost.scripteditor.gui;
 
 import icy.file.FileUtil;
+import icy.file.Loader;
 import icy.gui.component.button.IcyButton;
+import icy.gui.dialog.ImageLoaderDialog;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
@@ -178,7 +180,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 						}
 					} else
 					{
-						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
+						Loader.load(f, true);
 					}
 				}
 			}
@@ -558,7 +560,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 					scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
 					scriptHandler.setStrict(prefWin.isStrictModeEnabled());
 					scriptHandler.setForceRun(prefWin.isOverrideEnabled());
-					scriptHandler.interpret(false);
+//					scriptHandler.interpret(false);
 					provider.setHandler(scriptHandler);
 					textArea.addKeyListener(scriptHandler);
 					PluginRepositoryLoader.addListener(scriptHandler);

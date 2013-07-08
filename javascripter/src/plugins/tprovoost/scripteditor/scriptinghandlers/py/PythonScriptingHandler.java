@@ -1,18 +1,22 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers.py;
 
+import icy.file.FileUtil;
 import icy.util.ClassUtil;
 
+import java.io.File;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.script.ScriptException;
 import javax.swing.text.JTextComponent;
+import javax.vecmath.Tuple2d;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -25,14 +29,19 @@ import org.python.antlr.ast.Attribute;
 import org.python.antlr.ast.BinOp;
 import org.python.antlr.ast.Call;
 import org.python.antlr.ast.For;
+import org.python.antlr.ast.Import;
+import org.python.antlr.ast.ImportFrom;
+import org.python.antlr.ast.ListComp;
 import org.python.antlr.ast.Name;
 import org.python.antlr.ast.Num;
 import org.python.antlr.ast.Str;
+import org.python.antlr.ast.alias;
 import org.python.antlr.base.expr;
 import org.python.antlr.base.mod;
 import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
+import org.python.core.PyList;
 import org.python.core.PyObject;
 import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
@@ -83,6 +92,9 @@ public class PythonScriptingHandler extends ScriptingHandler
 
 		HashMap<String, VariableType> engineFunctions = ScriptEngineHandler.getEngineHandler(getEngine()).getEngineFunctions();
 		engineFunctions.put("range", new VariableType(Object[].class));
+		engineFunctions.put("isinstance", new VariableType(Boolean.class));
+		engineFunctions.put("len", new VariableType(Number.class));
+		engineFunctions.put("zip", new VariableType(List.class));
 	}
 
 	public void importPythonPackages(ScriptEngine engine) throws ScriptException
@@ -107,12 +119,14 @@ public class PythonScriptingHandler extends ScriptingHandler
 		// Otherwise, references to external variables will not
 		// be detected.
 		addExternalVariables();
-
 		try
 		{
 			mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
+			if (node.getChildren() == null)
+				return;
 			if (DEBUG)
-				dumpTree(node);
+				dumpTree(node, "");
+			registerImports(node);
 			registerVariables(node);
 		} catch (Exception e)
 		{
@@ -179,7 +193,7 @@ public class PythonScriptingHandler extends ScriptingHandler
 			addVariableDeclaration(c.getName(), type, node.getCharStartIndex());
 		} else if (node instanceof Call)
 		{
-			resolveCallType(node, currentText, false);
+			// resolveCallType(node, currentText, false);
 		} else if (node instanceof For)
 		{
 			String name = ((Name) ((For) node).getTarget()).getInternalId();
@@ -221,7 +235,8 @@ public class PythonScriptingHandler extends ScriptingHandler
 	private VariableType resolveType(PythonTree child)
 	{
 		if (child instanceof Call)
-			return resolveCallType(child, currentText, false);
+			// return resolveCallType(child, currentText, false);
+			return null;
 		else if (child instanceof Num)
 			return new VariableType(Number.class);
 
@@ -234,12 +249,22 @@ public class PythonScriptingHandler extends ScriptingHandler
 		} else if (child instanceof Name)
 		{
 			return getVariableDeclaration(child.getText(), child.getCharStartIndex());
+		} else if (child instanceof Assign)
+		{
+			// TODO
+		} else if (child instanceof org.python.antlr.ast.List)
+		{
+			// TODO
+		} else if (child instanceof ListComp)
+		{
+			// TODO
 		}
 		if (DEBUG)
 			System.out.println("TODO handle: " + child.getClass());
 		return null;
 	}
 
+	@SuppressWarnings("unused")
 	private VariableType resolveCallType(PythonTree child, String text, boolean noerror)
 	{
 		VariableType toReturn = null;
@@ -276,22 +301,19 @@ public class PythonScriptingHandler extends ScriptingHandler
 			else
 				classNameOrFunctionNameOrVariable = firstCall.substring(0);
 
-			if (classNameOrFunctionNameOrVariable.contains("."))
+			// is it a class?
+			Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+			if (clazz != null)
+				vt = new VariableType(clazz);
+			else if (classNameOrFunctionNameOrVariable.contains("."))
 			{
-				// is it a class?
-				Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
-				if (clazz != null)
-					vt = new VariableType(clazz);
-				else
+				String res[] = classNameOrFunctionNameOrVariable.split("\\.");
+				classNameOrFunctionNameOrVariable = res[0];
+				isField = true;
+				for (int i = 1; i < res.length; ++i)
 				{
-					String res[] = classNameOrFunctionNameOrVariable.split("\\.");
-					classNameOrFunctionNameOrVariable = res[0];
-					isField = true;
-					for (int i = 1; i < res.length; ++i)
-					{
-						lastDot = classNameOrFunctionNameOrVariable.length() + 1;
-						decal = classNameOrFunctionNameOrVariable.length() + 1;
-					}
+					lastDot = classNameOrFunctionNameOrVariable.length() + 1;
+					decal = classNameOrFunctionNameOrVariable.length() + 1;
 				}
 			}
 
@@ -324,15 +346,20 @@ public class PythonScriptingHandler extends ScriptingHandler
 			// is it a class?
 			if (vt == null)
 			{
-				Class<?> clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
+				clazz = resolveClassDeclaration(classNameOrFunctionNameOrVariable);
 				if (clazz != null)
 					vt = new VariableType(clazz);
 			}
-
 			// unknown type
 			if (vt == null)
 			{
-				System.out.println("Error while parsing code: unknown: " + classNameOrFunctionNameOrVariable + " at line: " + child.getLine());
+				String moduleName = classNameOrFunctionNameOrVariable + ".py";
+				String currentDirectory = FileUtil.getDirectory(fileName);
+			}
+			// unknown type
+			if (vt == null)
+			{
+				System.out.println("Error while parsing code: cannot find type of: " + classNameOrFunctionNameOrVariable + " at line: " + child.getLine());
 				return null;
 			}
 
@@ -652,67 +679,105 @@ public class PythonScriptingHandler extends ScriptingHandler
 		return callName;
 	}
 
-	public void dumpTree(mod node)
+	public void dumpTree(PythonTree node, String decal)
 	{
-		for (PythonTree tree : node.getChildren())
+		if (node == null)
+			return;
+		System.out.println(decal + node.getType().getName());
+		List<PythonTree> children = node.getChildren();
+		if (children == null)
+			return;
+		for (PythonTree child : children)
 		{
-			System.out.println(tree.getType());
+			dumpTree(child, decal + "\t");
 		}
 	}
 
 	@Override
 	public void registerImports()
 	{
-		scriptDeclaredImportClasses.clear();
-		String s = textArea.getText();
-		// Regex 1 : (from\s+((\w|\.|_)+)\s+)?import\s+((\w|\s|,|_|$)+)\n
-		// Regex 2 : ((\w|_|$)+)\s*(as\s+((\w|_|$)+))?
-		// group 2 : Package (from)
-		// group 4 : Class (import) : use regex 2
-		Pattern patternImport = Pattern.compile("(from\\s+((\\w|\\.|_)+)\\s+)?import\\s+((\\w|\\s|,|_|$)+)\\n");
-		Matcher matchImport = patternImport.matcher(s);
-		int offset = 0;
-		while (matchImport.find(offset))
+		aliases.clear();
+	}
+
+	private void registerImports(PythonTree node)
+	{
+		if (node instanceof Import)
 		{
-			String foundString = matchImport.group(0);
-			String foundPackage = matchImport.group(2);
-			String foundClasses = matchImport.group(4);
-			if (foundClasses.endsWith("\n"))
-				foundClasses = foundClasses.substring(0, foundClasses.length() - 1);
-			Pattern patternClasses = Pattern.compile("((\\w|_|$)+)(\\s*as\\s+((\\w|_|$)+))?");
-			Matcher matchClasses = patternClasses.matcher(foundClasses);
-			int offsetClasses = 0;
-			while (matchClasses.find(offsetClasses))
+			registerImportsTree((Import) node);
+		} else if (node instanceof ImportFrom)
+		{
+			registerImportsTree((ImportFrom) node);
+		}
+		List<PythonTree> children = node.getChildren();
+		if (children != null)
+		{
+			for (PythonTree child : children)
+				registerImports(child);
+		}
+	}
+
+	private void registerImportsTree(Import tree)
+	{
+		// TODO handle modules
+		List<alias> imports = tree.getInternalNames();
+		for (alias a : imports)
+		{
+			String alias = a.getInternalAsname();
+			String classOrModule = a.getName().toString();
+			if (alias == null && !classOrModule.contains(".") && isModule(classOrModule))
 			{
-				String foundStringClass = matchClasses.group(0);
-				if (foundStringClass.contentEquals(""))
-					break;
-				String foundClass = matchClasses.group(1);
-				String foundAlias = matchClasses.group(4);
-				String className = foundPackage + "." + foundClass;
-
-				if (foundClass.contentEquals("*"))
-				{
-					scriptDeclaredImports.add(foundPackage);
-				} else
-				{
-					if (foundAlias != null)
-					{
-						aliases.put(foundAlias, className);
-					}
-					scriptDeclaredImportClasses.add(className);
-				}
-
-				int idxString = foundClasses.indexOf(foundStringClass, offset);
-				if (idxString == -1)
-					break;
-				offsetClasses = idxString + foundStringClass.length();
+				// insert module TODO
+				if (DEBUG)
+					System.out.println("Module found : " + classOrModule);
+			} else
+			{
+				if (alias != null)
+					aliases.put(a.getInternalAsname().toString(), classOrModule);
+				scriptDeclaredImportClasses.add(classOrModule);
 			}
+		}
+	}
 
-			int idxString = s.indexOf(foundString, offset);
-			if (idxString == -1)
-				break;
-			offset = idxString + foundString.length();
+	private boolean isModule(String value)
+	{
+		// Look into the current folder
+		File f = new File(FileUtil.getDirectory(fileName) + value + ".py");
+		if (f.exists())
+			return true;
+
+		// Look into the sys.path
+		PyList paths = ((PyScriptEngine) getEngine()).getPythonInterpreter().getSystemState().path;
+		for (PyObject o : paths.getArray())
+		{
+			String path = o.toString();
+			if (!path.startsWith("_"))
+			{
+				f = new File(path + File.separator + value + ".py");
+				if (f.exists())
+					return true;
+			}
+		}
+		return false;
+	}
+
+	private void registerImportsTree(ImportFrom tree)
+	{
+		List<PythonTree> children = tree.getChildren();
+		String sPackage = "";
+		for (PythonTree child : children)
+		{
+			if (!sPackage.isEmpty())
+				sPackage += ".";
+			sPackage += child.getText();
+		}
+
+		List<alias> imports = tree.getInternalNames();
+		for (alias a : imports)
+		{
+			String alias = a.getInternalAsname();
+			scriptDeclaredImportClasses.add(a.getName().toString());
+			if (alias != null)
+				aliases.put(sPackage + "." + a.getInternalAsname().toString(), a.getName().toString());
 		}
 	}
 

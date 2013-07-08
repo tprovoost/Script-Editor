@@ -309,7 +309,7 @@ public class ClassSource
                 L1: for (BodyDeclaration bd : cv.getList())
                 {
                     ConstructorDeclaration cd = (ConstructorDeclaration) bd;
-                    if (!cd.getName().contentEquals(c.getName()))
+                    if (!cd.getName().contentEquals(clazz.getSimpleName()))
                         continue;
                     List<japa.parser.ast.body.Parameter> paramsSource = cd.getParameters();
                     Class<?> paramsReflect[] = c.getParameterTypes();

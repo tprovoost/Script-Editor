@@ -2,6 +2,7 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.common.listener.AcceptListener;
 import icy.file.FileUtil;
+import icy.file.Loader;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.IcyFrameAdapter;
@@ -203,7 +204,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 						{
 						}
 					else
-						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
+						Loader.load(f, true);
 			}
 		});
 		new FileDrop(getInternalFrame(), new FileDrop.FileDropListener()
@@ -221,7 +222,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 						{
 						}
 					else
-						new FailedAnnounceFrame("Script " + f.getName() + " could not be opened: incompatible type.");
+						Loader.load(f, true);
 			}
 		});
 		addPaneButton = new IcyButton(new IcyIcon("plus"));
