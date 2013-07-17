@@ -23,6 +23,8 @@ public abstract class ScriptEngine
 
 	public abstract void eval(String string) throws ScriptException;
 
+	public abstract void evalFile(String fileName) throws ScriptException;
+
 	public PrintWriter getWriter()
 	{
 		return pw;

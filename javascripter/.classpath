@@ -3,12 +3,14 @@
 	<classpathentry excluding="plugins/tprovoost/scripteditor/main/scriptinghandlers/JSScriptingHandler7.java|plugins/tprovoost/scripteditor/scriptinghandlers/JSScriptingHandler7.java|plugins/tprovoost/scripteditor/scriptinghandlers/JSScriptingHandlerSimple.java" kind="src" path="src"/>
 	<classpathentry kind="lib" path="/Icy-App/icy.jar"/>
 	<classpathentry kind="lib" path="/Icy-App/plugins/adufour/ezplug/EzPlug.jar"/>
-	<classpathentry kind="lib" path="C:/jython2.7b1/jython.jar" sourcepath="C:/jython2.7b1_sources/src"/>
 	<classpathentry kind="lib" path="/Icy-App/plugins/adufour/blocks/Blocks.jar"/>
 	<classpathentry kind="lib" path="/Icy-App/plugins/tprovoost/autocomplete/AutoCompletePlugin.jar"/>
 	<classpathentry kind="lib" path="/Icy-App/plugins/tprovoost/javadocparser/JavaDocParser.jar"/>
 	<classpathentry kind="lib" path="/Icy-App/plugins/tprovoost/rhino/RhinoPlugin.jar"/>
-	<classpathentry kind="lib" path="/Icy-App/plugins/tprovoost/rsyntaxtextarea/RSyntaxTextAreaPlugin.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre6"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Icy-App/plugins/tlecomte/jythonExecnetForIcy/JythonExecnetForIcy.jar"/>
+	<classpathentry kind="lib" path="/Icy-App/plugins/tlecomte/jythonExtrasForIcy/JythonExtrasForIcy.jar"/>
+	<classpathentry kind="lib" path="/Icy-App/plugins/tlecomte/jythonForIcy/JythonForIcy.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/RSyntaxTextArea"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

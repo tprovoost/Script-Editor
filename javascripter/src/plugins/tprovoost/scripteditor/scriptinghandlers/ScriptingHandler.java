@@ -41,12 +41,11 @@ import javax.swing.text.StyleConstants;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.VariableCompletion;
+import org.fife.ui.rsyntaxtextarea.LinkGenerator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
-import org.mozilla.javascript.ast.AstNode;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
@@ -63,7 +62,7 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
  * 
  * @author Thomas Provoost
  */
-public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener
+public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener, LinkGenerator
 {
 
 	/**
@@ -198,6 +197,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		setLanguage(engineType);
 
 		textArea.getDocument().addDocumentListener(autoverify);
+
+		if (textArea instanceof RSyntaxTextArea)
+		{
+			((RSyntaxTextArea) textArea).setLinkGenerator(this);
+		}
 
 		localVariables = new HashMap<String, ScriptVariable>();
 
@@ -572,132 +576,27 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * @param exec
 	 *            : run after compile or not.
 	 */
-	private void interpret(String s)
+	protected void interpret(String s)
 	{
 		RTextArea textArea = new RTextArea();
 		textArea.setText(s);
 		try
 		{
-			Context context = Context.enter();
-			context.setApplicationClassLoader(PluginLoader.getLoader());
 			updateGutter();
 			clearScriptVariables();
 			registerImports();
-			if (provider != null && varInterpretation)
+			if (varInterpretation)
 			{
-				detectVariables(s, context);
+				detectVariables(s);
 			}
 			setCompilationOk(true);
-		} catch (EvaluatorException ee)
-		{
-			// get the line and column of error
-			int lineError = ee.lineNumber() - 1;
-			int columnNumber = ee.columnNumber();
-			if (columnNumber == -1)
-				columnNumber = 0;
-			try
-			{
-				// verify if exists (> 0 and < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-					String textToRemove = s.substring(lineOffset, lineEndOffset);
-
-					textToRemove = "\n";
-					if (ignoredLines.containsKey(lineError))
-					{
-						// System.out.println("An error occured with the parsing.");
-						return;
-					}
-					ignoredLines.put(lineError, ee);
-					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stop interpretation
-					// System.out.println("error at unknown line: " +
-					// lineError);
-					ee.printStackTrace();
-					if (errorOutput != null)
-					{
-						Document doc = errorOutput.getDocument();
-						try
-						{
-							Style style = errorOutput.getStyle("normal");
-							if (style == null)
-								style = errorOutput.addStyle("normal", null);
-							doc.insertString(doc.getLength(), ee.getMessage() + "\n", style);
-						} catch (BadLocationException e)
-						{
-						}
-					} else
-						System.out.println(ee.getMessage());
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
-		} catch (ScriptException se)
-		{
-			// get line error
-			int lineError = lineNumber(se) - 1;
-			Integer columnNumberI = columnNumber(se);
-			int columnNumber = columnNumberI != null ? columnNumberI : -1;
-			if (columnNumber == -1)
-				columnNumber = 0;
-			try
-			{
-				// verify integrity (>0, < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-					if (ignoredLines.containsKey(lineError))
-					{
-						// System.out.println("An error occured with the error parsing.");
-						return;
-					}
-					ignoredLines.put(lineError, se);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stops interpretation
-					System.out.println("error at unknown line: " + lineError);
-					se.printStackTrace();
-					if (errorOutput != null)
-					{
-						Document doc = errorOutput.getDocument();
-						try
-						{
-							Style style = errorOutput.getStyle("normal");
-							if (style == null)
-								style = errorOutput.addStyle("normal", null);
-							doc.insertString(doc.getLength(), se.getMessage() + "\n", style);
-						} catch (BadLocationException e)
-						{
-						}
-					}
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
 		} catch (Exception e)
 		{
-			e.printStackTrace();
-		} finally
-		{
-			Context.exit();
+			processError(s, e);
 		}
 	}
+
+	protected abstract void processError(String s, Exception e);
 
 	protected void addExternalVariables()
 	{
@@ -830,7 +729,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * @param context
 	 * @throws Exception
 	 */
-	protected abstract void detectVariables(String s, Context context) throws Exception;
+	protected abstract void detectVariables(String s) throws Exception;
 
 	@Override
 	public void keyTyped(KeyEvent e)
@@ -906,74 +805,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	@Override
 	public void keyReleased(KeyEvent e)
 	{
-	}
-
-	/**
-	 * Returns the column number where the error occurred. This function should
-	 * be called instead of {@link ScriptException#getColumnNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer columnNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int columnNumber = se.getColumnNumber();
-		if (cause == null || columnNumber >= 0)
-			return columnNumber;
-		return callMethod(cause, "columnNumber", Integer.class);
-	}
-
-	/**
-	 * Returns the line number where the error occurred. This function should be
-	 * called instead {@link ScriptException#getLineNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer lineNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int lineNumber = se.getLineNumber();
-		if (lineNumber >= 0)
-			return lineNumber;
-		if (cause == null)
-			return -1;
-		else
-			return callMethod(cause, "lineNumber", Integer.class);
-	}
-
-	static private Method getMethod(Object object, String methodName)
-	{
-		try
-		{
-			if (object != null)
-				return object.getClass().getMethod(methodName);
-			return null;
-		} catch (NoSuchMethodException e)
-		{
-			return null;
-			/* gulp */
-		}
-	}
-
-	static private <T> T callMethod(Object object, String methodName, Class<T> cl)
-	{
-		try
-		{
-			Method m = getMethod(object, methodName);
-			if (m != null)
-			{
-				Object result = m.invoke(object);
-				return cl.cast(result);
-			}
-		} catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	/**
@@ -1191,6 +1022,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		private String s;
 		private ScriptEngine evalEngine;
+		private String filename;
 
 		public EvalThread(ScriptEngine engine, String script)
 		{
@@ -1224,62 +1056,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			} catch (ThreadDeath td)
 			{
 				System.out.println("shutdown");
-			} catch (final ScriptException se)
+			} catch (Exception e)
 			{
-				ThreadUtil.invokeLater(new Runnable()
-				{
-
-					@Override
-					public void run()
-					{
-						JTextArea textArea = new JTextArea(s);
-						int lineError = lineNumber(se) - 1;
-						Integer columnNumberI = columnNumber(se);
-						int columnNumber = columnNumberI != null ? columnNumberI : -1;
-						if (columnNumber == -1)
-							columnNumber = 0;
-
-						try
-						{
-							// verify integrity (>0, < lineCount)
-							if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-							{
-								int lineOffset = textArea.getLineStartOffset(lineError);
-								int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-								s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-								if (ignoredLines.containsKey(lineError))
-								{
-									// System.out.println("An error occured with the error parsing.");
-									return;
-								}
-								ignoredLines.put(lineError, se);
-
-								updateGutter();
-								updateOutput();
-							} else
-							{
-								if (errorOutput != null)
-								{
-									Document doc = errorOutput.getDocument();
-									try
-									{
-										Style style = errorOutput.getStyle("error");
-										if (style == null)
-											style = errorOutput.addStyle("error", null);
-										doc.insertString(doc.getLength(), se.getLocalizedMessage() + "\n", style);
-									} catch (BadLocationException e)
-									{
-									}
-									errorOutput.repaint();
-								}
-							}
-						} catch (BadLocationException e1)
-						{
-							e1.printStackTrace();
-						}
-					}
-				});
+				processError(s, e);
 			} finally
 			{
 				updateGutter();

@@ -42,7 +42,10 @@ import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
 import org.fife.ui.autocomplete.VariableCompletion;
+import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
+import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ErrorReporter;
@@ -191,7 +194,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 	public void evalEngine(ScriptEngine engine, String s) throws ScriptException
 	{
-		engine.eval(s);
+		if (fileName == null || fileName.isEmpty() || fileName.contentEquals("Untitled"))
+			engine.eval(s);
+		else
+			engine.evalFile(fileName);
 	}
 
 	@Override
@@ -224,17 +230,21 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
-			FunctionCompletion c = new FunctionCompletion(provider, "getSequence", Sequence.class.getName());
-			c.setDefinedIn(mainInterface);
-			c.setReturnValueDescription("The focused sequence is returned.");
-			c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
 
-			// check if does not exist already
-			// if not, add it to provider
-			@SuppressWarnings("unchecked")
-			List<Completion> list = provider.getCompletionByInputText("gui");
-			if (list == null || !IcyCompletionProvider.exists(c, list))
-				provider.addCompletion(c);
+			if (provider != null)
+			{
+				FunctionCompletion c = new FunctionCompletion(provider, "getSequence", Sequence.class.getName());
+				c.setDefinedIn(mainInterface);
+				c.setReturnValueDescription("The focused sequence is returned.");
+				c.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+
+				// check if does not exist already
+				// if not, add it to provider
+				@SuppressWarnings("unchecked")
+				List<Completion> list = provider.getCompletionByInputText("gui");
+				if (list == null || !IcyCompletionProvider.exists(c, list))
+					provider.addCompletion(c);
+			}
 
 			engineFunctions.put("getSequence", new VariableType(Sequence.class));
 		} catch (ScriptException e)
@@ -245,18 +255,20 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
-			FunctionCompletion c = new FunctionCompletion(provider, "getImage", IcyBufferedImage.class.getName());
-			c.setDefinedIn(mainInterface);
-			c.setShortDescription("Returns the current image viewed in the focused sequence.");
-			c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
+			if (provider != null)
+			{
+				FunctionCompletion c = new FunctionCompletion(provider, "getImage", IcyBufferedImage.class.getName());
+				c.setDefinedIn(mainInterface);
+				c.setShortDescription("Returns the current image viewed in the focused sequence.");
+				c.setReturnValueDescription("Returns the focused Image, returns null if no sequence opened");
 
-			// check if does not exist already
-			// if not, add it to provider
-			@SuppressWarnings("unchecked")
-			List<Completion> list = provider.getCompletionByInputText("gui");
-			if (list == null || !IcyCompletionProvider.exists(c, list))
-				provider.addCompletion(c);
-
+				// check if does not exist already
+				// if not, add it to provider
+				@SuppressWarnings("unchecked")
+				List<Completion> list = provider.getCompletionByInputText("gui");
+				if (list == null || !IcyCompletionProvider.exists(c, list))
+					provider.addCompletion(c);
+			}
 			engineFunctions.put("getImage", new VariableType(IcyBufferedImage.class));
 		} catch (ScriptException e)
 		{
@@ -266,17 +278,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			engine.eval("gui = Packages.icy.main.Icy.getMainInterface()");
-			VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
-			vc.setDefinedIn(mainInterface);
-			vc.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
+			if (provider != null)
+			{
+				VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
+				vc.setDefinedIn(mainInterface);
+				vc.setShortDescription("Returns the sequence under focus. Returns null if no sequence opened.");
 
-			// check if does not exist already
-			// if not, add it to provider
-			@SuppressWarnings("unchecked")
-			List<Completion> list = provider.getCompletionByInputText("gui");
-			if (list == null || !IcyCompletionProvider.exists(vc, list))
-				provider.addCompletion(vc);
-
+				// check if does not exist already
+				// if not, add it to provider
+				@SuppressWarnings("unchecked")
+				List<Completion> list = provider.getCompletionByInputText("gui");
+				if (list == null || !IcyCompletionProvider.exists(vc, list))
+					provider.addCompletion(vc);
+			}
 			engineVariables.put("gui", new VariableType(MainInterface.class));
 		} catch (ScriptException e)
 		{
@@ -286,6 +300,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		// ADD JS FUNCTIONS
 		engineFunctions.put("importClass", new VariableType(void.class));
 		engineFunctions.put("importPackage", new VariableType(void.class));
+		engineFunctions.put("eval", new VariableType(void.class));
 
 		// IMPORT PLUGINS FUNCTIONS
 		try
@@ -404,7 +419,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 			try
 			{
-				if ((provider.getCompletionByInputText(imported)) == null)
+				if (provider != null && (provider.getCompletionByInputText(imported)) == null)
 				{
 					provider.addCompletion(new BasicJavaClassCompletion(provider, ClassUtil.findClass(imported)));
 				}
@@ -584,36 +599,47 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	// --------------------------------------------------------------------
 	// --------------------------------------------------------------------
 	@Override
-	protected void detectVariables(String s, Context context) throws ScriptException
+	protected void detectVariables(String s) throws ScriptException
 	{
-		currentText = s;
-		final CompilerEnvirons comp = new CompilerEnvirons();
-		comp.initFromContext(context);
-		final Parser parser = new Parser(comp, comp.getErrorReporter());
-		AstRoot root;
-		root = parser.parse(s, "", 1);
+		Context context = Context.enter();
+		try
+		{
+			currentText = s;
+			final CompilerEnvirons comp = new CompilerEnvirons();
+			comp.initFromContext(context);
+			final Parser parser = new Parser(comp, comp.getErrorReporter());
+			AstRoot root;
+			root = parser.parse(s, "", 1);
 
-		if (root == null || !root.hasChildren())
-			return;
-		// no issue, removes variables
-		for (Completion c : variableCompletions)
-			provider.removeCompletion(c);
-		variableCompletions.clear();
+			if (root == null || !root.hasChildren())
+				return;
+			// no issue, removes variables
+			if (provider != null)
+			{
+				for (Completion c : variableCompletions)
+					provider.removeCompletion(c);
+			}
+			variableCompletions.clear();
 
-		// functionBlocksToResolve.clear();
-		if (DEBUG)
-			dumpTree(root, root, 1, "");
+			// functionBlocksToResolve.clear();
+			if (DEBUG)
+				dumpTree(root, root, 1, "");
 
-		// register external variables prio to detection.
-		// Otherwise, references to external variables will not
-		// be detected.
-		addExternalVariables();
+			// register external variables prio to detection.
+			// Otherwise, references to external variables will not
+			// be detected.
+			addExternalVariables();
 
-		// start variable registration
-		registerVariables(root, root, s);
+			// start variable registration
+			registerVariables(root, root, s);
 
-		// add the completions
-		provider.addCompletions(variableCompletions);
+			// add the completions
+			if (provider != null)
+				provider.addCompletions(variableCompletions);
+		} finally
+		{
+			Context.exit();
+		}
 	}
 
 	/**
@@ -2569,5 +2595,197 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	public ScriptEngine getEngine()
 	{
 		return ScriptEngineHandler.getEngine("javascript");
+	}
+
+	@Override
+	protected void processError(String s, Exception e)
+	{
+		RTextArea textArea = null;
+		try
+		{
+			textArea = new RTextArea();
+		} catch (Exception toignore)
+		{
+		}
+		textArea.setText(s);
+		if (e instanceof EvaluatorException)
+		{
+			EvaluatorException ee = (EvaluatorException) e;
+			// get the line and column of error
+			int lineError = ee.lineNumber() - 1;
+			int columnNumber = ee.columnNumber();
+			if (columnNumber == -1)
+				columnNumber = 0;
+			try
+			{
+				// verify if exists (> 0 and < lineCount)
+				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
+				{
+					int lineOffset = textArea.getLineStartOffset(lineError);
+					int lineEndOffset = textArea.getLineEndOffset(lineError);
+
+					String textToRemove = s.substring(lineOffset, lineEndOffset);
+
+					textToRemove = "\n";
+					if (ignoredLines.containsKey(lineError))
+					{
+						// System.out.println("An error occured with the parsing.");
+						return;
+					}
+					ignoredLines.put(lineError, ee);
+					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
+
+					// interpret again, without the faulty line.
+					interpret(s);
+				} else
+				{
+					// stop interpretation
+					// System.out.println("error at unknown line: " +
+					// lineError);
+					ee.printStackTrace();
+					if (errorOutput != null)
+					{
+						Document doc = errorOutput.getDocument();
+						try
+						{
+							Style style = errorOutput.getStyle("normal");
+							if (style == null)
+								style = errorOutput.addStyle("normal", null);
+							doc.insertString(doc.getLength(), ee.getMessage() + "\n", style);
+						} catch (BadLocationException ble)
+						{
+						}
+					} else
+						System.out.println(ee.getMessage());
+				}
+			} catch (BadLocationException e1)
+			{
+				e1.printStackTrace();
+			}
+		} else if (e instanceof ScriptException)
+		{
+			ScriptException se = (ScriptException) e;
+			// get line error
+			int lineError = lineNumber(se) - 1;
+			Integer columnNumberI = columnNumber(se);
+			int columnNumber = columnNumberI != null ? columnNumberI : -1;
+			if (columnNumber == -1)
+				columnNumber = 0;
+			try
+			{
+				// verify integrity (>0, < lineCount)
+				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
+				{
+					int lineOffset = textArea.getLineStartOffset(lineError);
+					int lineEndOffset = textArea.getLineEndOffset(lineError);
+
+					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
+					if (ignoredLines.containsKey(lineError))
+					{
+						// System.out.println("An error occured with the error parsing.");
+						return;
+					}
+					ignoredLines.put(lineError, se);
+
+					// interpret again, without the faulty line.
+					interpret(s);
+				} else
+				{
+					// stops interpretation
+					System.out.println("error at unknown line: " + lineError);
+					se.printStackTrace();
+					if (errorOutput != null)
+					{
+						Document doc = errorOutput.getDocument();
+						try
+						{
+							Style style = errorOutput.getStyle("normal");
+							if (style == null)
+								style = errorOutput.addStyle("normal", null);
+							doc.insertString(doc.getLength(), se.getMessage() + "\n", style);
+						} catch (BadLocationException ble)
+						{
+						}
+					}
+				}
+			} catch (BadLocationException e1)
+			{
+				e1.printStackTrace();
+			}
+		}
+	}
+
+	static private Method getMethod(Object object, String methodName)
+	{
+		try
+		{
+			if (object != null)
+				return object.getClass().getMethod(methodName);
+			return null;
+		} catch (NoSuchMethodException e)
+		{
+			return null;
+			/* gulp */
+		}
+	}
+
+	static private <T> T callMethod(Object object, String methodName, Class<T> cl)
+	{
+		try
+		{
+			Method m = getMethod(object, methodName);
+			if (m != null)
+			{
+				Object result = m.invoke(object);
+				return cl.cast(result);
+			}
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the column number where the error occurred. This function should
+	 * be called instead of {@link ScriptException#getColumnNumber()}.
+	 * 
+	 * @param se
+	 *            : the ScriptException raised.
+	 * @return
+	 */
+	private Integer columnNumber(ScriptException se)
+	{
+		Throwable cause = se.getCause();
+		int columnNumber = se.getColumnNumber();
+		if (cause == null || columnNumber >= 0)
+			return columnNumber;
+		return callMethod(cause, "columnNumber", Integer.class);
+	}
+
+	/**
+	 * Returns the line number where the error occurred. This function should be
+	 * called instead {@link ScriptException#getLineNumber()}.
+	 * 
+	 * @param se
+	 *            : the ScriptException raised.
+	 * @return
+	 */
+	private Integer lineNumber(ScriptException se)
+	{
+		Throwable cause = se.getCause();
+		int lineNumber = se.getLineNumber();
+		if (lineNumber >= 0)
+			return lineNumber;
+		if (cause == null)
+			return -1;
+		else
+			return callMethod(cause, "lineNumber", Integer.class);
+	}
+
+	@Override
+	public LinkGeneratorResult isLinkAtOffset(RSyntaxTextArea textArea, int offs)
+	{
+		return null;
 	}
 }

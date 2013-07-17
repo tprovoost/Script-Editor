@@ -3,7 +3,6 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.file.FileUtil;
 import icy.file.Loader;
 import icy.gui.component.button.IcyButton;
-import icy.gui.dialog.ImageLoaderDialog;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
@@ -37,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.ArrayList;
 
 import javax.script.ScriptEngineFactory;
@@ -59,6 +59,7 @@ import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
@@ -75,6 +76,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import plugins.tprovoost.scripteditor.completion.IcyAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionCellRenderer;
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
+import plugins.tprovoost.scripteditor.completion.IcyCompletionProviderPython;
 import plugins.tprovoost.scripteditor.completion.JSAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
@@ -93,7 +95,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandle
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener
+public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, HyperlinkListener
 {
 	/** */
 	private static final long serialVersionUID = 1L;
@@ -162,6 +164,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		textArea.setPaintMatchedBracketPair(true);
 		textArea.setPaintTabLines(true);
 		textArea.setTabsEmulated(false);
+		((RSyntaxTextArea) textArea).addHyperlinkListener(this);
 		new FileDrop(textArea, new FileDrop.FileDropListener()
 		{
 
@@ -427,7 +430,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		// the provider provides the results when hitting Ctrl + Space.
 		if (provider == null)
 		{
-			provider = new IcyCompletionProvider();
+			if (language.contentEquals("Python"))
+			{
+				provider = new IcyCompletionProviderPython();
+			} else
+			{
+				provider = new IcyCompletionProvider();
+			}
 			boolean autoActivate = prefWin.isFullAutoCompleteEnabled();
 			provider.setAutoActivationRules(autoActivate, ".");
 			ThreadUtil.invokeLater(new Runnable()
@@ -560,7 +569,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 					scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
 					scriptHandler.setStrict(prefWin.isStrictModeEnabled());
 					scriptHandler.setForceRun(prefWin.isOverrideEnabled());
-//					scriptHandler.interpret(false);
+					// scriptHandler.interpret(false);
 					provider.setHandler(scriptHandler);
 					textArea.addKeyListener(scriptHandler);
 					PluginRepositoryLoader.addListener(scriptHandler);
@@ -802,13 +811,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 						return;
 					if (!integrated)
 					{
-						if (isDirty() && getLanguage().contentEquals("Python"))
+						if (isDirty())
 						{
-							if (saveFile == null)
-							{
-								if (!showSaveFileDialog(ScriptingEditor.currentDirectoryPath))
-									return;
-							} else
+							if (saveFile != null)
 							{
 								saveFile();
 							}
@@ -889,7 +894,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				return;
 			if (!integrated)
 			{
-				if (isDirty() && getLanguage().contentEquals("Python"))
+				if (isDirty())
 				{
 					if (saveFile == null)
 					{
@@ -1041,6 +1046,22 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		{
 		} catch (BadLocationException e)
 		{
+		}
+	}
+
+	@Override
+	public void hyperlinkUpdate(HyperlinkEvent e)
+	{
+		if (e.getEventType() == EventType.ACTIVATED)
+		{
+			URL url = e.getURL();
+			String res = url == null ? e.getDescription() : url.getFile();
+			try
+			{
+				editor.openFile(new File(res));
+			} catch (IOException e1)
+			{
+			}
 		}
 	}
 

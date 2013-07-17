@@ -1,7 +1,13 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers.js;
 
+import icy.file.FileUtil;
 import icy.plugin.PluginLoader;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 
 import javax.script.ScriptException;
@@ -9,6 +15,7 @@ import javax.script.ScriptException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.ImporterTopLevel;
+import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
@@ -19,6 +26,7 @@ public class JSScriptEngine extends ScriptEngine
 {
 
 	public ScriptableObject scriptable;
+	public String lastFileName = "";
 
 	public JSScriptEngine()
 	{
@@ -73,6 +81,53 @@ public class JSScriptEngine extends ScriptEngine
 		}
 	}
 
+	public void evalFile(String fileName) throws ScriptException, EvaluatorException
+	{
+		this.lastFileName = fileName;
+		File f = new File(fileName);
+		if (!f.exists())
+		{
+			throw new ScriptException("The script file could not be found, please check if it is correctly saved on the disk.", fileName, -1);
+		}
+
+		byte[] bytes = null;
+		try
+		{
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(f));
+			bytes = new byte[bis.available()];
+			bis.read(bytes);
+			bis.close();
+		} catch (IOException e1)
+		{
+			throw new ScriptException(e1.getMessage(), fileName, -1);
+		}
+		String s = new String(bytes);
+
+		Context context = Context.enter();
+		context.setApplicationClassLoader(PluginLoader.getLoader());
+		// context.setErrorReporter(errorReporter);
+		try
+		{
+			Script script = context.compileString(s, "script", 0, null);
+			script.exec(context, scriptable);
+		} catch (EvaluatorException e)
+		{
+			throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+		} catch (RhinoException e3)
+		{
+			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+		} finally
+		{
+			bindings.clear();
+			for (Object o : scriptable.getIds())
+			{
+				bindings.put((String) o, scriptable.get(o));
+			}
+			lastFileName = "";
+			Context.exit();
+		}
+	}
+
 	class IcyImporterTopLevel extends ImporterTopLevel
 	{
 
@@ -85,7 +140,7 @@ public class JSScriptEngine extends ScriptEngine
 		{
 			super(context);
 			String[] names =
-			{ "println", "print" };
+			{ "println", "print", "eval" };
 			defineFunctionProperties(names, IcyImporterTopLevel.class, ScriptableObject.DONTENUM);
 		}
 
@@ -99,6 +154,58 @@ public class JSScriptEngine extends ScriptEngine
 			getWriter().write(Context.toString(o));
 		}
 
+		public void eval(Object o) throws ScriptException, FileNotFoundException
+		{
+			File f;
+			if (o instanceof NativeJavaObject && ((NativeJavaObject) o).unwrap() instanceof File)
+				f = (File) ((NativeJavaObject) o).unwrap();
+			else if (o instanceof String)
+			{
+				String s = (String) o;
+				f = new File(s);
+				if (!f.exists() && !s.contains(File.separator))
+				{
+					if (!s.endsWith(".js"))
+						s += ".js";
+					s = FileUtil.getDirectory(lastFileName) + File.separator + s;
+					f = new File(s);
+				}
+			} else
+			{
+				// getErrorWriter().write("Argument must be a file of a string.");
+				throw new FileNotFoundException("Argument must be a file of a string.");
+			}
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(f));
+			byte[] bytes = null;
+			try
+			{
+				bytes = new byte[bis.available()];
+				bis.read(bytes);
+				bis.close();
+			} catch (IOException e1)
+			{
+				// getErrorWriter().write(e1.getMessage());
+			}
+			String s = new String(bytes);
+			Context context = Context.enter();
+			context.setApplicationClassLoader(PluginLoader.getLoader());
+			try
+			{
+				Script script = context.compileString(s, "script", 0, null);
+				script.exec(context, scriptable);
+			} catch (EvaluatorException e)
+			{
+				// getErrorWriter().write(e.getMessage());
+				throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+			} catch (RhinoException e3)
+			{
+				// getErrorWriter().write(e3.getMessage());
+				throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+			} finally
+			{
+				Context.exit();
+			}
+		}
 	}
 
 	@Override
@@ -129,7 +236,7 @@ public class JSScriptEngine extends ScriptEngine
 	{
 		scriptable.put(name, scriptable, value);
 	}
-	
+
 	@Override
 	protected void removeFromRealEngine(String name)
 	{

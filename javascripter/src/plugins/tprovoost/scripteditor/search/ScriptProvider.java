@@ -26,204 +26,202 @@ import plugins.tprovoost.scripteditor.main.ScriptEditorPlugin;
 public class ScriptProvider extends SearchResultProducer
 {
 
-    private static final String SEARCH_URL = "http://bioimageanalysis.org/icy/search/search.php?search=";
+	private static final String SEARCH_URL = "http://bioimageanalysis.org/icy/search/search.php?search=";
 
-    private static final String ID_SEARCH_RESULT = "searchresult";
-    private static final String ID_SCRIPT = "script";
-    private static final String ID_TEXT = "string";
+	private static final String ID_SEARCH_RESULT = "searchresult";
+	private static final String ID_SCRIPT = "script";
+	private static final String ID_TEXT = "string";
 
-    private final long REQUEST_INTERVAL = 400;
+	private final long REQUEST_INTERVAL = 400;
 
-    @Override
-    public String getName()
-    {
-        return "Online Plugins";
-    }
+	@Override
+	public String getName()
+	{
+		return "Online Plugins";
+	}
 
-    @Override
-    public String getTooltipText()
-    {
-        return "Result(s) from online scripts";
-    }
+	@Override
+	public String getTooltipText()
+	{
+		return "Result(s) from online scripts";
+	}
 
-    @Override
-    public void doSearch(String[] words, SearchResultConsumer consumer)
-    {
-        String request = SEARCH_URL;
+	@Override
+	public void doSearch(String[] words, SearchResultConsumer consumer)
+	{
+		String request = SEARCH_URL;
 
-        if (words.length > 0)
-            request += words[0].replace("+", "%2B").replace("&", "%26").replace("@", "%40").replace("<", "%3C")
-                    .replace(">", "%3E");
-        if (words.length > 1)
-        {
-            for (int i = 1; i < words.length; i++)
-                request += "%20"
-                        + words[i].replace("+", "%2B").replace("&", "%26").replace("@", "%40").replace("<", "%3C")
-                                .replace(">", "%3E");
-        }
+		if (words.length > 0)
+			request += words[0].replace("+", "%2B").replace("&", "%26").replace("@", "%40").replace("<", "%3C").replace(">", "%3E");
+		if (words.length > 1)
+		{
+			for (int i = 1; i < words.length; i++)
+				request += "%20" + words[i].replace("+", "%2B").replace("&", "%26").replace("@", "%40").replace("<", "%3C").replace(">", "%3E");
+		}
 
-        final long startTime = System.currentTimeMillis();
+		final long startTime = System.currentTimeMillis();
 
-        // wait interval elapsed before sending request (avoid website request spam)
-        while ((System.currentTimeMillis() - startTime) < REQUEST_INTERVAL)
-        {
-            ThreadUtil.sleep(10);
-            // abort
-            if (hasWaitingSearch())
-                return;
-        }
+		// wait interval elapsed before sending request (avoid website request
+		// spam)
+		while ((System.currentTimeMillis() - startTime) < REQUEST_INTERVAL)
+		{
+			ThreadUtil.sleep(10);
+			// abort
+			if (hasWaitingSearch())
+				return;
+		}
 
-        // System.out.println("Request: " + request);
+		// System.out.println("Request: " + request);
 
-        Document doc = null;
-        int retry = 0;
+		Document doc = null;
+		int retry = 0;
 
-        // let's 10 try to get the result
-        while ((doc == null) && (retry < 10))
-        {
-            // we use an online request as website can search in plugin documention
-            doc = XMLUtil.loadDocument(URLUtil.getURL(request), false);
+		// let's 10 try to get the result
+		while ((doc == null) && (retry < 10))
+		{
+			// we use an online request as website can search in plugin
+			// documention
+			doc = XMLUtil.loadDocument(URLUtil.getURL(request), false);
 
-            // abort
-            if (hasWaitingSearch())
-                return;
+			// abort
+			if (hasWaitingSearch())
+				return;
 
-            // error ? --> wait a bit before retry
-            if (doc == null)
-                ThreadUtil.sleep(50);
-        }
+			// error ? --> wait a bit before retry
+			if (doc == null)
+				ThreadUtil.sleep(100);
+		}
 
-        // can't get result from website --> exit
-        if (doc == null)
-            return;
+		// can't get result from website --> exit
+		if (doc == null)
+			return;
 
-        if (hasWaitingSearch())
-            return;
+		if (hasWaitingSearch())
+			return;
 
-        // get online result node
-        final Element resultElement = XMLUtil.getElement(doc.getDocumentElement(), ID_SEARCH_RESULT);
+		// get online result node
+		final Element resultElement = XMLUtil.getElement(doc.getDocumentElement(), ID_SEARCH_RESULT);
 
-        if (resultElement == null)
-            return;
+		if (resultElement == null)
+			return;
 
-        final ArrayList<SearchResult> tmpResults = new ArrayList<SearchResult>();
+		final ArrayList<SearchResult> tmpResults = new ArrayList<SearchResult>();
 
-        for (Element script : XMLUtil.getElements(resultElement, ID_SCRIPT))
-        {
-            // abort
-            if (getClass().getClassLoader() != SystemUtil.getSystemClassLoader() && hasWaitingSearch())
-                return;
+		for (Element script : XMLUtil.getElements(resultElement, ID_SCRIPT))
+		{
+			// abort
+			if (getClass().getClassLoader() != SystemUtil.getSystemClassLoader() && hasWaitingSearch())
+				return;
 
-            final SearchResult result = getResult(script, words);
+			final SearchResult result = getResult(script, words);
 
-            if (result != null)
-                tmpResults.add(result);
-        }
-        results = tmpResults;
+			if (result != null)
+				tmpResults.add(result);
+		}
 
-        consumer.resultsChanged(this);
-    }
+		results = tmpResults;
+		consumer.resultsChanged(this);
+	}
 
-    private OnlineScriptResult getResult(Element protocolNode, String words[])
-    {
-        final String text = XMLUtil.getElementValue(protocolNode, ID_TEXT, "");
+	private OnlineScriptResult getResult(Element scriptNode, String words[])
+	{
+		final String text = XMLUtil.getElementValue(scriptNode, ID_TEXT, "");
 
-        ScriptDescriptor script = new ScriptDescriptor(protocolNode);
+		ScriptDescriptor script = new ScriptDescriptor(scriptNode);
 
-        return new OnlineScriptResult(this, script, text, words);
-    }
+		return new OnlineScriptResult(this, script, text, words);
+	}
 
-    private class OnlineScriptResult extends SearchResult
-    {
+	private class OnlineScriptResult extends SearchResult
+	{
 
-        private ScriptDescriptor script;
-        private String description;
+		private ScriptDescriptor script;
+		private String description;
 
-        public OnlineScriptResult(ScriptProvider scriptProvider, ScriptDescriptor script, String text,
-                String[] searchWords)
-        {
-            super(scriptProvider);
+		public OnlineScriptResult(ScriptProvider scriptProvider, ScriptDescriptor script, String text, String[] searchWords)
+		{
+			super(scriptProvider);
 
-            this.script = script;
+			this.script = script;
 
-            int wi = 0;
-            description = "";
-            while (StringUtil.isEmpty(description) && (wi < searchWords.length))
-            {
-                // no more than 80 characters...
-                description = StringUtil.trunc(text, searchWords[wi], 80);
-                wi++;
-            }
+			int wi = 0;
+			description = "";
+			while (StringUtil.isEmpty(description) && (wi < searchWords.length))
+			{
+				// no more than 80 characters...
+				description = StringUtil.trunc(text, searchWords[wi], 80);
+				wi++;
+			}
 
-            if (!StringUtil.isEmpty(description))
-            {
-                // remove carriage return
-                description = description.replace("\n", "");
+			if (!StringUtil.isEmpty(description))
+			{
+				// remove carriage return
+				description = description.replace("\n", "");
 
-                // highlight search keywords (only for more than 2 characters search)
-                if ((searchWords.length > 1) || (searchWords[0].length() > 2))
-                {
-                    // highlight search keywords
-                    for (String word : searchWords)
-                        description = StringUtil.htmlBoldSubstring(description, word, true);
-                }
-            }
-        }
+				// highlight search keywords (only for more than 2 characters
+				// search)
+				if ((searchWords.length > 1) || (searchWords[0].length() > 2))
+				{
+					// highlight search keywords
+					for (String word : searchWords)
+						description = StringUtil.htmlBoldSubstring(description, word, true);
+				}
+			}
+		}
 
-        @Override
-        public String getTitle()
-        {
-            return script.getName();
-        }
+		@Override
+		public String getTitle()
+		{
+			return script.getName();
+		}
 
-        @Override
-        public Image getImage()
-        {
-            ImageIcon icon = script.getIcon();
-            if (icon != null)
-                return icon.getImage();
+		@Override
+		public Image getImage()
+		{
+			ImageIcon icon = script.getIcon();
+			if (icon != null)
+				return icon.getImage();
 
-            return null;
-        }
+			return null;
+		}
 
-        @Override
-        public String getDescription()
-        {
-            return description;
-        }
+		@Override
+		public String getDescription()
+		{
+			return description;
+		}
 
-        @Override
-        public String getTooltip()
-        {
-            return "Left click: Open   -   Right click: Online documentation";
-        }
+		@Override
+		public String getTooltip()
+		{
+			return "Left click: Open   -   Right click: Online documentation";
+		}
 
-        @Override
-        public void execute()
-        {
-            try
-            {
-                byte[] b = NetworkUtil.download(new URL(script.getUrl()), null, false);
-                String s = new String(b);
-                ScriptEditorPlugin.openInScriptEditor(s, script.getName());
-            }
-            catch (MalformedURLException e1)
-            {
-            }
-        }
+		@Override
+		public void execute()
+		{
+			try
+			{
+				byte[] b = NetworkUtil.download(new URL(script.getUrl()), null, false);
+				String s = new String(b);
+				ScriptEditorPlugin.openInScriptEditor(s, script.getName());
+			} catch (MalformedURLException e1)
+			{
+			}
+		}
 
-        @Override
-        public void executeAlternate()
-        {
-            NetworkUtil.openBrowser(script.getUrl());
-        }
+		@Override
+		public void executeAlternate()
+		{
+			NetworkUtil.openBrowser(script.getUrl());
+		}
 
-        @Override
-        public RichTooltip getRichToolTip()
-        {
-            return new ScriptRichToolTip(script);
-        }
+		@Override
+		public RichTooltip getRichToolTip()
+		{
+			return new ScriptRichToolTip(script);
+		}
 
-    }
+	}
 
 }

@@ -29,6 +29,14 @@
 		<keyword name="double" type="other" />
 		<keyword name="else" type="other" />
 		<keyword name="enum" type="other" />
+		<keyword name="eval" type="function" returnType="void">
+			<params>
+				<param type="Object" name="file">
+					<desc><![CDATA[The script to run. It must be either a String or a File.]]></desc>
+				</param>
+			</params>
+			<desc><![CDATA[Evaluates a script.]]></desc>
+		</keyword>
 		<keyword name="export" type="other" />
 		<keyword name="extends" type="other" />
 		<keyword name="external" type="other" />

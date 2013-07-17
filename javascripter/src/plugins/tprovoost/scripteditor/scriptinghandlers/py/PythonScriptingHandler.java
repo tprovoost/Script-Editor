@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -15,20 +17,25 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.script.ScriptException;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.text.JTextComponent;
-import javax.vecmath.Tuple2d;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
+import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.VariableCompletion;
+import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
-import org.mozilla.javascript.Context;
 import org.python.antlr.PythonTree;
 import org.python.antlr.ast.Assign;
 import org.python.antlr.ast.Attribute;
 import org.python.antlr.ast.BinOp;
 import org.python.antlr.ast.Call;
+import org.python.antlr.ast.Expr;
 import org.python.antlr.ast.For;
+import org.python.antlr.ast.FunctionDef;
 import org.python.antlr.ast.Import;
 import org.python.antlr.ast.ImportFrom;
 import org.python.antlr.ast.ListComp;
@@ -38,14 +45,19 @@ import org.python.antlr.ast.Str;
 import org.python.antlr.ast.alias;
 import org.python.antlr.base.expr;
 import org.python.antlr.base.mod;
+import org.python.antlr.base.stmt;
 import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
 import org.python.core.PyList;
 import org.python.core.PyObject;
+import org.python.core.PySyntaxError;
+import org.python.core.PyTuple;
+import org.python.core.PyType;
 import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
 
+import plugins.tprovoost.scripteditor.completion.types.PythonModuleCompletion;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
@@ -59,7 +71,8 @@ public class PythonScriptingHandler extends ScriptingHandler
 	private static InteractiveInterpreter interpreter;
 	private LinkedList<IcyFunctionBlock> functionBlocksToResolve = new LinkedList<IcyFunctionBlock>();
 	private HashMap<String, String> aliases = new HashMap<String, String>();
-	private String currentText;
+	// private String currentText;
+	private HashMap<String, File> modules = new HashMap<String, File>();
 
 	public PythonScriptingHandler(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation)
 	{
@@ -69,7 +82,10 @@ public class PythonScriptingHandler extends ScriptingHandler
 	@Override
 	public void evalEngine(ScriptEngine engine, String s) throws ScriptException
 	{
-		((PyScriptEngine) engine).evalFile(fileName);
+		if (fileName.isEmpty())
+			engine.eval(s);
+		else
+			((PyScriptEngine) engine).evalFile(fileName);
 	}
 
 	public static void setInterpreter(InteractiveInterpreter interpreter)
@@ -94,7 +110,7 @@ public class PythonScriptingHandler extends ScriptingHandler
 		engineFunctions.put("range", new VariableType(Object[].class));
 		engineFunctions.put("isinstance", new VariableType(Boolean.class));
 		engineFunctions.put("len", new VariableType(Number.class));
-		engineFunctions.put("zip", new VariableType(List.class));
+		engineFunctions.put("zip", new VariableType(PyList.class));
 	}
 
 	public void importPythonPackages(ScriptEngine engine) throws ScriptException
@@ -107,34 +123,36 @@ public class PythonScriptingHandler extends ScriptingHandler
 	}
 
 	@Override
-	protected void detectVariables(String s, Context context) throws Exception
+	protected void detectVariables(String s) throws Exception
 	{
-		currentText = s;
+		// currentText = s;
+
 		final CompilerFlags cflags = Py.getCompilerFlags(0, false);
-		for (Completion c : variableCompletions)
-			provider.removeCompletion(c);
+		if (provider != null)
+		{
+			for (Completion c : variableCompletions)
+				provider.removeCompletion(c);
+		}
 		variableCompletions.clear();
 
 		// register external variables prio to detection.
 		// Otherwise, references to external variables will not
 		// be detected.
 		addExternalVariables();
-		try
-		{
-			mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
-			if (node.getChildren() == null)
-				return;
-			if (DEBUG)
-				dumpTree(node, "");
-			registerImports(node);
-			registerVariables(node);
-		} catch (Exception e)
-		{
-			e.printStackTrace();
-		}
+
+		mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
+		if (node.getChildren() == null)
+			return;
+		if (DEBUG)
+			dumpTree(node, "");
+		registerImports(node);
+		registerVariables(node);
 
 		// add the completions
-		provider.addCompletions(variableCompletions);
+		if (provider != null)
+		{
+			provider.addCompletions(variableCompletions);
+		}
 	}
 
 	public void registerVariables(PythonTree node)
@@ -183,40 +201,89 @@ public class PythonScriptingHandler extends ScriptingHandler
 		if (node instanceof Assign)
 		{
 			// assign
-			String name = node.getChild(0).getText();
-			VariableType type = resolveType(node.getChild(1));
-			VariableCompletion c = new VariableCompletion(provider, name, type == null || type.getClazz() == null ? "" : type.toString());
-			c.setDefinedIn(fileName);
-			c.setSummary("variable");
-			c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-			toReturn.add(c);
-			addVariableDeclaration(c.getName(), type, node.getCharStartIndex());
+			Assign assign = (Assign) node;
+			expr target = assign.getInternalTargets().get(0);
+			expr value = assign.getInternalValue();
+
+			if (target instanceof org.python.antlr.ast.List)
+			{
+				for (int i = 0; i < target.getChildCount(); ++i)
+				{
+					PythonTree child = target.getChild(i);
+					String name = child.getText();
+					VariableType type = new VariableType(Object.class);
+					VariableCompletion c = new VariableCompletion(provider, name, type == null || type.getClazz() == null ? "" : type.toString());
+					c.setDefinedIn(fileName);
+					c.setSummary("variable");
+					c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+					toReturn.add(c);
+					addVariableDeclaration(c.getName(), type, node.getCharStartIndex());
+				}
+			} else
+			{
+				String name = target.getText();
+				VariableType type = resolveType(value);
+				VariableCompletion c = new VariableCompletion(provider, name, type == null || type.getClazz() == null ? "" : type.toString());
+				c.setDefinedIn(fileName);
+				c.setSummary("variable");
+				c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+				toReturn.add(c);
+				addVariableDeclaration(c.getName(), type, node.getCharStartIndex());
+			}
 		} else if (node instanceof Call)
 		{
 			// resolveCallType(node, currentText, false);
-		} else if (node instanceof For)
+		} else if (node instanceof FunctionDef)
 		{
-			String name = ((Name) ((For) node).getTarget()).getInternalId();
-			VariableType type = resolveType((PythonTree) ((For) node).getIter());
-			String typeS = "";
-			if (type != null)
+			FunctionDef fn = (FunctionDef) node;
+			String name = fn.getName().toString();
+			localFunctions.put(name, null);
+
+			FunctionCompletion fc = new FunctionCompletion(provider, name, "");
+			String shortDesc = "";
+
+			List<stmt> body = fn.getInternalBody();
+			if (body.size() > 0)
 			{
-				Class<?> clazz = type.getClazz();
-				if (clazz != null)
+				PythonTree child = body.get(0);
+				if (child instanceof Expr && child.getChildCount() > 0)
 				{
-					if (clazz.isArray())
+					PythonTree childchild = child.getChild(0);
+					if (childchild instanceof Str)
 					{
-						type = new VariableType(clazz.getComponentType());
+						shortDesc = ((Str) childchild).getInternalS().toString();
 					}
-					typeS = type.toString();
 				}
 			}
-			addVariableDeclaration(name, null, node.getCharStartIndex());
-			localVariables.get(name).getVariableScopes().get(0).setEndScopeOffset(node.getCharStopIndex());
-			VariableCompletion c = new VariableCompletion(provider, name, typeS);
-			c.setDefinedIn(fileName);
-			c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
-			toReturn.add(c);
+			fc.setDefinedIn(FileUtil.getFileName(fileName, true));
+			fc.setShortDescription(shortDesc);
+			fc.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+			toReturn.add(fc);
+		} else if (node instanceof For)
+		{
+			// String name = ((Name) ((For) node).getTarget()).getInternalId();
+			// VariableType type = resolveType((PythonTree) ((For)
+			// node).getIter());
+			// String typeS = "";
+			// if (type != null)
+			// {
+			// Class<?> clazz = type.getClazz();
+			// if (clazz != null)
+			// {
+			// if (clazz.isArray())
+			// {
+			// type = new VariableType(clazz.getComponentType());
+			// }
+			// typeS = type.toString();
+			// }
+			// }
+			// addVariableDeclaration(name, null, node.getCharStartIndex());
+			// localVariables.get(name).getVariableScopes().get(0).setEndScopeOffset(node.getCharStopIndex());
+			// VariableCompletion c = new VariableCompletion(provider, name,
+			// typeS);
+			// c.setDefinedIn(fileName);
+			// c.setRelevance(ScriptingHandler.RELEVANCE_HIGH);
+			// toReturn.add(c);
 		}
 		return toReturn;
 	}
@@ -697,6 +764,7 @@ public class PythonScriptingHandler extends ScriptingHandler
 	public void registerImports()
 	{
 		aliases.clear();
+		modules.clear();
 	}
 
 	private void registerImports(PythonTree node)
@@ -724,9 +792,18 @@ public class PythonScriptingHandler extends ScriptingHandler
 		{
 			String alias = a.getInternalAsname();
 			String classOrModule = a.getName().toString();
-			if (alias == null && !classOrModule.contains(".") && isModule(classOrModule))
+			File moduleFile;
+			if (alias == null && !classOrModule.contains(".") && (moduleFile = isModule(classOrModule)) != null)
 			{
-				// insert module TODO
+				// insert modle TODO
+				modules.put(classOrModule, moduleFile);
+
+				// int pos = currentText.indexOf(classOrModule);
+
+				PythonModuleCompletion mc = new PythonModuleCompletion(provider, classOrModule);
+				mc.setRelevance(RELEVANCE_HIGH);
+				variableCompletions.add(mc);
+
 				if (DEBUG)
 					System.out.println("Module found : " + classOrModule);
 			} else
@@ -738,12 +815,12 @@ public class PythonScriptingHandler extends ScriptingHandler
 		}
 	}
 
-	private boolean isModule(String value)
+	private File isModule(String value)
 	{
 		// Look into the current folder
 		File f = new File(FileUtil.getDirectory(fileName) + value + ".py");
 		if (f.exists())
-			return true;
+			return f;
 
 		// Look into the sys.path
 		PyList paths = ((PyScriptEngine) getEngine()).getPythonInterpreter().getSystemState().path;
@@ -754,10 +831,10 @@ public class PythonScriptingHandler extends ScriptingHandler
 			{
 				f = new File(path + File.separator + value + ".py");
 				if (f.exists())
-					return true;
+					return f;
 			}
 		}
-		return false;
+		return null;
 	}
 
 	private void registerImportsTree(ImportFrom tree)
@@ -874,5 +951,66 @@ public class PythonScriptingHandler extends ScriptingHandler
 			return toReturn;
 		} else
 			return toReturn;
+	}
+
+	@Override
+	protected void processError(String s, Exception e)
+	{
+		if (e instanceof PySyntaxError)
+		{
+			PySyntaxError se = (PySyntaxError) e;
+
+			String error = ((PyTuple) se.value).get(0).toString();
+			PyTuple position = (PyTuple) ((PyTuple) se.value).get(1);
+			int lineno = (Integer) position.get(1);
+			int indent = (Integer) position.get(2);
+
+			String message = ((PyType) se.type).getName() + ": " + error + ". Character index: " + indent;
+			ignoredLines.put(lineno - 1, new Exception(message));
+			updateGutter();
+
+		} else
+			e.printStackTrace();
+	}
+
+	public HashMap<String, File> getModules()
+	{
+		return modules;
+	}
+
+	@Override
+	public LinkGeneratorResult isLinkAtOffset(final RSyntaxTextArea textArea, int offs)
+	{
+		for (String s : modules.keySet())
+		{
+			final String currentS = s;
+			final int offsetMod = textArea.getText().indexOf(s);
+			if (offs >= offsetMod && offs <= offsetMod + s.length())
+			{
+				return new LinkGeneratorResult()
+				{
+
+					@Override
+					public int getSourceOffset()
+					{
+						return offsetMod;
+					}
+
+					@Override
+					public HyperlinkEvent execute()
+					{
+						String path = modules.get(currentS).getAbsolutePath();
+						try
+						{
+							return new HyperlinkEvent(textArea, EventType.ACTIVATED, new URL(path), path);
+						} catch (MalformedURLException e)
+						{
+							return new HyperlinkEvent(textArea, EventType.ACTIVATED, null, path);
+						}
+					}
+				};
+			}
+		}
+		return null;
 	}
 }

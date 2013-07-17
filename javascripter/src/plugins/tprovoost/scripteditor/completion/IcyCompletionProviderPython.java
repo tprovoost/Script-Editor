@@ -2,6 +2,11 @@ package plugins.tprovoost.scripteditor.completion;
 
 import icy.util.ClassUtil;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
@@ -13,7 +18,9 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.autocomplete.ParameterizedCompletion.Parameter;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
@@ -228,11 +235,42 @@ public class IcyCompletionProviderPython extends IcyCompletionProvider
 							populateClassTypes(type, text, retVal);
 						}
 					}
-					// ((PythonScriptingHandler)handler).getModules().
-					// if (a == 0)
-					// {
-					// } 
-					else
+					File f = ((PythonScriptingHandler) handler).getModules().get(command);
+					if (f != null)
+					{
+						// TODO
+						try
+						{
+							BufferedReader br = new BufferedReader(new FileReader(f));
+							String textModule = "";
+							String line;
+							while ((line = br.readLine()) != null)
+								textModule += line + "\n";
+
+							RSyntaxTextArea textArea = new RSyntaxTextArea();
+							textArea.setText(textModule);
+
+							PythonScriptingHandler handlerModule = new PythonScriptingHandler(null, textArea, null, false);
+							handlerModule.setVarInterpretation(true);
+							handlerModule.setStrict(false);
+							handlerModule.interpret(false);
+							HashMap<String, VariableType> localFuncts = handlerModule.getLocalFunctions();
+
+							for (String s : localFuncts.keySet())
+							{
+								type = localFuncts.get(s);
+								FunctionCompletion fc = new FunctionCompletion(this, s, type == null ? "" : type.toString());
+								fc.setDefinedIn(command);
+								retVal.add(fc);
+							}
+							br.close();
+						} catch (FileNotFoundException e)
+						{
+						} catch (IOException e)
+						{
+						}
+
+					} else
 					{
 						// ----------------------------
 						// FUNCTION ACCESS
