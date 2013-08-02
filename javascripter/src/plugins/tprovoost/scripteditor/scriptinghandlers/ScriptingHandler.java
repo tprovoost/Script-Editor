@@ -69,7 +69,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * {@link HashMap} containing all ignored Lines if they contains errors.
 	 * This allows the parser to no stop at the first line where the error is.
 	 */
-	protected HashMap<Integer, Exception> ignoredLines = new HashMap<Integer, Exception>();
+	protected ArrayList<ScriptEditorException> ignoredLines = new ArrayList<ScriptEditorException>();
 
 	/**
 	 * List of the variable completions found when script was parsed. Functions
@@ -499,22 +499,22 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		if (gutter == null || !(textArea instanceof JTextArea))
 			return;
 		gutter.removeAllTrackingIcons();
-		for (Integer a : new ArrayList<Integer>(ignoredLines.keySet()))
+		for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
 		{
 			try
 			{
 				IcyIcon icon;
-				Exception e = ignoredLines.get(a);
-				if (e instanceof EvaluatorException)
+				Exception e = see.getInternalException();
+				if (see.isWarning())
 					icon = ICON_ERROR_TOOLTIP;
 				else
 					icon = ICON_ERROR;
-				String tooltip = ignoredLines.get(a).getMessage();
+				String tooltip = e.getMessage();
 				// if (tooltip.length() > 127)
 				// {
 				// tooltip = tooltip.substring(0, 127) + "...";
 				// }
-				gutter.addLineTrackingIcon(a, icon, tooltip);
+				gutter.addLineTrackingIcon(see.getLine(), icon, tooltip);
 				gutter.repaint();
 			} catch (BadLocationException e)
 			{
@@ -535,9 +535,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					ThreadUtil.sleep(200);
 				}
 				String textResult = "";
-				for (Integer a : ignoredLines.keySet())
+				for (ScriptEditorException see : ignoredLines)
 				{
-					Exception ee = ignoredLines.get(a);
+					Exception ee = see.getInternalException();
 					String msg = ee.getLocalizedMessage();
 
 					// System.out.println(msg);

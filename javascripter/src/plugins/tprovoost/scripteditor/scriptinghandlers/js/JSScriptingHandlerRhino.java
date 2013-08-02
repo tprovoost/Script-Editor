@@ -82,6 +82,7 @@ import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
@@ -2627,12 +2628,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					String textToRemove = s.substring(lineOffset, lineEndOffset);
 
 					textToRemove = "\n";
-					if (ignoredLines.containsKey(lineError))
+					for (ScriptEditorException see : ignoredLines)
 					{
-						// System.out.println("An error occured with the parsing.");
-						return;
+						if (see.getLine() == lineError)
+							return;
 					}
-					ignoredLines.put(lineError, ee);
+					ignoredLines.add(new ScriptEditorException(ee, lineError, true));
 					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 
 					// interpret again, without the faulty line.
@@ -2680,12 +2681,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					int lineEndOffset = textArea.getLineEndOffset(lineError);
 
 					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-					if (ignoredLines.containsKey(lineError))
+					for (ScriptEditorException see : ignoredLines)
 					{
-						// System.out.println("An error occured with the error parsing.");
-						return;
+						if (see.getLine() == lineError)
+							return;
 					}
-					ignoredLines.put(lineError, se);
+					ignoredLines.add(new ScriptEditorException(se, lineError));
 
 					// interpret again, without the faulty line.
 					interpret(s);

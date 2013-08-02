@@ -28,6 +28,7 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
+import org.python.antlr.ParseException;
 import org.python.antlr.PythonTree;
 import org.python.antlr.ast.Assign;
 import org.python.antlr.ast.Attribute;
@@ -59,6 +60,7 @@ import org.python.util.PythonInterpreter;
 
 import plugins.tprovoost.scripteditor.completion.types.PythonModuleCompletion;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
@@ -966,9 +968,13 @@ public class PythonScriptingHandler extends ScriptingHandler
 			int indent = (Integer) position.get(2);
 
 			String message = ((PyType) se.type).getName() + ": " + error + ". Character index: " + indent;
-			ignoredLines.put(lineno - 1, new Exception(message));
+			ignoredLines.add(new ScriptEditorException(new Exception(message), lineno - 1, true));
 			updateGutter();
 
+		} else if (e instanceof ParseException)
+		{
+			ParseException pe = (ParseException) e;
+			ignoredLines.add(new ScriptEditorException(pe, pe.line, true));
 		} else
 			e.printStackTrace();
 	}
