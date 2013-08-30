@@ -968,13 +968,13 @@ public class PythonScriptingHandler extends ScriptingHandler
 			int indent = (Integer) position.get(2);
 
 			String message = ((PyType) se.type).getName() + ": " + error + ". Character index: " + indent;
-			ignoredLines.add(new ScriptEditorException(new Exception(message), lineno - 1, true));
+			ignoredLines.add(new ScriptEditorException(message, fileName, lineno - 1, true));
 			updateGutter();
 
 		} else if (e instanceof ParseException)
 		{
 			ParseException pe = (ParseException) e;
-			ignoredLines.add(new ScriptEditorException(pe, pe.line, true));
+			ignoredLines.add(new ScriptEditorException(pe.getMessage(), fileName, pe.line, true));
 		} else
 			e.printStackTrace();
 	}

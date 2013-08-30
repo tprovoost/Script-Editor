@@ -772,7 +772,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			{
 				AstNode target = ((FunctionCall) expression).getTarget();
 				if (!(target.getType() == Token.NAME && (target.getString().contentEquals("importClass") || target.getString().contentEquals("importPackage"))))
-					resolveCallType(expression, text, false);
+				{
+					VariableType vt = resolveCallType(expression, text, false);
+					if (vt == null)
+						updateGutter();
+				}
 			} else if (expression instanceof PropertyGet)
 			{
 				// Do nothing
@@ -948,7 +952,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			// unknown type
 			if (vt == null)
 			{
-				System.out.println("Unknown: " + classNameOrFunctionNameOrVariable + " at line: " + n.getLineno());
+				ignoredLines.add(new ScriptEditorException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno(), true));
 				return null;
 			}
 
@@ -1023,8 +1027,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 							returnType = f.getType();
 						} catch (SecurityException e)
 						{
+							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+							return null;
 						} catch (NoSuchFieldException e)
 						{
+							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
 							return null;
 						}
 					}
@@ -1042,8 +1049,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 						returnType = f.getType();
 					} catch (SecurityException e)
 					{
+						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						return null;
 					} catch (NoSuchFieldException e)
 					{
+						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						return null;
 					}
 				}
 
@@ -2063,7 +2074,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		case Token.NAME:
 			return getVariableDeclaration(n.getString(), n.getAbsolutePosition());
 		case Token.CALL:
-			return resolveCallType(n, currentText, false);
+		{
+			VariableType vt = resolveCallType(n, currentText, false);
+			if (vt == null)
+			{
+				updateGutter();
+			}
+			return vt;
+		}
 		case Token.FUNCTION:
 			return new VariableType(Void.class);
 		case Token.GETPROP:
@@ -2617,7 +2635,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			EvaluatorException ee = (EvaluatorException) e;
 			// get the line and column of error
-			int lineError = ee.lineNumber() - 1;
+			int lineError = ee.lineNumber();
 			int columnNumber = ee.columnNumber();
 			if (columnNumber == -1)
 				columnNumber = 0;
@@ -2634,10 +2652,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					textToRemove = "\n";
 					for (ScriptEditorException see : ignoredLines)
 					{
-						if (see.getLine() == lineError)
+						if (see.getLineNumber() == lineError)
 							return;
 					}
-					ignoredLines.add(new ScriptEditorException(ee, lineError, true));
+					ignoredLines.add(new ScriptEditorException(ee.getMessage(), fileName, lineError, true));
 					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
 
 					// interpret again, without the faulty line.
@@ -2667,11 +2685,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			{
 				e1.printStackTrace();
 			}
-		} else if (e instanceof ScriptException)
+		} else if (e instanceof ScriptEditorException)
 		{
-			ScriptException se = (ScriptException) e;
+			ScriptEditorException se = (ScriptEditorException) e;
 			// get line error
-			int lineError = lineNumber(se) - 1;
+			int lineError = lineNumber(se);
 			Integer columnNumberI = columnNumber(se);
 			int columnNumber = columnNumberI != null ? columnNumberI : -1;
 			if (columnNumber == -1)
@@ -2687,10 +2705,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
 					for (ScriptEditorException see : ignoredLines)
 					{
-						if (see.getLine() == lineError)
+						if (see.getLineNumber() == lineError)
 							return;
 					}
-					ignoredLines.add(new ScriptEditorException(se, lineError));
+					ignoredLines.add(se);
 
 					// interpret again, without the faulty line.
 					interpret(s);

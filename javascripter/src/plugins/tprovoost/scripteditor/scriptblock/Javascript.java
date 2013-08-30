@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.scriptblock;
 import icy.plugin.abstract_.Plugin;
 import icy.roi.ROI;
 import icy.sequence.Sequence;
+import icy.system.IcyHandledException;
 import icy.system.thread.ThreadUtil;
 
 import java.io.File;
@@ -53,8 +54,7 @@ public class Javascript extends Plugin implements Block, VarListListener
 		}
 	}
 
-	@SuppressWarnings(
-	{ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void run()
 	{
@@ -80,7 +80,7 @@ public class Javascript extends Plugin implements Block, VarListListener
 			inputScript.evaluate();
 		} catch (ScriptException e)
 		{
-			System.out.println(e.getLocalizedMessage());
+			throw new IcyHandledException(e.getMessage());
 		}
 
 		for (Var output : outputMap)
@@ -116,9 +116,8 @@ public class Javascript extends Plugin implements Block, VarListListener
 			{
 				String name = "input" + inputIdx;
 				VarMutableScript myVariable = new VarMutableScript(name, Object.class);
-				myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[]
-				{ Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class,
-						File.class, File[].class }));
+				myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] { Object.class, Object[].class, Sequence.class, ROI[].class,
+						Integer.class, Double.class, int[].class, double[].class, String.class, File.class, File[].class }));
 				myVariable.addTypeChangeListener(new TypeChangeListener()
 				{
 
@@ -155,9 +154,8 @@ public class Javascript extends Plugin implements Block, VarListListener
 			{
 				String name = "output" + outputIdx;
 				VarMutableScript myVariable = new VarMutableScript(name, Object.class);
-				myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[]
-				{ Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class,
-						File.class, File[].class }));
+				myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] { Object.class, Object[].class, Sequence.class, ROI[].class,
+						Integer.class, Double.class, int[].class, double[].class, String.class, File.class, File[].class }));
 				myVariable.addTypeChangeListener(new TypeChangeListener()
 				{
 
@@ -181,9 +179,8 @@ public class Javascript extends Plugin implements Block, VarListListener
 
 		String name = "input" + inputIdx;
 		VarMutableScript myVariable = new VarMutableScript(name, Object.class);
-		myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[]
-		{ Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class, File.class,
-				File[].class }));
+		myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] { Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class,
+				Double.class, int[].class, double[].class, String.class, File.class, File[].class }));
 		myVariable.addTypeChangeListener(new TypeChangeListener()
 		{
 
@@ -203,9 +200,8 @@ public class Javascript extends Plugin implements Block, VarListListener
 		outputMap.addVarListListener(this);
 		String name = "output" + outputIdx;
 		VarMutableScript myVariable = new VarMutableScript(name, Object.class);
-		myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[]
-		{ Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class, Double.class, int[].class, double[].class, String.class, File.class,
-				File[].class }));
+		myVariable.setDefaultEditorModel(new TypeSelectionModel(new Class<?>[] { Object.class, Object[].class, Sequence.class, ROI[].class, Integer.class,
+				Double.class, int[].class, double[].class, String.class, File.class, File[].class }));
 		myVariable.addTypeChangeListener(new TypeChangeListener()
 		{
 

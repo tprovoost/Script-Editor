@@ -137,7 +137,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
 
 	/** Turn to true if you need to display more information in the console. */
-	protected static final boolean DEBUG = true;
+	protected static final boolean DEBUG = false;
 
 	private AutoVerify autoverify = new AutoVerify();
 
@@ -495,30 +495,39 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	protected void updateGutter()
 	{
-		if (gutter == null || !(textArea instanceof JTextArea))
-			return;
-		gutter.removeAllTrackingIcons();
-		for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
+		ThreadUtil.invokeLater(new Runnable()
 		{
-			try
+
+			@Override
+			public void run()
 			{
-				IcyIcon icon;
-				Exception e = see.getInternalException();
-				if (see.isWarning())
-					icon = ICON_ERROR_TOOLTIP;
-				else
-					icon = ICON_ERROR;
-				String tooltip = e.getMessage();
-				// if (tooltip.length() > 127)
-				// {
-				// tooltip = tooltip.substring(0, 127) + "...";
-				// }
-				gutter.addLineTrackingIcon(see.getLine(), icon, tooltip);
-				gutter.repaint();
-			} catch (BadLocationException e)
-			{
+				if (gutter == null || !(textArea instanceof JTextArea))
+					return;
+				gutter.removeAllTrackingIcons();
+				for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
+				{
+					try
+					{
+						IcyIcon icon;
+						if (see.isWarning())
+							icon = ICON_ERROR_TOOLTIP;
+						else
+							icon = ICON_ERROR;
+						String tooltip = see.getMessage();
+						// if (tooltip.length() > 127)
+						// {
+						// tooltip = tooltip.substring(0, 127) + "...";
+						// }
+						gutter.addLineTrackingIcon(see.getLineNumber() - 1, icon, tooltip);
+						gutter.repaint();
+					} catch (BadLocationException e)
+					{
+						// if (DEBUG)
+						e.printStackTrace();
+					}
+				}
 			}
-		}
+		});
 	}
 
 	private void updateOutput()
@@ -536,8 +545,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				String textResult = "";
 				for (ScriptEditorException see : ignoredLines)
 				{
-					Exception ee = see.getInternalException();
-					String msg = ee.getLocalizedMessage();
+					String msg = see.getLocalizedMessage();
 
 					// System.out.println(msg);
 					textResult += msg + "\n";

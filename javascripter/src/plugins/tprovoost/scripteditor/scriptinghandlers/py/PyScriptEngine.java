@@ -16,6 +16,7 @@ import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
 
 import plugins.tlecomte.jythonForIcy.JythonLibsManager;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class PyScriptEngine extends ScriptEngine
@@ -45,7 +46,7 @@ public class PyScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void eval(String s) throws ScriptException, PyException
+	public void eval(String s) throws ScriptEditorException, PyException
 	{
 		for (String s2 : bindings.keySet())
 		{
@@ -70,7 +71,7 @@ public class PyScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void evalFile(String s) throws ScriptException, PyException
+	public void evalFile(String s) throws ScriptEditorException, PyException
 	{
 		for (String s2 : bindings.keySet())
 		{

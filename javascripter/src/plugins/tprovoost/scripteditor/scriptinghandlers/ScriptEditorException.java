@@ -1,37 +1,50 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
-public class ScriptEditorException
+import javax.script.ScriptException;
+
+public class ScriptEditorException extends ScriptException
 {
 
-	private int line;
-	private Exception internalException;
-	private boolean isWarning;
+	private boolean warning;
 
-	public ScriptEditorException(Exception internalException, int line)
+	public ScriptEditorException(String message, boolean warning)
 	{
-		this(internalException, line, false);
+		super(message);
+		this.warning = warning;
 	}
 
-	public ScriptEditorException(Exception internalException, int line, boolean isWarning)
+	public ScriptEditorException(String message, String fileName, int lineNumber)
 	{
-		this.internalException = internalException;
-		this.line = line;
-		this.isWarning = isWarning;
+		super(message, fileName, lineNumber);
+		this.warning = false;
+	}
+
+	public ScriptEditorException(String message, String fileName, int lineNumber, boolean warning)
+	{
+		super(message, fileName, lineNumber);
+		this.warning = warning;
+	}
+
+	public ScriptEditorException(String message, String fileName, int lineNumber, int columnNumber)
+	{
+		super(message, fileName, lineNumber, columnNumber);
+		this.warning = false;
+	}
+
+	public ScriptEditorException(String message, String fileName, int lineNumber, int columnNumber, boolean warning)
+	{
+		super(message, fileName, lineNumber, columnNumber);
+		this.warning = warning;
 	}
 
 	public boolean isWarning()
 	{
-		return isWarning;
+		return warning;
 	}
 
-	public int getLine()
+	public void setWarning(boolean warning)
 	{
-		return line;
-	}
-
-	public Exception getInternalException()
-	{
-		return internalException;
+		this.warning = warning;
 	}
 
 }

@@ -10,8 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 
-import javax.script.ScriptException;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.ImporterTopLevel;
@@ -20,6 +18,7 @@ import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
 
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class JSScriptEngine extends ScriptEngine
@@ -37,7 +36,7 @@ public class JSScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void eval(String s) throws ScriptException, EvaluatorException
+	public void eval(String s) throws ScriptEditorException, EvaluatorException
 	{
 		// uses Context from Rhino integrated in JRE or impossibility
 		// to use already defined methods in ScriptEngine, such as println or
@@ -64,11 +63,11 @@ public class JSScriptEngine extends ScriptEngine
 		} catch (EvaluatorException e)
 		{
 			getErrorWriter().write(e.getMessage());
-			throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -80,13 +79,13 @@ public class JSScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void evalFile(String fileName) throws ScriptException, EvaluatorException
+	public void evalFile(String fileName) throws ScriptEditorException, EvaluatorException
 	{
 		this.lastFileName = fileName;
 		File f = new File(fileName);
 		if (!f.exists())
 		{
-			throw new ScriptException("The script file could not be found, please check if it is correctly saved on the disk.", fileName, -1);
+			throw new ScriptEditorException("The script file could not be found, please check if it is correctly saved on the disk.", fileName, -1);
 		}
 
 		byte[] bytes = null;
@@ -98,7 +97,7 @@ public class JSScriptEngine extends ScriptEngine
 			bis.close();
 		} catch (IOException e1)
 		{
-			throw new ScriptException(e1.getMessage(), fileName, -1);
+			throw new ScriptEditorException(e1.getMessage(), fileName, -1);
 		}
 		String s = new String(bytes);
 
@@ -112,11 +111,11 @@ public class JSScriptEngine extends ScriptEngine
 		} catch (EvaluatorException e)
 		{
 			getErrorWriter().write(e.getMessage());
-			throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -154,7 +153,7 @@ public class JSScriptEngine extends ScriptEngine
 			getWriter().write(Context.toString(o));
 		}
 
-		public void eval(Object o) throws ScriptException, FileNotFoundException
+		public void eval(Object o) throws ScriptEditorException, FileNotFoundException
 		{
 			File f;
 			if (o instanceof NativeJavaObject && ((NativeJavaObject) o).unwrap() instanceof File)
@@ -196,11 +195,11 @@ public class JSScriptEngine extends ScriptEngine
 			} catch (EvaluatorException e)
 			{
 				// getErrorWriter().write(e.getMessage());
-				throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
 			} catch (RhinoException e3)
 			{
 				// getErrorWriter().write(e3.getMessage());
-				throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+				throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
 			} finally
 			{
 				Context.exit();
