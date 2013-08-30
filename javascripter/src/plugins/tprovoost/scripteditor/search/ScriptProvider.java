@@ -1,10 +1,13 @@
 package plugins.tprovoost.scripteditor.search;
 
+import icy.file.FileUtil;
+import icy.gui.frame.progress.DownloadFrame;
 import icy.network.NetworkUtil;
 import icy.network.URLUtil;
 import icy.search.SearchResult;
 import icy.search.SearchResultConsumer;
 import icy.search.SearchResultProducer;
+import icy.sequence.SequenceUtil;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
 import icy.util.StringUtil;
@@ -37,7 +40,7 @@ public class ScriptProvider extends SearchResultProducer
 	@Override
 	public String getName()
 	{
-		return "Online Plugins";
+		return "Scripts";
 	}
 
 	@Override
@@ -71,8 +74,6 @@ public class ScriptProvider extends SearchResultProducer
 				return;
 		}
 
-		// System.out.println("Request: " + request);
-
 		Document doc = null;
 		int retry = 0;
 
@@ -90,6 +91,8 @@ public class ScriptProvider extends SearchResultProducer
 			// error ? --> wait a bit before retry
 			if (doc == null)
 				ThreadUtil.sleep(100);
+
+			retry++;
 		}
 
 		// can't get result from website --> exit
@@ -97,7 +100,9 @@ public class ScriptProvider extends SearchResultProducer
 			return;
 
 		if (hasWaitingSearch())
+		{
 			return;
+		}
 
 		// get online result node
 		final Element resultElement = XMLUtil.getElement(doc.getDocumentElement(), ID_SEARCH_RESULT);
@@ -200,14 +205,35 @@ public class ScriptProvider extends SearchResultProducer
 		@Override
 		public void execute()
 		{
-			try
+			ThreadUtil.bgRun(new Runnable()
 			{
-				byte[] b = NetworkUtil.download(new URL(script.getUrl()), null, false);
-				String s = new String(b);
-				ScriptEditorPlugin.openInScriptEditor(s, script.getName());
-			} catch (MalformedURLException e1)
-			{
-			}
+
+				@Override
+				public void run()
+				{
+					final String name = script.getName() + " v" + script.getVersion() + "." + script.getExtension();
+					final DownloadFrame frameDownload = new DownloadFrame(name);
+					try
+					{
+						// SequenceUtil.extra
+						byte[] data = NetworkUtil.download(new URL(script.getFileUrl()), frameDownload, true);
+						final String s = new String(data);
+						ThreadUtil.invokeLater(new Runnable()
+						{
+
+							@Override
+							public void run()
+							{
+								ScriptEditorPlugin.openInScriptEditor(s, name);
+								frameDownload.close();
+							}
+						});
+					} catch (MalformedURLException e1)
+					{
+						frameDownload.close();
+					}
+				}
+			});
 		}
 
 		@Override

@@ -45,7 +45,6 @@ import org.fife.ui.rsyntaxtextarea.LinkGenerator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
-import org.mozilla.javascript.EvaluatorException;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
@@ -138,7 +137,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	private ArrayList<ScriptListener> listeners = new ArrayList<ScriptListener>();
 
 	/** Turn to true if you need to display more information in the console. */
-	protected static final boolean DEBUG = false;
+	protected static final boolean DEBUG = true;
 
 	private AutoVerify autoverify = new AutoVerify();
 
@@ -1056,9 +1055,17 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			} catch (ThreadDeath td)
 			{
 				System.out.println("shutdown");
-			} catch (Exception e)
+			} catch (final Exception e)
 			{
-				processError(s, e);
+				ThreadUtil.invokeLater(new Runnable()
+				{
+
+					@Override
+					public void run()
+					{
+						processError(s, e);
+					}
+				});
 			} finally
 			{
 				updateGutter();

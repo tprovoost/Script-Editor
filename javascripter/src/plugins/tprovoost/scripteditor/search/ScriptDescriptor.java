@@ -12,79 +12,101 @@ import plugins.tprovoost.scripteditor.main.ScriptEditorPlugin;
 
 public class ScriptDescriptor implements XMLPersistent
 {
-    private String name;
-    private String description;
-    private String author;
-    private String url;
+	private String name;
+	private String description;
+	private String author;
+	private String url;
+	private String fileurl;
+	private String extension;
+	private String version;
 
-    public ScriptDescriptor(Node node)
-    {
-        loadFromXML(node);
-    }
-    
-    public ScriptDescriptor(String name, String url) {
-        this.name = name;
-        this.url = url;
-    }
+	public ScriptDescriptor(Node node)
+	{
+		loadFromXML(node);
+	}
 
-    public String getName()
-    {
-        return name;
-    }
+	public ScriptDescriptor(String name, String url)
+	{
+		this.name = name;
+		this.url = url;
+	}
 
-    public String getDescription()
-    {
-        return description;
-    }
+	public String getName()
+	{
+		return name;
+	}
 
-    public String getAuthor()
-    {
-        return author;
-    }
+	public String getDescription()
+	{
+		return description;
+	}
 
-    public String getUrl()
-    {
-        return url;
-    }
+	public String getExtension()
+	{
+		return extension;
+	}
 
-    public void setName(String name)
-    {
-        this.name = name;
-    }
+	public String getAuthor()
+	{
+		return author;
+	}
+	
+	public String getVersion()
+	{
+		return version;
+	}
 
-    public void setDescription(String description)
-    {
-        this.description = description;
-    }
+	public String getUrl()
+	{
+		return url;
+	}
 
-    public void setAuthor(String author)
-    {
-        this.author = author;
-    }
+	public String getFileUrl()
+	{
+		return fileurl;
+	}
 
-    public void setUrl(String url)
-    {
-        this.url = url;
-    }
+	public void setName(String name)
+	{
+		this.name = name;
+	}
 
-    @Override
-    public boolean loadFromXML(Node node)
-    {
-        this.name = XMLUtil.getValue(XMLUtil.getElement(node, "name"), "No name");
-        this.author = XMLUtil.getValue(XMLUtil.getElement(node, "author"), "No author");
-        this.url = XMLUtil.getValue(XMLUtil.getElement(node, "url"), "http://icy.bioimageanalysis.org");
-        this.description = XMLUtil.getValue(XMLUtil.getElement(node, "shortDescription"), "No description");
-        return true;
-    }
+	public void setDescription(String description)
+	{
+		this.description = description;
+	}
 
-    @Override
-    public boolean saveToXML(Node node)
-    {
-        return false;
-    }
+	public void setAuthor(String author)
+	{
+		this.author = author;
+	}
 
-    public ImageIcon getIcon()
-    {
-        return PluginLoader.getPlugin(ScriptEditorPlugin.class.getName()).getIcon();
-    }
+	public void setUrl(String url)
+	{
+		this.url = url;
+	}
+
+	@Override
+	public boolean loadFromXML(Node node)
+	{
+		this.name = XMLUtil.getValue(XMLUtil.getElement(node, "name"), "No name");
+		this.author = XMLUtil.getValue(XMLUtil.getElement(node, "author"), "No author");
+		this.url = XMLUtil.getValue(XMLUtil.getElement(node, "url"), "");
+		this.fileurl = XMLUtil.getValue(XMLUtil.getElement(node, "fileurl"), "");
+		this.description = XMLUtil.getValue(XMLUtil.getElement(node, "shortDescription"), "No description");
+		this.extension = XMLUtil.getValue(XMLUtil.getElement(node, "language"), "js");
+		this.version = XMLUtil.getValue(XMLUtil.getElement(node, "version"), "1");
+		return true;
+	}
+
+	@Override
+	public boolean saveToXML(Node node)
+	{
+		return false;
+	}
+
+	public ImageIcon getIcon()
+	{
+		return PluginLoader.getPlugin(ScriptEditorPlugin.class.getName()).getIcon();
+	}
 }

@@ -1803,6 +1803,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				int level = commandIdx + 1;
 				dumpTree(left, root, level, "-" + decal);
 				dumpTree(right, root, level, "-" + decal);
+			} else if (expression instanceof FunctionCall)
+			{
+				List<AstNode> args = ((FunctionCall) expression).getArguments();
+				dumpTree(((FunctionCall) expression).getTarget(), root, commandIdx, "-" + decal);
+				for (AstNode arg : args)
+				{
+					dumpTree(arg, root, commandIdx, "-" + decal);
+				}
 			}
 			break;
 		case Token.GETPROP:
@@ -1921,7 +1929,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		callName = buildFunctionRecursive(callName, n);
 		if (!callName.isEmpty())
 		{
-
 			// removes the last dot
 			if (callName.startsWith("."))
 				callName = callName.substring(1);
@@ -1936,8 +1943,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 	/**
 	 * Recursive version
-	 * 
-	 * @throws ScriptException
 	 */
 	private String buildFunctionRecursive(String elem, AstNode n)
 	{
@@ -2582,8 +2587,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 		properties.defineProperty("brace_style", braceStyle, NativeObject.READONLY);
 
-		Object result = fct.call(context, scope, scope, new Object[]
-		{ textArea.getText(), properties });
+		Object result = fct.call(context, scope, scope, new Object[] { textArea.getText(), properties });
 
 		String finalText = result.toString();
 		int caretPos = textArea.getCaretPosition();

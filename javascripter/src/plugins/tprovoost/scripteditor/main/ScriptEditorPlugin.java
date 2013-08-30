@@ -80,6 +80,12 @@ public class ScriptEditorPlugin extends PluginActionable
 	// return 42;
 	// }
 
+	/**
+	 * Creates a new tab from a file.
+	 * 
+	 * @param f
+	 * @throws IOException
+	 */
 	public static void openInScriptEditor(final File f) throws IOException
 	{
 		// TODO gen text
@@ -94,11 +100,23 @@ public class ScriptEditorPlugin extends PluginActionable
 		openInScriptEditor(text, f.getName());
 	}
 
+	/**
+	 * Creates a new tab containing the <code>text</code>, with no title.
+	 * 
+	 * @param text
+	 */
 	public static void openInScriptEditor(final String text)
 	{
 		openInScriptEditor(text, "Untitled*");
 	}
 
+	/**
+	 * Creates a new tab with the <code>title</code> and containing the
+	 * <code>text</code>.
+	 * 
+	 * @param text
+	 * @param title
+	 */
 	public static void openInScriptEditor(final String text, final String title)
 	{
 		if (!editors.isEmpty())

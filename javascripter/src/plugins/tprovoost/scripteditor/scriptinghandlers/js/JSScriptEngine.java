@@ -63,12 +63,11 @@ public class JSScriptEngine extends ScriptEngine
 			// }
 		} catch (EvaluatorException e)
 		{
-			// ignoredLines.put(e.lineNumber(), e);
-			// updateGutter();
-			// throw e;
+			getErrorWriter().write(e.getMessage());
 			throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
 		} catch (RhinoException e3)
 		{
+			getErrorWriter().write(e3.getMessage());
 			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
 		} finally
 		{
@@ -112,9 +111,11 @@ public class JSScriptEngine extends ScriptEngine
 			script.exec(context, scriptable);
 		} catch (EvaluatorException e)
 		{
+			getErrorWriter().write(e.getMessage());
 			throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
 		} catch (RhinoException e3)
 		{
+			getErrorWriter().write(e3.getMessage());
 			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
 		} finally
 		{
@@ -139,8 +140,7 @@ public class JSScriptEngine extends ScriptEngine
 		public IcyImporterTopLevel(Context context)
 		{
 			super(context);
-			String[] names =
-			{ "println", "print", "eval" };
+			String[] names = { "println", "print", "eval" };
 			defineFunctionProperties(names, IcyImporterTopLevel.class, ScriptableObject.DONTENUM);
 		}
 

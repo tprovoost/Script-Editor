@@ -339,6 +339,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	public boolean showSaveFileDialog(String currentDirectoryPath)
 	{
+		return showSaveFileDialog(currentDirectoryPath, panelName);
+	}
+
+	/**
+	 * Displays a JFileChoose and let the user choose its file, then open it.
+	 * 
+	 * @see ScriptingEditor#openFile(File)
+	 */
+	public boolean showSaveFileDialog(String currentDirectoryPath, String defaultName)
+	{
 		final JFileChooser fc;
 		if (currentDirectoryPath == "")
 			fc = new JFileChooser();
@@ -357,8 +367,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			public void keyPressed(KeyEvent e)
 			{
 				fc.accept(fc.getSelectedFile());
+				fc.removeKeyListener(this);
 			}
 		});
+		if (!defaultName.isEmpty())
+			fc.setSelectedFile(new File(defaultName));
 		if (fc.showSaveDialog(Icy.getMainInterface().getMainFrame()) == JFileChooser.APPROVE_OPTION)
 		{
 			File file = fc.getSelectedFile();
