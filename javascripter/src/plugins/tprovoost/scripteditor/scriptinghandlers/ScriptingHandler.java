@@ -1162,4 +1162,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		return clazz.getMethod(name, parameterTypes);
 	}
 
+	public void autoImport()
+	{
+		// default : do nothing
+	}
+
 }

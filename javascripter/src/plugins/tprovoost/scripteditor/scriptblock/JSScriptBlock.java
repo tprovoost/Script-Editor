@@ -1,4 +1,4 @@
-package plugins.tprovoost.scripteditor.scriptblock.vartransformer;
+package plugins.tprovoost.scripteditor.scriptblock;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;

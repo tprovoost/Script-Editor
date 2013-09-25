@@ -298,7 +298,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 				if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
 				{
 					Document doc = consoleOutput.getDocument();
-					consoleOutput.setCaretPosition(doc.getLength() - 1);
+					consoleOutput.setCaretPosition(doc.getLength());
 				}
 			}
 
@@ -475,6 +475,8 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 	 */
 	public void openFile(File f) throws IOException
 	{
+		if (!f.exists())
+			return;
 		String filename = f.getName();
 		boolean exists = false;
 		for (int i = 0; i < tabbedPane.getTabCount(); ++i)
@@ -789,7 +791,27 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		});
 		menuFormat.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ctrlMask | InputEvent.SHIFT_DOWN_MASK));
 		menuEdit.add(menuFormat);
-
+		
+		JMenuItem menuAutoImport = new JMenuItem("Auto-Import");
+		menuAutoImport.addActionListener(new ActionListener()
+		{
+			
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// TODO
+				// parse the text, look for an Unknown
+				// if it starts by a Capital letter, try to load it
+				// if multiple choices, do nothing for now
+				Component c = tabbedPane.getSelectedComponent();
+				if (c instanceof ScriptingPanel)
+				{
+					ScriptingPanel panel = ((ScriptingPanel) c);
+					panel.getScriptHandler().autoImport();
+				}
+			}
+		});
+		menuEdit.add(menuAutoImport);
 		menuEdit.add(new JSeparator());
 
 		// FIND FEATURE

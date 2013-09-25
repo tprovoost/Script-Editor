@@ -7,11 +7,8 @@ import icy.system.IcyHandledException;
 import icy.system.thread.ThreadUtil;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.script.ScriptEngineFactory;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import plugins.adufour.blocks.lang.Block;
@@ -22,17 +19,15 @@ import plugins.adufour.vars.lang.Var;
 import plugins.adufour.vars.lang.VarTrigger;
 import plugins.adufour.vars.util.TypeChangeListener;
 import plugins.adufour.vars.util.VarReferencingPolicy;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
+import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
-import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptEngine;
+import plugins.tprovoost.scripteditor.scriptinghandlers.py.PyScriptEngine;
 
-public class Javascript extends Plugin implements Block, VarListListener
+public class Pythonscript extends Plugin implements Block, VarListListener
 {
-    ArrayList<String> languagesInstalled = new ArrayList<String>();
-
-    private VarScript inputScript = new VarScript("Script", "// Click on the button\n// to edit in a frame.\n\noutput0 = input0 * 2");
+    private VarScriptPython inputScript = new VarScriptPython("Script", "# Click on the button\n# to edit in a frame.\n\noutput0 = input0 * 2");
 
     private VarList inputMap;
     private VarList outputMap;
@@ -44,13 +39,8 @@ public class Javascript extends Plugin implements Block, VarListListener
 
     private VarTrigger triggerOutput;
 
-    public Javascript()
+    public Pythonscript()
     {
-	ScriptEngineManager factory = new ScriptEngineManager();
-	for (ScriptEngineFactory f : factory.getEngineFactories())
-	{
-	    languagesInstalled.add(ScriptEngineHandler.getLanguageName(f));
-	}
     }
 
     @SuppressWarnings(
@@ -59,7 +49,7 @@ public class Javascript extends Plugin implements Block, VarListListener
     public void run()
     {
 	ScriptingHandler handler = inputScript.getEditor().getPanelIn().getScriptHandler();
-	JSScriptEngine engine = (JSScriptEngine) handler.createNewEngine();
+	ScriptEngine engine = (PyScriptEngine) handler.createNewEngine();
 	// String language = inputScript.getEditor().panelIn.getLanguage();
 
 	for (Var<?> var : inputMap)
@@ -69,7 +59,7 @@ public class Javascript extends Plugin implements Block, VarListListener
 	    if (name.contains("input"))
 	    {
 		// For another language, remove this, or use the right one.
-		value = JSScriptBlock.transformInputForScript(value);
+		value = PythonScriptBlock.transformInputForScript(value);
 
 		// put in the engine the value.
 		engine.put(name, value);
@@ -86,7 +76,7 @@ public class Javascript extends Plugin implements Block, VarListListener
 	for (Var output : outputMap)
 	{
 	    Object resObject = engine.get(output.getName());
-	    output.setValue(JSScriptBlock.transformScriptOutput(resObject));
+	    output.setValue(PythonScriptBlock.transformScriptOutput(resObject));
 	}
     }
 
@@ -127,7 +117,7 @@ public class Javascript extends Plugin implements Block, VarListListener
 			registerVariables();
 		    }
 		});
-		Javascript.this.inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
+		Pythonscript.this.inputMap.addRuntimeVariable("" + myVariable.hashCode(), myVariable);
 		registerVariables();
 
 	    }

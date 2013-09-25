@@ -8,7 +8,6 @@ import icy.gui.frame.IcyFrameListener;
 import icy.resource.icon.IcyIcon;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -21,33 +20,20 @@ import javax.swing.WindowConstants;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
-import plugins.adufour.vars.gui.swing.SwingVarEditor;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 
-public class VarScriptEditorV3 extends SwingVarEditor<String>
+public class VarScriptEditorPython extends VarScriptEditorV3
 {
-    protected ScriptingPanel panelOut;
-    protected ScriptingPanel panelIn;
-    protected IcyFrame frame;
-    protected IcyFrameListener frameListener;
-
-    public VarScriptEditorV3(VarScript varScript, String defaultValue)
+    public VarScriptEditorPython(VarScriptPython varScript, String defaultValue)
     {
-	super(varScript);
-	panelIn.getTextArea().setText(defaultValue);
-    }
-
-    @Override
-    public Dimension getPreferredSize()
-    {
-	return super.getPreferredSize();
+	super(varScript, defaultValue);
     }
 
     @Override
     protected JComponent createEditorComponent()
     {
-	panelIn = new ScriptingPanel(null, "Internal Editor", "JavaScript", true);
-	panelOut = new ScriptingPanel(null, "External Editor", "JavaScript", true);
+	panelIn = new ScriptingPanel(null, "Internal Editor", "Python", true);
+	panelOut = new ScriptingPanel(null, "External Editor", "Python", true);
 	panelOut.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
 	frame = new IcyFrame("External Editor", true, true, true, true);
@@ -102,53 +88,4 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
 	panelOut.getTextArea().setCaretPosition(0);
 	return toReturn;
     }
-
-    @Override
-    public double getComponentVerticalResizeFactor()
-    {
-	return 1d;
-    }
-
-    @Override
-    protected void activateListeners()
-    {
-	frame.addFrameListener(frameListener);
-    }
-
-    @Override
-    protected void deactivateListeners()
-    {
-	frame.removeFrameListener(frameListener);
-	frame.close();
-    }
-
-    @Override
-    protected void updateInterfaceValue()
-    {
-
-    }
-
-    public String getText()
-    {
-	if (panelIn == null || panelIn.getTextArea() == null)
-	    return getVariable().getDefaultValue();
-	return panelIn.getTextArea().getText();
-    }
-
-    public void setText(String newValue)
-    {
-	panelOut.getTextArea().setText(newValue);
-	panelIn.getTextArea().setText(newValue);
-    }
-
-    public ScriptingPanel getPanelIn()
-    {
-	return panelIn;
-    }
-
-    public ScriptingPanel getPanelOut()
-    {
-	return panelOut;
-    }
-
 }

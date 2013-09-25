@@ -749,6 +749,41 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		private static final long serialVersionUID = 1L;
 		private JComboBox comboLanguages;
 
+		private ActionListener runInNewListener = new ActionListener()
+		{
+
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (!lastIsNew)
+				{
+					lastIsNew = true;
+					btnSplitRun.setIcon(new IcyIcon("playback_play", 16));
+					btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
+					btnSplitRun.repaint();
+				}
+				runInNew();
+			}
+		};
+
+		private ActionListener runInSameListener = new ActionListener()
+		{
+
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (lastIsNew)
+				{
+					lastIsNew = false;
+					btnSplitRun.setIcon(new IcyIcon(imgPlayback2, 16));
+					btnSplitRun.setToolTipText("All variables in the bindings are re-usable.");
+					btnSplitRun.repaint();
+				}
+				runInSame();
+			}
+		};
+		protected boolean lastIsNew = true;
+
 		public PanelOptions()
 		{
 			this("JavaScript");
@@ -814,46 +849,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			if (integrated)
 				return;
 
-			btnRun.addActionListener(new ActionListener()
-			{
-
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					if (scriptHandler == null)
-						return;
-					if (!integrated)
-					{
-						if (isDirty())
-						{
-							if (saveFile != null)
-							{
-								saveFile();
-							}
-						}
-					}
-					PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
-					ThreadUtil.invokeLater(new Runnable()
-					{
-
-						@Override
-						public void run()
-						{
-							btnRun.setEnabled(false);
-							btnSplitRun.setEnabled(false);
-							btnStop.setEnabled(true);
-						}
-					});
-					if (!integrated)
-					{
-						scriptHandler.setNewEngine(false);
-						scriptHandler.setForceRun(prefs.isOverrideEnabled());
-						scriptHandler.setStrict(prefs.isStrictModeEnabled());
-						scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
-						scriptHandler.interpret(true);
-					}
-				}
-			});
+			btnRun.addActionListener(runInSameListener);
 
 			btnSplitRun.addSplitButtonActionListener(new SplitButtonActionListener()
 			{
@@ -866,18 +862,13 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				@Override
 				public void buttonClicked(ActionEvent e)
 				{
-					runInSame();
+					if (lastIsNew)
+						runInNew();
+					else
+						runInSame();
 				}
 			});
-			btnRunNew2.addActionListener(new ActionListener()
-			{
-
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					runInSame();
-				}
-			});
+			btnRunNew2.addActionListener(runInNewListener);
 
 			btnStop.addActionListener(new ActionListener()
 			{
@@ -901,7 +892,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			add(Box.createHorizontalGlue());
 		}
 
-		protected void runInSame()
+		protected void runInNew()
 		{
 			if (scriptHandler == null)
 				return;
@@ -909,11 +900,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			{
 				if (isDirty())
 				{
-					if (saveFile == null)
-					{
-						if (!showSaveFileDialog(ScriptingEditor.currentDirectoryPath))
-							return;
-					} else
+					if (saveFile != null)
 					{
 						saveFile();
 					}
@@ -937,6 +924,42 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			scriptHandler.setStrict(prefs.isStrictModeEnabled());
 			scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
 			scriptHandler.interpret(true);
+		}
+
+		protected void runInSame()
+		{
+			if (scriptHandler == null)
+				return;
+			if (!integrated)
+			{
+				if (isDirty())
+				{
+					if (saveFile != null)
+					{
+						saveFile();
+					}
+				}
+			}
+			PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+			ThreadUtil.invokeLater(new Runnable()
+			{
+
+				@Override
+				public void run()
+				{
+					btnRun.setEnabled(false);
+					btnSplitRun.setEnabled(false);
+					btnStop.setEnabled(true);
+				}
+			});
+			if (!integrated)
+			{
+				scriptHandler.setNewEngine(false);
+				scriptHandler.setForceRun(prefs.isOverrideEnabled());
+				scriptHandler.setStrict(prefs.isStrictModeEnabled());
+				scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+				scriptHandler.interpret(true);
+			}
 		}
 	}
 

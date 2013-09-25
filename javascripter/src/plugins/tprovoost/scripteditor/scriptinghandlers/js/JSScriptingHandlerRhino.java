@@ -609,8 +609,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			final CompilerEnvirons comp = new CompilerEnvirons();
 			comp.initFromContext(context);
 			final Parser parser = new Parser(comp, comp.getErrorReporter());
-			AstRoot root;
-			root = parser.parse(s, "", 1);
+			AstRoot root = null;
+
+			try
+			{
+				root = parser.parse(s, "", 1);
+			} catch (EvaluatorException e)
+			{
+				throw new ScriptEditorException(e.getMessage(), fileName, e.lineNumber(), e.columnNumber(), true);
+			}
 
 			if (root == null || !root.hasChildren())
 				return;
@@ -754,14 +761,16 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				AstNode left = ((Assignment) expression).getLeft();
 				AstNode right = ((Assignment) expression).getRight();
 				VariableType type = getRealType(right);
+				if (type != null && type.getClazz() == void.class)
+				{
+					throw new ScriptEditorException("This method returns \"void\" and cannot be assigned", fileName, n.getLineno(), -1, false);
+				}
 				String typeString = "";
 				if (type != null)
 					typeString = type.toString();
-				VariableCompletion c = null;
 				if (left.getType() == Token.NAME)
-					c = new VariableCompletion(provider, left.getString(), typeString);
-				if (c != null)
 				{
+					VariableCompletion c = new VariableCompletion(provider, left.getString(), typeString);
 					c.setSummary("variable");
 					c.setDefinedIn("script");
 					c.setRelevance(RELEVANCE_HIGH);
@@ -2635,7 +2644,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			EvaluatorException ee = (EvaluatorException) e;
 			// get the line and column of error
-			int lineError = ee.lineNumber();
+			int lineError = ee.lineNumber() - 1;
 			int columnNumber = ee.columnNumber();
 			if (columnNumber == -1)
 				columnNumber = 0;
@@ -2689,7 +2698,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			ScriptEditorException se = (ScriptEditorException) e;
 			// get line error
-			int lineError = lineNumber(se);
+			int lineError = lineNumber(se) - 1;
 			Integer columnNumberI = columnNumber(se);
 			int columnNumber = columnNumberI != null ? columnNumberI : -1;
 			if (columnNumber == -1)
@@ -2810,5 +2819,25 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	public LinkGeneratorResult isLinkAtOffset(RSyntaxTextArea textArea, int offs)
 	{
 		return null;
+	}
+
+	@Override
+	public void autoImport()
+	{
+		try
+		{
+			detectVariables(currentText);
+			ArrayList<ScriptEditorException> listCopy = new ArrayList<ScriptEditorException>(ignoredLines);
+			for (ScriptEditorException e : listCopy)
+			{
+				String message = e.getMessage();
+				if (message.contains("Unknown field or method: "))
+				{
+					message.substring("Unknown field or method: ".length());
+				}
+			}
+		} catch (ScriptException e)
+		{
+		}
 	}
 }
