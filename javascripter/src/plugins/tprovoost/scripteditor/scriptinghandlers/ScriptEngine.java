@@ -26,7 +26,7 @@ public abstract class ScriptEngine
 
 	public abstract void exec(String string) throws ScriptEditorException;
 
-	public abstract void evalFile(String fileName) throws ScriptEditorException;
+	public abstract void execFile(String fileName) throws ScriptEditorException;
 
 	public PrintWriter getWriter()
 	{

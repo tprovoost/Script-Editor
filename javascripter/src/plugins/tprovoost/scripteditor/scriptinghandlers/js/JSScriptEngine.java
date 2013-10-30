@@ -79,7 +79,7 @@ public class JSScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void evalFile(String fileName) throws ScriptEditorException, EvaluatorException
+	public void execFile(String fileName) throws ScriptEditorException, EvaluatorException
 	{
 		this.lastFileName = fileName;
 		File f = new File(fileName);
