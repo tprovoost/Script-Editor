@@ -7,8 +7,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Properties;
 
-import javax.script.ScriptException;
-
 import org.python.core.PyException;
 import org.python.core.PyString;
 import org.python.core.PyStringMap;
@@ -17,7 +15,6 @@ import org.python.core.imp;
 import org.python.util.PythonInterpreter;
 
 import plugins.tlecomte.jythonForIcy.JythonLibsManager;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class PyScriptEngine extends ScriptEngine
@@ -52,7 +49,7 @@ public class PyScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void eval(String s) throws ScriptEditorException, PyException
+	public void eval(String s)
 	{
 		for (String s2 : bindings.keySet())
 		{
@@ -77,7 +74,7 @@ public class PyScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void evalFile(String s) throws ScriptEditorException, PyException
+	public void evalFile(String s)
 	{
 		for (String s2 : bindings.keySet())
 		{
