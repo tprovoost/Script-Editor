@@ -24,7 +24,7 @@ public abstract class ScriptEngine
 		this.pwE = pwE;
 	}
 
-	public abstract void eval(String string) throws ScriptEditorException;
+	public abstract void exec(String string) throws ScriptEditorException;
 
 	public abstract void evalFile(String fileName) throws ScriptEditorException;
 

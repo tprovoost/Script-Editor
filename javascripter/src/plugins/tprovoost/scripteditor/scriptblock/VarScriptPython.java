@@ -22,7 +22,7 @@ public class VarScriptPython extends VarScript
     public void evaluate() throws ScriptException
     {
 	ScriptEngine engine = ScriptEngineHandler.getEngine("python");
-	engine.eval(getValue());
+	engine.exec(getValue());
     }
 
 }
