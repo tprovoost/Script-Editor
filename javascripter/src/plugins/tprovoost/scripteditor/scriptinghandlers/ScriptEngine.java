@@ -9,6 +9,11 @@ public abstract class ScriptEngine
 	private PrintWriter pw;
 	private PrintWriter pwE;
 
+	protected ScriptEngine() {
+		pw = new PrintWriter(System.out);
+		pwE = new PrintWriter(System.err);
+	}
+
 	public void setWriter(PrintWriter pw)
 	{
 		this.pw = pw;
