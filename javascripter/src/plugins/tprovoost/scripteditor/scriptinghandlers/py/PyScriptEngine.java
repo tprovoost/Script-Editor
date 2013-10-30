@@ -71,6 +71,7 @@ public class PyScriptEngine extends ScriptEngine
 		} catch (PyException pe)
 		{
 			getErrorWriter().write(pe.toString());
+			getErrorWriter().flush();
 		}
 	}
 
@@ -96,6 +97,7 @@ public class PyScriptEngine extends ScriptEngine
 		} catch (PyException pe)
 		{
 			getErrorWriter().write(pe.toString());
+			getErrorWriter().flush();
 		}
 	}
 
