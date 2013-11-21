@@ -66,7 +66,7 @@ public class PyScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void execFile(String s)
+	public void evalFile(String s)
 	{
 		for (String s2 : bindings.keySet())
 		{

@@ -87,7 +87,7 @@ public class PythonScriptingHandler extends ScriptingHandler
 	if (fileName == null || fileName.isEmpty() || fileName.contentEquals("Untitled") || fileName.contentEquals("Untitled"))
 	    engine.exec(s);
 	else
-	    engine.execFile(fileName);
+	    engine.evalFile(fileName);
     }
 
     public static void setInterpreter(InteractiveInterpreter interpreter)
