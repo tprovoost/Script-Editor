@@ -196,7 +196,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	public void evalEngine(ScriptEngine engine, String s) throws ScriptException
 	{
 		if (fileName == null || fileName.isEmpty() || fileName.contentEquals("Untitled"))
-			engine.exec(s);
+			engine.eval(s);
 		else
 			engine.evalFile(fileName);
 	}
@@ -230,7 +230,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		String mainInterface = MainInterface.class.getName();
 		try
 		{
-			engine.exec("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
+			engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
 
 			if (provider != null)
 			{
@@ -255,7 +255,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 		try
 		{
-			engine.exec("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
+			engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
 			if (provider != null)
 			{
 				FunctionCompletion c = new FunctionCompletion(provider, "getImage", IcyBufferedImage.class.getName());
@@ -278,7 +278,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 		try
 		{
-			engine.exec("gui = Packages.icy.main.Icy.getMainInterface()");
+			engine.eval("gui = Packages.icy.main.Icy.getMainInterface()");
 			if (provider != null)
 			{
 				VariableCompletion vc = new VariableCompletion(provider, "gui", mainInterface);
@@ -323,19 +323,19 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		// hardcoded functions, to remove in the future
 		try
 		{
-			engine.exec("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
+			engine.eval("function getSequence() { return Packages.icy.main.Icy.getMainInterface().getFocusedSequence() }");
 		} catch (ScriptException e1)
 		{
 		}
 		try
 		{
-			engine.exec("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
+			engine.eval("function getImage() { return Packages.icy.main.Icy.getMainInterface().getFocusedImage(); }");
 		} catch (ScriptException e1)
 		{
 		}
 		try
 		{
-			engine.exec("gui = Packages.icy.main.Icy.getMainInterface()");
+			engine.eval("gui = Packages.icy.main.Icy.getMainInterface()");
 		} catch (ScriptException e1)
 		{
 		}
@@ -376,10 +376,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				// {
 				if (method.getReturnType() == void.class)
 				{
-					engine.exec("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
+					engine.eval("function " + functionName + " (" + params + ") {\n\t" + sfc.getMethodCall() + "\n}");
 				} else
 				{
-					engine.exec("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
+					engine.eval("function " + functionName + " (" + params + ") {\n\treturn " + sfc.getMethodCall() + "\n}");
 				}
 				// }
 			} catch (ScriptException e)

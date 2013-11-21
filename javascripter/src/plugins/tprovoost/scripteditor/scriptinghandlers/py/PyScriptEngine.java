@@ -40,7 +40,7 @@ public class PyScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void exec(String s)
+	public void eval(String s)
 	{
 		for (String s2 : bindings.keySet())
 		{

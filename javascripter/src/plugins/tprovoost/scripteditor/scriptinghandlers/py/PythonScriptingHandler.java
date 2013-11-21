@@ -85,7 +85,7 @@ public class PythonScriptingHandler extends ScriptingHandler
     public void evalEngine(ScriptEngine engine, String s) throws ScriptException
     {
 	if (fileName == null || fileName.isEmpty() || fileName.contentEquals("Untitled") || fileName.contentEquals("Untitled"))
-	    engine.exec(s);
+	    engine.eval(s);
 	else
 	    engine.evalFile(fileName);
     }

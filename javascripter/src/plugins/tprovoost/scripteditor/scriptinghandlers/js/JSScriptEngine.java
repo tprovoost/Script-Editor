@@ -36,7 +36,7 @@ public class JSScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void exec(String s) throws ScriptEditorException, EvaluatorException
+	public void eval(String s) throws ScriptEditorException, EvaluatorException
 	{
 		// uses Context from Rhino integrated in JRE or impossibility
 		// to use already defined methods in ScriptEngine, such as println or

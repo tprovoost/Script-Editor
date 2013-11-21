@@ -42,7 +42,7 @@ public class VarScript extends VarString
 	public void evaluate() throws ScriptException
 	{
 		ScriptEngine engine = ScriptEngineHandler.getEngine("javascript");
-		engine.exec(getValue());
+		engine.eval(getValue());
 	}
 
 	public ScriptEngine getEngine()
