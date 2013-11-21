@@ -11,7 +11,6 @@ import org.python.core.PyException;
 import org.python.core.PyString;
 import org.python.core.PyStringMap;
 import org.python.core.PySystemState;
-import org.python.core.imp;
 import org.python.util.PythonInterpreter;
 
 import plugins.tlecomte.jythonForIcy.JythonLibsManager;
@@ -41,11 +40,6 @@ public class PyScriptEngine extends ScriptEngine
 		new JythonLibsManager().addDirsToPythonPath(sys);
 
 		py = new PythonInterpreter(dict, sys);
-
-		// Jython 2.5 does not import the site module (see http://bugs.jython.org/issue1552)
-		// The site modile is responsible for importing sitecustomize.py,
-		// a script that a user can create to tweak its setup (import paths, environment variables)
-		imp.load("site");
 	}
 
 	@Override
