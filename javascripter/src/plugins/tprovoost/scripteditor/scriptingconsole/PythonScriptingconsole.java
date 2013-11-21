@@ -21,7 +21,6 @@ import javax.swing.text.Style;
 import org.python.core.PyException;
 import org.python.util.InteractiveConsole;
 
-import plugins.tprovoost.scripteditor.scriptinghandlers.py.PyScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 public class PythonScriptingconsole extends Scriptingconsole
