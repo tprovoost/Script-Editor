@@ -159,6 +159,9 @@ public class PyScriptEngine extends ScriptEngine
 			bindings.put(s, null);
 			py.set(s, null);
 		}
+		
+		// let Jython do its housekeeping
+		py.cleanup();
 	}
 
 	@Override
