@@ -19,12 +19,8 @@ import javax.swing.text.Document;
 import javax.swing.text.Style;
 
 import org.python.core.PyException;
-import org.python.core.PySystemState;
-import org.python.core.imp;
 import org.python.util.InteractiveConsole;
 
-import plugins.tlecomte.jythonForIcy.JythonLibsManager;
-import plugins.tprovoost.scripteditor.scriptinghandlers.py.PyScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 public class PythonScriptingconsole extends Scriptingconsole
@@ -47,16 +43,6 @@ public class PythonScriptingconsole extends Scriptingconsole
 		// so sys.path (for example) is shared for all instances of them!
 		console = new InteractiveConsole();
 		
-		// add path entries for python libs to PySystemState
-		PySystemState sys = console.getSystemState();
-		new JythonLibsManager().addDirsToPythonPath(sys);
-
-		// Jython 2.5 does not import the site module (see http://bugs.jython.org/issue1552)
-		// The site modile is responsible for importing sitecustomize.py,
-		// a script that a user can create to tweak its setup (import paths, environment variables)
-		imp.load("site");
-		
-
 		if (PythonScriptingHandler.getInterpreter() == null)
 		{
 			PythonScriptingHandler.setInterpreter(console);

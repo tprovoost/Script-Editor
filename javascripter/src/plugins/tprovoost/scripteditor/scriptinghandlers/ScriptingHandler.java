@@ -691,33 +691,37 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 */
 	public ScriptEngine createNewEngine()
 	{
-		ScriptEngine engine = getEngine();
-		if (engine != null)
+		ScriptEngine oldEngine = getEngine();
+		
+		if (oldEngine != null)
 		{
-			// remove everything from current engine
-			clearEngine(engine);
-
-			ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(engine);
+			// retrieve the methods known to the old engine to transfert them to the new engine
+			ScriptEngineHandler engineHandler = ScriptEngineHandler.getEngineHandler(oldEngine);
 			ArrayList<Method> functions = engineHandler.getFunctions();
-			String newEngineType = engine.getName();
-			engine = ScriptEngineHandler.getEngine(newEngineType, true);
-			installMethods(engine, functions);
+
+			// unregister the old engine (will do the housekeeping)
+			engineHandler.disposeEngine(oldEngine);
+			
+			// create a new engine
+			String newEngineType = oldEngine.getName();
+			ScriptEngine newEngine = ScriptEngineHandler.getEngine(newEngineType, true);
+			installMethods(newEngine, functions);
 			try
 			{
 				installDefaultLanguageCompletions(newEngineType);
 			} catch (ScriptException e)
 			{
 			}
-			engine.setWriter(pw);
-			engine.setErrorWriter(pw);
+			newEngine.setWriter(pw);
+			newEngine.setErrorWriter(pw);
+			
+			return newEngine;
 		}
-		return engine;
-	}
-
-	private void clearEngine(ScriptEngine engine)
-	{
-		engine.clear();
-		System.gc();
+		else
+		{
+			// Failed to retrieve the current engine
+			return null;	
+		}
 	}
 
 	/**

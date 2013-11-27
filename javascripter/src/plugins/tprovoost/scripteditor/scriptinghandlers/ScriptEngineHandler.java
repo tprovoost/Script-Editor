@@ -110,6 +110,14 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		return engineHash;
 	}
 
+	public void disposeEngine(ScriptEngine engine)
+	{
+		engine.clear();
+
+		// remove the reference to the engine
+		engineHandlers.remove(engine);
+	}
+
 	// public ScriptEngine generateNewEngine() {
 	// String engineType = engine.getFactory().getLanguageName();
 	// ScriptEngine engine = factory.getEngineByName(engineType);

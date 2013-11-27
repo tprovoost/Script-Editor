@@ -142,6 +142,9 @@ public class PythonScriptingHandler extends ScriptingHandler
 	// be detected.
 	addExternalVariables();
 
+	// avoid SyntaxErrors due to encoding declarations
+	s = mangleCodingDeclaration(s);
+
 	mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
 	if (node.getChildren() == null)
 	    return;
@@ -155,6 +158,24 @@ public class PythonScriptingHandler extends ScriptingHandler
 	{
 	    provider.addCompletions(variableCompletions);
 	}
+    }
+
+    private static String mangleCodingDeclaration(String s)
+    {
+    	// Mangle coding definitions on first two lines of the string.
+    	// Otherwise we get a SyntaxError when parsing a script that begins
+    	// with a coding declaration such as:
+    	//      # -*- coding: utf-8 -*-
+    	String[] parts = s.split("\n", 3);
+    	StringBuilder builder = new StringBuilder();
+
+    	for (int i=0; i<parts.length-1; i++) {
+    		// replace the coding declaration with something harmless
+    		builder.append(parts[i].replaceFirst("coding[:=]\\s*([-\\w.]+)", "coding declaration"));
+    		builder.append("\n");
+    	}
+    	builder.append(parts[parts.length-1]); // lines 3 and below
+    	return builder.toString();
     }
 
     public void registerVariables(PythonTree node)
