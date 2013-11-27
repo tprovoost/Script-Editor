@@ -129,19 +129,6 @@ public class PyScriptEngine extends ScriptEngine
 
 		// Here's the initialization step
 		PythonInterpreter.initialize(sysProps, postProps, null);
-
-		// TODO add bundled libs from jython.jar
-		// PySystemState sys = Py.getSystemState();
-		// sys.path.append(new PyString("jython.jar/Lib"));
-
-		// TODO add execnet path (and maybe pip, virtualenv, setuptools) to
-		// python.path
-		// sys.path.append(new
-		// PyString("jython.jar/Lib/site-packages/execnet"));
-
-		// TODO here we could add custom path entries (from a GUI) to
-		// python.path
-		// sys.path.append(new PyString(gui_configured_path));
 	}
 
 	@Override
