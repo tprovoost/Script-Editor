@@ -116,8 +116,6 @@ public class ScriptEngineHandler implements PluginInstallerListener
 
 		// remove the reference to the engine
 		engineHandlers.remove(engine);
-
-		System.gc();
 	}
 
 	// public ScriptEngine generateNewEngine() {
