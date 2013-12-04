@@ -69,6 +69,12 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
         setMinimumSize(new Dimension(0, 25));
         setPreferredSize(new Dimension(0, 25));
     }
+    
+    public void close()
+    {
+    	removeKeyListener(this);
+    	removeMouseListener(this);
+    }
 
     public void setLanguage(String language)
     {

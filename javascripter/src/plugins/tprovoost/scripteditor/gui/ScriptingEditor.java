@@ -111,6 +111,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				ScriptEngineHandler.clearEngines();
 				BindingsScriptFrame.getInstance().setVisible(false);
 			}
+			console.close();
 			closeAll();
 			PreferencesWindow.getPreferencesWindow().removeFrameListener(applyPrefsListener);
 		}
