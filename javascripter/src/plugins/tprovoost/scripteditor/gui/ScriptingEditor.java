@@ -75,7 +75,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
  * 
  * @author tprovoost
  */
-public class ScriptingEditor extends IcyFrame implements IcyFrameListener, ActionListener
+public class ScriptingEditor extends IcyFrame implements ActionListener
 {
 
 	// Scripting Panels
@@ -112,7 +112,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 				BindingsScriptFrame.getInstance().setVisible(false);
 			}
 			closeAll();
-			PreferencesWindow.getPreferencesWindow().removeFrameListener(ScriptingEditor.this);
+			PreferencesWindow.getPreferencesWindow().removeFrameListener(applyPrefsListener);
 		}
 	};
 	private AcceptListener acceptlistener = new AcceptListener()
@@ -123,6 +123,46 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 			return closeAll();
 		}
 	};
+	
+	/**
+	 * This listener is called when the preferences window is closed.
+	 * It applies the preferences to the opened ScriptingPanels.
+	 */
+	private IcyFrameListener applyPrefsListener = new IcyFrameAdapter()
+	{
+		@Override
+		public void icyFrameClosed(IcyFrameEvent e)
+		{
+			PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+
+			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
+			{
+				Component comp = tabbedPane.getComponentAt(i);
+				if (comp instanceof ScriptingPanel)
+				{
+					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
+					if (!textArea.getText().isEmpty())
+					{
+						boolean indentWanted = prefWin.isIndentSpacesEnabled();
+						// if (textArea.getTabsEmulated() != indentWanted)
+						// {
+						// a change occured
+						textArea.setTabsEmulated(indentWanted);
+						if (indentWanted)
+						{
+							textArea.convertSpacesToTabs();
+						} else
+						{
+							textArea.setTabSize(prefWin.indentSpacesCount());
+							textArea.convertTabsToSpaces();
+						}
+						// }
+					}
+				}
+			}
+		}
+	};
+	
 	private JPanel panelSouth;
 
 	public ScriptingEditor()
@@ -348,7 +388,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
 		// frame listener on preferences
-		PreferencesWindow.getPreferencesWindow().addFrameListener(this);
+		PreferencesWindow.getPreferencesWindow().addFrameListener(applyPrefsListener);
 
 		ThreadUtil.invokeLater(new Runnable()
 		{
@@ -1092,48 +1132,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		updateRecentFiles();
 	}
 
-	@Override
-	public void icyFrameOpened(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameClosing(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameClosed(IcyFrameEvent e)
-	{
-		PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
-
-		for (int i = 0; i < tabbedPane.getTabCount(); ++i)
-		{
-			Component comp = tabbedPane.getComponentAt(i);
-			if (comp instanceof ScriptingPanel)
-			{
-				RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
-				if (!textArea.getText().isEmpty())
-				{
-					boolean indentWanted = prefWin.isIndentSpacesEnabled();
-					// if (textArea.getTabsEmulated() != indentWanted)
-					// {
-					// a change occured
-					textArea.setTabsEmulated(indentWanted);
-					if (indentWanted)
-					{
-						textArea.convertSpacesToTabs();
-					} else
-					{
-						textArea.setTabSize(prefWin.indentSpacesCount());
-						textArea.convertTabsToSpaces();
-					}
-					// }
-				}
-			}
-		}
-	}
-
 	public static String getDefaultFolder()
 	{
 		return "";
@@ -1147,36 +1145,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 	private synchronized void setScrollLocked(boolean scrollLocked)
 	{
 		this.scrollLocked = scrollLocked;
-	}
-
-	@Override
-	public void icyFrameIconified(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameDeiconified(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameActivated(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameDeactivated(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameInternalized(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameExternalized(IcyFrameEvent e)
-	{
 	}
 
 	/**
