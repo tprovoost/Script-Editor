@@ -416,6 +416,66 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			}
 		}
 	}
+	
+	/**
+	 * Ask the user whether to save the files.
+	 * 
+	 * @return false is the close operation is cancelled
+	 */
+	boolean promptSave()
+	{
+        int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
+                "Some work has not been saved, are you sure you want to close?", getPanelName(),
+                JOptionPane.WARNING_MESSAGE, JOptionPane.QUESTION_MESSAGE, null, new Object[] {"Save",
+                        "Discard Changes", "Cancel"}, "Cancel" + "");
+        if (n == 2)
+        	return false;
+        if (n == 0)
+        {
+            if (getSaveFile() != null)
+            	return saveFile();
+            else
+            	return showSaveFileDialog(editor.getCurrentDirectory());
+        }
+        
+        return true;
+	}
+	
+	/**
+	 * Try to close this ScriptingPanel. The user will be asked whether to save the files
+	 * if they are modified. If the operation is not cancelled, the listeners are removed.
+	 * 
+	 * @return false is the close operation is cancelled
+	 */
+	boolean close()
+	{
+		boolean canClose = true;
+        if (isDirty())
+        {
+        	canClose = promptSave();
+        }
+
+        if (canClose)
+        {
+        	cleanup();
+        	return true;
+        }
+        else
+        {
+        	return false;
+        }
+	}
+	
+	/**
+	 * Removes the listeners
+	 */
+	void cleanup()
+	{
+		scriptHandler.stopThreads();
+		scriptHandler.removeScriptListener(this);
+		textArea.removeKeyListener(scriptHandler);
+		PluginRepositoryLoader.removeListener(scriptHandler);
+	}
 
 	/**
 	 * Install the wanted language in the text area: creates the provider and
@@ -434,10 +494,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		// Autocompletion is done with the following item
 		if (scriptHandler != null)
 		{
-			scriptHandler.stopThreads();
-			scriptHandler.removeScriptListener(this);
-			textArea.removeKeyListener(scriptHandler);
-			PluginRepositoryLoader.removeListener(scriptHandler);
+			cleanup();
 		}
 
 		// the provider provides the results when hitting Ctrl + Space.

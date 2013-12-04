@@ -495,7 +495,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		tabbedPane.addTab(name, panelCreated);
 		tabbedPane.setTitleAt(idx, name);
 		tabbedPane.repaint();
-		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, tabbedPane));
+		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(tabbedPane));
 		tabbedPane.addTab("+", new JLabel());
 		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);

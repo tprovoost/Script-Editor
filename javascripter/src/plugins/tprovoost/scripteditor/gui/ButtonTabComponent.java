@@ -1,6 +1,5 @@
 package plugins.tprovoost.scripteditor.gui;
 
-import icy.main.Icy;
 import icy.util.EventUtil;
 
 import java.awt.BasicStroke;
@@ -20,7 +19,6 @@ import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -34,13 +32,11 @@ public class ButtonTabComponent extends JPanel
     /** */
     private static final long serialVersionUID = 1L;
     private final JTabbedPane pane;
-    private ScriptingEditor parent;
 
-    public ButtonTabComponent(ScriptingEditor parent, final JTabbedPane pane)
+    public ButtonTabComponent(final JTabbedPane pane)
     {
         // unset default FlowLayout' gaps
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        this.parent = parent;
         if (pane == null)
         {
             throw new NullPointerException("TabbedPane is null");
@@ -176,34 +172,27 @@ public class ButtonTabComponent extends JPanel
     public boolean deletePane()
     {
         Component c = pane.getComponentAt(pane.indexOfTabComponent(ButtonTabComponent.this));
+        boolean ok = true;
         if (c instanceof ScriptingPanel)
         {
             ScriptingPanel sp = ((ScriptingPanel) c);
-            if (sp.isDirty())
-            {
-                int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
-                        "Some work has not been saved, are you sure you want to close?", sp.getPanelName(),
-                        JOptionPane.WARNING_MESSAGE, JOptionPane.QUESTION_MESSAGE, null, new Object[] {"Save",
-                                "Discard Changes", "Cancel"}, "Cancel" + "");
-                if (n == 2)
-                    return false;
-                if (n == 0)
-                {
-                    if (sp.getSaveFile() != null)
-                        return sp.saveFile();
-                    else
-                        return sp.showSaveFileDialog(parent.getCurrentDirectory());
-                }
-            }
+            ok = sp.close();
         }
-        int i = pane.indexOfTabComponent(ButtonTabComponent.this);
-        int selectedIdx = pane.getSelectedIndex();
-        if (i != -1)
+        if (ok)
         {
-            pane.remove(i);
-            if (i == selectedIdx)
-                pane.setSelectedIndex(0);
+	        int i = pane.indexOfTabComponent(ButtonTabComponent.this);
+	        int selectedIdx = pane.getSelectedIndex();
+	        if (i != -1)
+	        {
+	            pane.remove(i);
+	            if (i == selectedIdx)
+	                pane.setSelectedIndex(0);
+	        }
+	        return true;
         }
-        return true;
+        else
+        {
+        	return false;
+        }
     }
 }
