@@ -110,7 +110,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		return engineHash;
 	}
 
-	public void disposeEngine(ScriptEngine engine)
+	public static void disposeEngine(ScriptEngine engine)
 	{
 		engine.clear();
 
@@ -346,7 +346,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
 	{
 		for (ScriptEngine engine : engines.values())
 		{
-			engine.clear();
+			disposeEngine(engine);
 		}
 	}
 }
