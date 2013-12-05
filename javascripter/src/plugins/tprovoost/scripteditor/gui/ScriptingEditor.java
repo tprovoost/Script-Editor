@@ -109,7 +109,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			if (IcyFrame.getAllFrames(ScriptingEditor.class).size() == 1)
 			{
 				ScriptEngineHandler.clearEngines();
+				// close the bindings frame and release the reference to the engine
 				BindingsScriptFrame.getInstance().setVisible(false);
+				BindingsScriptFrame.getInstance().setEngine(null);
 			}
 			console.close();
 			closeAll();
