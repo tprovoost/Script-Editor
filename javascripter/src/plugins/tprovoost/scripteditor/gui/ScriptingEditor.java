@@ -12,6 +12,7 @@ import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
+import icy.preferences.IcyPreferences;
 import icy.preferences.PluginPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
@@ -171,21 +172,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	public ScriptingEditor()
 	{
 		super("Script Editor", true, true, true, true);
-
-		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
-
-		// load preferences
-		final XMLPreferences openedFiles = prefs.node("openedFiles");
-		final ArrayList<String> toOpen = new ArrayList<String>();
-		for (XMLPreferences key : openedFiles.getChildren())
-		{
-			String fileName = key.get("name", "");
-			previousFiles.add(fileName);
-			boolean opened = key.getBoolean("opened", false);
-			key.putBoolean("opened", false);
-			if (opened)
-				toOpen.add(fileName);
-		}
 
 		setJMenuBar(createJMenuBar());
 
@@ -369,14 +355,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 		panelSouth = new JPanel(new BorderLayout());
 		bottomPanel.add(panelSouth, BorderLayout.SOUTH);
-
-		if (toOpen.isEmpty())
-		{
-			// No files to reopen, let's create by default a Javascript panel named "Untitled"
-			// This will also create and add a console
-			createNewPane();
-		}
-		
+	
 		JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabbedPane, bottomPanel);
 		split.setDividerLocation(0.75d);
 		split.setResizeWeight(0.75d);
@@ -395,7 +374,44 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 		// frame listener on preferences
 		PreferencesWindow.getPreferencesWindow().addFrameListener(applyPrefsListener);
+		
+		restoreState();
+	}
 
+	/**
+	 * Getter on tabbedPane.
+	 * 
+	 * @return
+	 */
+	public JTabbedPane getTabbedPane()
+	{
+		return tabbedPane;
+	}
+	
+	void restoreState()
+	{
+		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
+
+		// load preferences
+		final XMLPreferences openedFiles = prefs.node("openedFiles");
+		final ArrayList<String> toOpen = new ArrayList<String>();
+		for (XMLPreferences key : openedFiles.getChildren())
+		{
+			String fileName = key.get("name", "");
+			previousFiles.add(fileName);
+			boolean opened = key.getBoolean("opened", false);
+			key.putBoolean("opened", false);
+			if (opened)
+				toOpen.add(fileName);
+		}
+		
+		if (toOpen.isEmpty())
+		{
+			// No files to reopen, let's create by default a Javascript panel named "Untitled"
+			// This will also create and add a console
+			createNewPane();
+		}
+		
 		ThreadUtil.invokeLater(new Runnable()
 		{
 
@@ -418,13 +434,32 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	}
 
 	/**
-	 * Getter on tabbedPane.
-	 * 
-	 * @return
+	 * Save the editor state (opened files, selected tab) to the disk
 	 */
-	public JTabbedPane getTabbedPane()
+	private void saveState()
 	{
-		return tabbedPane;
+		int idx = tabbedPane.getSelectedIndex();
+		// Saving state of the opened files.
+		XMLPreferences openedFiles = prefs.node("openedFiles");
+		openedFiles.putInt(PREF_IDX, 0);
+		for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
+		{
+			Component c = tabbedPane.getComponentAt(i);
+			if (c instanceof ScriptingPanel)
+			{
+				File f = ((ScriptingPanel) c).getSaveFile();
+				if (f != null)
+				{
+					String path = f.getAbsolutePath().replace('/', '.');
+					XMLPreferences key = openedFiles.node(path);
+					key.putBoolean("opened", true);
+				}
+			}
+		}
+		openedFiles.putInt(PREF_IDX, idx);
+		
+		// actually save on disk now
+		IcyPreferences.save();
 	}
 
 	/**
@@ -437,30 +472,14 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			int idx = tabbedPane.getSelectedIndex();
-			// Saving state of the opened files.
-			XMLPreferences openedFiles = prefs.node("openedFiles");
-			openedFiles.putInt(PREF_IDX, 0);
-			for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
-			{
-				Component c = tabbedPane.getComponentAt(i);
-				if (c instanceof ScriptingPanel)
-				{
-					File f = ((ScriptingPanel) c).getSaveFile();
-					if (f != null)
-					{
-						String path = f.getAbsolutePath().replace('/', '.');
-						XMLPreferences key = openedFiles.node(path);
-						key.putBoolean("opened", true);
-					}
-				}
-			}
+			saveState();
+			
 			while (tabbedPane.getTabCount() > 1)
 			{
 				if (!closeTab(0))
 					return false;
 			}
-			openedFiles.putInt(PREF_IDX, idx);
+
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			close();
 		}
@@ -547,6 +566,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
+		saveState();
 	}
 
 	private void updateRecentFiles()
@@ -988,6 +1008,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		{
 			return ((ButtonTabComponent) c).deletePane();
 		}
+		saveState();
 		return true;
 	}
 
