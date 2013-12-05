@@ -115,9 +115,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	/** Default file used to save the content into */
 	private File saveFile = null;
 
-	/** Boolean used to know if the file was modified since the last save. */
-	private JTabbedPane tabbedPane;
-
 	/** Provider used for auto-completion. */
 	private IcyCompletionProvider provider;
 	/** Auto-completion system. Uses provider item. */
@@ -399,16 +396,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	private void updateTitle()
 	{
 		// if this panel is in a tabbed pane: updates its title.
-		if (tabbedPane != null)
+		if (editor.getTabbedPane() != null)
 		{
-			int idx = tabbedPane.indexOfComponent(this);
+			int idx = editor.getTabbedPane().indexOfComponent(this);
 			if (idx != -1)
 			{
 				if (isDirty())
-					tabbedPane.setTitleAt(idx, panelName + "*");
+					editor.getTabbedPane().setTitleAt(idx, panelName + "*");
 				else
-					tabbedPane.setTitleAt(idx, panelName);
-				Component c = tabbedPane.getTabComponentAt(idx);
+					editor.getTabbedPane().setTitleAt(idx, panelName);
+				Component c = editor.getTabbedPane().getTabComponentAt(idx);
 				if (c instanceof JComponent)
 					((JComponent) c).revalidate();
 				else
@@ -1034,11 +1031,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public void caretUpdate(CaretEvent e)
 	{
 		updateTitle();
-	}
-
-	public void setTabbedPane(JTabbedPane tabbedPane)
-	{
-		this.tabbedPane = tabbedPane;
 	}
 
 	/**

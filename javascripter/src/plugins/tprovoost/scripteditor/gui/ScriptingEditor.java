@@ -487,7 +487,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			panelCreated = new ScriptingPanel(this, name, "Python");
 		else
 			panelCreated = new ScriptingPanel(this, name, "JavaScript");
-		panelCreated.setTabbedPane(tabbedPane);
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
 			tabbedPane.removeTabAt(idx);
