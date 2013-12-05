@@ -362,16 +362,19 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		btnClearConsole = new JButton("Clear");
 		btnClearConsole.addActionListener(ScriptingEditor.this);
 
-		createNewPane();
-
 		JPanel bottomPanel = new JPanel(new BorderLayout());
 		bottomPanel.add(scrollpane, BorderLayout.CENTER);
 
 		panelSouth = new JPanel(new BorderLayout());
-		panelSouth.add(console, BorderLayout.CENTER);
-		panelSouth.add(btnClearConsole, BorderLayout.EAST);
 		bottomPanel.add(panelSouth, BorderLayout.SOUTH);
 
+		if (toOpen.isEmpty())
+		{
+			// No files to reopen, let's create by default a Javascript panel named "Untitled"
+			// This will also create and add a console
+			createNewPane();
+		}
+		
 		JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabbedPane, bottomPanel);
 		split.setDividerLocation(0.75d);
 		split.setResizeWeight(0.75d);
@@ -529,12 +532,16 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		{
 			return;
 		}
+		
 		// only one tab opened
 		if (tabbedPane.getTabCount() == 2)
 		{
+			// The user has chosen to open a file, while the editor only has the default "Untitled" pane
+			// Remove that default pane.
 			if (tabbedPane.getTitleAt(0).contentEquals("Untitled"))
-				tabbedPane.remove(0);
+				closeTab(0);
 		}
+		
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
