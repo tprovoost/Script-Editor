@@ -468,10 +468,22 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	void cleanup()
 	{
-		scriptHandler.stopThreads();
-		scriptHandler.removeScriptListener(this);
-		textArea.removeKeyListener(scriptHandler);
-		PluginRepositoryLoader.removeListener(scriptHandler);
+		// if (editor != null && editor.getConsoleOutput() != null)
+		// editor.getConsoleOutput().setText("");
+		
+		// Autocompletion is done with the following item
+		if (scriptHandler != null)
+		{
+			scriptHandler.stopThreads();
+			scriptHandler.removeScriptListener(this);
+			textArea.removeKeyListener(scriptHandler);
+			PluginRepositoryLoader.removeListener(scriptHandler);
+		}
+		
+		if (ac != null)
+		{
+			ac.uninstall();
+		}
 	}
 
 	/**
@@ -485,14 +497,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	{
 		final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 
-		// if (editor != null && editor.getConsoleOutput() != null)
-		// editor.getConsoleOutput().setText("");
-
-		// Autocompletion is done with the following item
-		if (scriptHandler != null)
-		{
-			cleanup();
-		}
+		cleanup();
 
 		// the provider provides the results when hitting Ctrl + Space.
 		if (provider == null)
@@ -517,11 +522,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			});
 		}
 		provider.clear();
-
-		if (ac != null)
-		{
-			ac.uninstall();
-		}
 
 		// set the syntax
 		if (language.contentEquals("JavaScript"))
