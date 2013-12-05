@@ -114,7 +114,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
 	{
 		engine.clear();
 
-		// remove the reference to the engine
+		// remove the references to the engine
 		engineHandlers.remove(engine);
 	}
 
@@ -350,5 +350,6 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		{
 			disposeEngine(engine);
 		}
+		engines.clear();
 	}
 }
