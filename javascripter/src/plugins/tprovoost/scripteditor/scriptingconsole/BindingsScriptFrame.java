@@ -29,7 +29,9 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 // FIXME
 public class BindingsScriptFrame extends IcyFrame
 {
-
+	// Warning! The BindingsFrame keeps a reference on the engine, and is a singleton
+	// It means that the referenced engine will not be garbage-collected unless
+	// it is set as null
 	private ScriptEngine engine;
 	private JButton btnFreeVar;
 	private JTable listVariables;

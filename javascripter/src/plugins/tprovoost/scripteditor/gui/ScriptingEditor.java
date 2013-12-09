@@ -12,6 +12,7 @@ import icy.gui.frame.progress.FailedAnnounceFrame;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
+import icy.preferences.IcyPreferences;
 import icy.preferences.PluginPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
@@ -75,7 +76,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
  * 
  * @author tprovoost
  */
-public class ScriptingEditor extends IcyFrame implements IcyFrameListener, ActionListener
+public class ScriptingEditor extends IcyFrame implements ActionListener
 {
 
 	// Scripting Panels
@@ -109,10 +110,13 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 			if (IcyFrame.getAllFrames(ScriptingEditor.class).size() == 1)
 			{
 				ScriptEngineHandler.clearEngines();
+				// close the bindings frame and release the reference to the engine
 				BindingsScriptFrame.getInstance().setVisible(false);
+				BindingsScriptFrame.getInstance().setEngine(null);
 			}
+			console.close();
 			closeAll();
-			PreferencesWindow.getPreferencesWindow().removeFrameListener(ScriptingEditor.this);
+			PreferencesWindow.getPreferencesWindow().removeFrameListener(applyPrefsListener);
 		}
 	};
 	private AcceptListener acceptlistener = new AcceptListener()
@@ -123,26 +127,51 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 			return closeAll();
 		}
 	};
+	
+	/**
+	 * This listener is called when the preferences window is closed.
+	 * It applies the preferences to the opened ScriptingPanels.
+	 */
+	private IcyFrameListener applyPrefsListener = new IcyFrameAdapter()
+	{
+		@Override
+		public void icyFrameClosed(IcyFrameEvent e)
+		{
+			PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+
+			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
+			{
+				Component comp = tabbedPane.getComponentAt(i);
+				if (comp instanceof ScriptingPanel)
+				{
+					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
+					if (!textArea.getText().isEmpty())
+					{
+						boolean indentWanted = prefWin.isIndentSpacesEnabled();
+						// if (textArea.getTabsEmulated() != indentWanted)
+						// {
+						// a change occured
+						textArea.setTabsEmulated(indentWanted);
+						if (indentWanted)
+						{
+							textArea.convertSpacesToTabs();
+						} else
+						{
+							textArea.setTabSize(prefWin.indentSpacesCount());
+							textArea.convertTabsToSpaces();
+						}
+						// }
+					}
+				}
+			}
+		}
+	};
+	
 	private JPanel panelSouth;
 
 	public ScriptingEditor()
 	{
 		super("Script Editor", true, true, true, true);
-
-		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
-
-		// load preferences
-		final XMLPreferences openedFiles = prefs.node("openedFiles");
-		final ArrayList<String> toOpen = new ArrayList<String>();
-		for (XMLPreferences key : openedFiles.getChildren())
-		{
-			String fileName = key.get("name", "");
-			previousFiles.add(fileName);
-			boolean opened = key.getBoolean("opened", false);
-			key.putBoolean("opened", false);
-			if (opened)
-				toOpen.add(fileName);
-		}
 
 		setJMenuBar(createJMenuBar());
 
@@ -321,16 +350,12 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		btnClearConsole = new JButton("Clear");
 		btnClearConsole.addActionListener(ScriptingEditor.this);
 
-		createNewPane();
-
 		JPanel bottomPanel = new JPanel(new BorderLayout());
 		bottomPanel.add(scrollpane, BorderLayout.CENTER);
 
 		panelSouth = new JPanel(new BorderLayout());
-		panelSouth.add(console, BorderLayout.CENTER);
-		panelSouth.add(btnClearConsole, BorderLayout.EAST);
 		bottomPanel.add(panelSouth, BorderLayout.SOUTH);
-
+	
 		JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tabbedPane, bottomPanel);
 		split.setDividerLocation(0.75d);
 		split.setResizeWeight(0.75d);
@@ -348,8 +373,45 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
 		// frame listener on preferences
-		PreferencesWindow.getPreferencesWindow().addFrameListener(this);
+		PreferencesWindow.getPreferencesWindow().addFrameListener(applyPrefsListener);
+		
+		restoreState();
+	}
 
+	/**
+	 * Getter on tabbedPane.
+	 * 
+	 * @return
+	 */
+	public JTabbedPane getTabbedPane()
+	{
+		return tabbedPane;
+	}
+	
+	void restoreState()
+	{
+		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
+
+		// load preferences
+		final XMLPreferences openedFiles = prefs.node("openedFiles");
+		final ArrayList<String> toOpen = new ArrayList<String>();
+		for (XMLPreferences key : openedFiles.getChildren())
+		{
+			String fileName = key.get("name", "");
+			previousFiles.add(fileName);
+			boolean opened = key.getBoolean("opened", false);
+			key.putBoolean("opened", false);
+			if (opened)
+				toOpen.add(fileName);
+		}
+		
+		if (toOpen.isEmpty())
+		{
+			// No files to reopen, let's create by default a Javascript panel named "Untitled"
+			// This will also create and add a console
+			createNewPane();
+		}
+		
 		ThreadUtil.invokeLater(new Runnable()
 		{
 
@@ -372,13 +434,32 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 	}
 
 	/**
-	 * Getter on tabbedPane.
-	 * 
-	 * @return
+	 * Save the editor state (opened files, selected tab) to the disk
 	 */
-	public JTabbedPane getTabbedPane()
+	private void saveState()
 	{
-		return tabbedPane;
+		int idx = tabbedPane.getSelectedIndex();
+		// Saving state of the opened files.
+		XMLPreferences openedFiles = prefs.node("openedFiles");
+		openedFiles.putInt(PREF_IDX, 0);
+		for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
+		{
+			Component c = tabbedPane.getComponentAt(i);
+			if (c instanceof ScriptingPanel)
+			{
+				File f = ((ScriptingPanel) c).getSaveFile();
+				if (f != null)
+				{
+					String path = f.getAbsolutePath().replace('/', '.');
+					XMLPreferences key = openedFiles.node(path);
+					key.putBoolean("opened", true);
+				}
+			}
+		}
+		openedFiles.putInt(PREF_IDX, idx);
+		
+		// actually save on disk now
+		IcyPreferences.save();
 	}
 
 	/**
@@ -391,30 +472,14 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			int idx = tabbedPane.getSelectedIndex();
-			// Saving state of the opened files.
-			XMLPreferences openedFiles = prefs.node("openedFiles");
-			openedFiles.putInt(PREF_IDX, 0);
-			for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
-			{
-				Component c = tabbedPane.getComponentAt(i);
-				if (c instanceof ScriptingPanel)
-				{
-					File f = ((ScriptingPanel) c).getSaveFile();
-					if (f != null)
-					{
-						String path = f.getAbsolutePath().replace('/', '.');
-						XMLPreferences key = openedFiles.node(path);
-						key.putBoolean("opened", true);
-					}
-				}
-			}
+			saveState();
+			
 			while (tabbedPane.getTabCount() > 1)
 			{
 				if (!closeTab(0))
 					return false;
 			}
-			openedFiles.putInt(PREF_IDX, idx);
+
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			close();
 		}
@@ -446,7 +511,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 			panelCreated = new ScriptingPanel(this, name, "Python");
 		else
 			panelCreated = new ScriptingPanel(this, name, "JavaScript");
-		panelCreated.setTabbedPane(tabbedPane);
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
 			tabbedPane.removeTabAt(idx);
@@ -455,7 +519,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		tabbedPane.addTab(name, panelCreated);
 		tabbedPane.setTitleAt(idx, name);
 		tabbedPane.repaint();
-		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, tabbedPane));
+		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(tabbedPane));
 		tabbedPane.addTab("+", new JLabel());
 		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
@@ -489,15 +553,20 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		{
 			return;
 		}
+		
 		// only one tab opened
 		if (tabbedPane.getTabCount() == 2)
 		{
+			// The user has chosen to open a file, while the editor only has the default "Untitled" pane
+			// Remove that default pane.
 			if (tabbedPane.getTitleAt(0).contentEquals("Untitled"))
-				tabbedPane.remove(0);
+				closeTab(0);
 		}
+		
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
+		saveState();
 	}
 
 	private void updateRecentFiles()
@@ -939,6 +1008,7 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		{
 			return ((ButtonTabComponent) c).deletePane();
 		}
+		saveState();
 		return true;
 	}
 
@@ -1092,48 +1162,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 		updateRecentFiles();
 	}
 
-	@Override
-	public void icyFrameOpened(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameClosing(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameClosed(IcyFrameEvent e)
-	{
-		PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
-
-		for (int i = 0; i < tabbedPane.getTabCount(); ++i)
-		{
-			Component comp = tabbedPane.getComponentAt(i);
-			if (comp instanceof ScriptingPanel)
-			{
-				RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
-				if (!textArea.getText().isEmpty())
-				{
-					boolean indentWanted = prefWin.isIndentSpacesEnabled();
-					// if (textArea.getTabsEmulated() != indentWanted)
-					// {
-					// a change occured
-					textArea.setTabsEmulated(indentWanted);
-					if (indentWanted)
-					{
-						textArea.convertSpacesToTabs();
-					} else
-					{
-						textArea.setTabSize(prefWin.indentSpacesCount());
-						textArea.convertTabsToSpaces();
-					}
-					// }
-				}
-			}
-		}
-	}
-
 	public static String getDefaultFolder()
 	{
 		return "";
@@ -1147,36 +1175,6 @@ public class ScriptingEditor extends IcyFrame implements IcyFrameListener, Actio
 	private synchronized void setScrollLocked(boolean scrollLocked)
 	{
 		this.scrollLocked = scrollLocked;
-	}
-
-	@Override
-	public void icyFrameIconified(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameDeiconified(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameActivated(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameDeactivated(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameInternalized(IcyFrameEvent e)
-	{
-	}
-
-	@Override
-	public void icyFrameExternalized(IcyFrameEvent e)
-	{
 	}
 
 	/**

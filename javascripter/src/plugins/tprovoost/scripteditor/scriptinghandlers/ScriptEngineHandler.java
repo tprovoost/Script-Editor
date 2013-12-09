@@ -110,11 +110,11 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		return engineHash;
 	}
 
-	public void disposeEngine(ScriptEngine engine)
+	public static void disposeEngine(ScriptEngine engine)
 	{
 		engine.clear();
 
-		// remove the reference to the engine
+		// remove the references to the engine
 		engineHandlers.remove(engine);
 	}
 
@@ -284,6 +284,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		return bindingFunctions;
 	}
 
+	// FIXME Although this is defined, the listener is never added !!
 	@Override
 	public void pluginInstalled(PluginDescriptor plugin, boolean success)
 	{
@@ -301,6 +302,7 @@ public class ScriptEngineHandler implements PluginInstallerListener
 		}
 	}
 
+	// FIXME Although this is defined, the listener is never added !!
 	@Override
 	public void pluginRemoved(PluginDescriptor plugin, boolean success)
 	{
@@ -346,7 +348,8 @@ public class ScriptEngineHandler implements PluginInstallerListener
 	{
 		for (ScriptEngine engine : engines.values())
 		{
-			engine.clear();
+			disposeEngine(engine);
 		}
+		engines.clear();
 	}
 }

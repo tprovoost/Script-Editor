@@ -115,9 +115,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	/** Default file used to save the content into */
 	private File saveFile = null;
 
-	/** Boolean used to know if the file was modified since the last save. */
-	private JTabbedPane tabbedPane;
-
 	/** Provider used for auto-completion. */
 	private IcyCompletionProvider provider;
 	/** Auto-completion system. Uses provider item. */
@@ -399,21 +396,93 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	private void updateTitle()
 	{
 		// if this panel is in a tabbed pane: updates its title.
-		if (tabbedPane != null)
+		if (editor.getTabbedPane() != null)
 		{
-			int idx = tabbedPane.indexOfComponent(this);
+			int idx = editor.getTabbedPane().indexOfComponent(this);
 			if (idx != -1)
 			{
 				if (isDirty())
-					tabbedPane.setTitleAt(idx, panelName + "*");
+					editor.getTabbedPane().setTitleAt(idx, panelName + "*");
 				else
-					tabbedPane.setTitleAt(idx, panelName);
-				Component c = tabbedPane.getTabComponentAt(idx);
+					editor.getTabbedPane().setTitleAt(idx, panelName);
+				Component c = editor.getTabbedPane().getTabComponentAt(idx);
 				if (c instanceof JComponent)
 					((JComponent) c).revalidate();
 				else
 					c.repaint();
 			}
+		}
+	}
+	
+	/**
+	 * Ask the user whether to save the files.
+	 * 
+	 * @return false is the close operation is cancelled
+	 */
+	boolean promptSave()
+	{
+        int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
+                "Some work has not been saved, are you sure you want to close?", getPanelName(),
+                JOptionPane.WARNING_MESSAGE, JOptionPane.QUESTION_MESSAGE, null, new Object[] {"Save",
+                        "Discard Changes", "Cancel"}, "Cancel" + "");
+        if (n == 2)
+        	return false;
+        if (n == 0)
+        {
+            if (getSaveFile() != null)
+            	return saveFile();
+            else
+            	return showSaveFileDialog(editor.getCurrentDirectory());
+        }
+        
+        return true;
+	}
+	
+	/**
+	 * Try to close this ScriptingPanel. The user will be asked whether to save the files
+	 * if they are modified. If the operation is not cancelled, the listeners are removed.
+	 * 
+	 * @return false is the close operation is cancelled
+	 */
+	boolean close()
+	{
+		boolean canClose = true;
+        if (isDirty())
+        {
+        	canClose = promptSave();
+        }
+
+        if (canClose)
+        {
+        	cleanup();
+        	return true;
+        }
+        else
+        {
+        	return false;
+        }
+	}
+	
+	/**
+	 * Removes the listeners
+	 */
+	void cleanup()
+	{
+		// if (editor != null && editor.getConsoleOutput() != null)
+		// editor.getConsoleOutput().setText("");
+		
+		// Autocompletion is done with the following item
+		if (scriptHandler != null)
+		{
+			scriptHandler.stopThreads();
+			scriptHandler.removeScriptListener(this);
+			textArea.removeKeyListener(scriptHandler);
+			PluginRepositoryLoader.removeListener(scriptHandler);
+		}
+		
+		if (ac != null)
+		{
+			ac.uninstall();
 		}
 	}
 
@@ -428,17 +497,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	{
 		final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 
-		// if (editor != null && editor.getConsoleOutput() != null)
-		// editor.getConsoleOutput().setText("");
-
-		// Autocompletion is done with the following item
-		if (scriptHandler != null)
-		{
-			scriptHandler.stopThreads();
-			scriptHandler.removeScriptListener(this);
-			textArea.removeKeyListener(scriptHandler);
-			PluginRepositoryLoader.removeListener(scriptHandler);
-		}
+		cleanup();
 
 		// the provider provides the results when hitting Ctrl + Space.
 		if (provider == null)
@@ -463,11 +522,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			});
 		}
 		provider.clear();
-
-		if (ac != null)
-		{
-			ac.uninstall();
-		}
 
 		// set the syntax
 		if (language.contentEquals("JavaScript"))
@@ -977,11 +1031,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public void caretUpdate(CaretEvent e)
 	{
 		updateTitle();
-	}
-
-	public void setTabbedPane(JTabbedPane tabbedPane)
-	{
-		this.tabbedPane = tabbedPane;
 	}
 
 	/**
