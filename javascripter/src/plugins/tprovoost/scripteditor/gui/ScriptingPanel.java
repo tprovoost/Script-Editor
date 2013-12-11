@@ -54,7 +54,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
@@ -1148,6 +1147,30 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			{
 			}
 		}
+	}
+
+	/**
+	 * Format the text in this panel.
+	 * Do a space/tab conversion according to the preferences, and
+	 * perform a language-specific beautification.
+	 * 
+	 */
+	public void format() {
+		// getScriptHandler().organizeImports();
+		
+		// do the tab-to-space (or space-to-tab) conversion
+		PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+		RSyntaxTextArea textArea = getTextArea();
+		if (prefWin.isIndentSpacesEnabled())
+		{
+			textArea.convertTabsToSpaces();
+		} else
+		{
+			textArea.convertSpacesToTabs();
+		}
+		
+		// do a language-specific formatting
+		getScriptHandler().format();
 	}
 
 }

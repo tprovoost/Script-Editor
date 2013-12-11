@@ -840,21 +840,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				if (c instanceof ScriptingPanel)
 				{
 					ScriptingPanel panel = ((ScriptingPanel) c);
-					// panel.getScriptHandler().organizeImports();
-					
-					// do the tab-to-space (or space-to-tab) conversion
-					PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
-					RSyntaxTextArea textArea = panel.getTextArea();
-					if (prefWin.isIndentSpacesEnabled())
-					{
-						textArea.convertTabsToSpaces();
-					} else
-					{
-						textArea.convertSpacesToTabs();
-					}
-					
-					// do a language-specific formatting
-					panel.getScriptHandler().format();
+					panel.format();
 				}
 			}
 		});
