@@ -142,7 +142,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		
 		@Override
 		public void preferencesChanged() {
-			PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+			Preferences preferences = Preferences.getPreferences();
 
 			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
 			{
@@ -152,8 +152,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
 					if (!textArea.getText().isEmpty())
 					{
-						textArea.setTabsEmulated(prefWin.isIndentSpacesEnabled());
-						textArea.setTabSize(prefWin.indentSpacesCount());
+						textArea.setTabsEmulated(preferences.isSoftTabsEnabled());
+						textArea.setTabSize(preferences.indentSpacesCount());
 					}
 				}
 			}

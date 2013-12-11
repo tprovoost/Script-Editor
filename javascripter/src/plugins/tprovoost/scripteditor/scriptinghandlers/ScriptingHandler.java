@@ -50,7 +50,7 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
-import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
+import plugins.tprovoost.scripteditor.gui.Preferences;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
@@ -665,7 +665,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				// errorOutput.append(str + "\n");
 				// errorOutput.append("New Engine created" + "\n");
 				// errorOutput.append(str + "\n");
-				if (PreferencesWindow.getPreferencesWindow().isAutoClearOutputEnabled())
+				if (Preferences.getPreferences().isAutoClearOutputEnabled())
 				{
 					errorOutput.setText("");
 				}
@@ -966,7 +966,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		{
 			lastChange = true;
 			// System.out.println("changedUpdate");
-			if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
+			if (Preferences.getPreferences().isAutoBuildEnabled())
 				timer.restart();
 		}
 

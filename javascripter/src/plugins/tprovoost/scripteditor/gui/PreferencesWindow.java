@@ -2,8 +2,6 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.component.IcyTextField;
 import icy.gui.frame.IcyFrame;
-import icy.preferences.PluginsPreferences;
-import icy.preferences.XMLPreferences;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -24,17 +22,10 @@ import javax.swing.event.EventListenerList;
 public class PreferencesWindow extends IcyFrame
 {
     private static PreferencesWindow singleton = new PreferencesWindow();
+    
+    private Preferences preferences = Preferences.getPreferences();
     private JPanel panel;
-    private XMLPreferences prefs = PluginsPreferences.getPreferences().node("plugins.tprovoost.scripteditor.main.ScriptEditorPlugin");
-    // private PreferencesTableModel tableModel;
-    // private final String PREF_VAR_INTERPRET = "varinterp";
-    // private final String PREF_OVERRIDE = "override";
-    // private final String PREF_VERIF = "autoverif";
-    // private final String PREF_STRICT = "strictmode";
-    private final String PREF_INDENT_SPACES = "indent";
-    private final String PREF_INDENT_SPACES_VALUE = "nbSpaces";
-    private final String PREF_FULL_AUTOCOMPLETE = "fullautocomplete";
-    private final String PREF_AUTOCLEAR_OUTPUT = "autoclearoutput";
+
     private IcyTextField tfSpacesTab;
     private JCheckBox cboxVarInterp;
     private JCheckBox cboxOverride;
@@ -69,19 +60,28 @@ public class PreferencesWindow extends IcyFrame
 
         panelButtons.add(Box.createHorizontalGlue());
 
-        // JButton btnApply = new JButton("Apply");
-        // panelButtons.add(btnApply);
-        // panelButtons.add(Box.createHorizontalStrut(20));
+        JButton btnApply = new JButton("Apply");
+        btnApply.addActionListener(new ActionListener()
+        {
 
-        JButton btnOk = new JButton("OK");
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+            	applyPreferences();
+            }
+
+        });
+        panelButtons.add(btnApply);
+        panelButtons.add(Box.createHorizontalStrut(20));
+
+        JButton btnOk = new JButton("Ok");
         btnOk.addActionListener(new ActionListener()
         {
 
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                savePrefs();
-                firePreferencesChanged();
+            	applyPreferences();
                 close();
             }
 
@@ -90,8 +90,8 @@ public class PreferencesWindow extends IcyFrame
 
         panelButtons.add(Box.createHorizontalStrut(20));
 
-        JButton btnClose = new JButton("Close");
-        btnClose.addActionListener(new ActionListener()
+        JButton btnCancel = new JButton("Cancel");
+        btnCancel.addActionListener(new ActionListener()
         {
 
             @Override
@@ -102,7 +102,7 @@ public class PreferencesWindow extends IcyFrame
             }
 
         });
-        panelButtons.add(btnClose);
+        panelButtons.add(btnCancel);
 
         JLabel lblPreferences = new JLabel("<html><h2>Preferences</h2></html>");
         lblPreferences.setHorizontalAlignment(SwingConstants.CENTER);
@@ -259,137 +259,43 @@ public class PreferencesWindow extends IcyFrame
         // if (!release)
         // panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 
-        loadPrefs();
+        initGUI();
         
         return toReturn;
     }
 
-    public boolean isFullAutoCompleteEnabled()
+    void initGUI()
     {
-        // return cboxFullAutocomplete.isSelected();
-        return true;
+    	// cboxVarInterp.setSelected(preferences.isVarInterpretationEnabled());
+    	// cboxOverride.setSelected(preferences.isOverrideEnabled());
+    	// cboxAutoVerif.setSelected(preferences.isAutoBuildEnabled());
+    	// cboxStrict.setSelected(preferences.isStrictModeEnabled());
+    	cboxFullAutocomplete.setSelected(preferences.isFullAutoCompleteEnabled());
+    	cboxAutoClearOutput.setSelected(preferences.isAutoClearOutputEnabled());
+    	cboxSoft.setSelected(preferences.isSoftTabsEnabled());
+    	tfSpacesTab.setValue("" + preferences.indentSpacesCount());
     }
-
-    public boolean isVarInterpretationEnabled()
+    
+    void applyPreferences()
     {
-        // if (release)
-        // return false;
-        // return cboxVarInterp.isSelected();
-        return true;
-    }
-
-    public boolean isOverrideEnabled()
-    {
-        // if (release)
-        // return true;
-        // return cboxOverride.isSelected();
-        return true;
-    }
-
-    public boolean isAutoBuildEnabled()
-    {
-        // if (release)
-        // return false;
-        // return cboxAutoVerif.isSelected();
-        return true;
-    }
-
-    public boolean isStrictModeEnabled()
-    {
-        // if (release)
-        // return false;
-        // return cboxStrict.isSelected();
-        return false;
-    }
-
-    public boolean isAutoClearOutputEnabled()
-    {
-        return cboxAutoClearOutput.isSelected();
-    }
-
-    public boolean isIndentSpacesEnabled()
-    {
-        return cboxSoft.isSelected();
-    }
-
-    public int indentSpacesCount()
-    {
-        try
-        {
-            return Integer.valueOf(tfSpacesTab.getText());
-        }
-        catch (NumberFormatException e)
-        {
-            // do nothing
-        }
-        return 8;
-    }
-
-    // public class PreferencesTableModel extends DefaultTableModel
-    // {
-    //
-    // /**
-    // *
-    // */
-    // private static final long serialVersionUID = 1L;
-    // Class<?>[] columnTypes = new Class[] {String.class, Boolean.class};
-    //
-    // public PreferencesTableModel()
-    // {
-    // super(new Object[][] {
-    // {"Enable variable interpretation (beta)*", prefs.getBoolean(PREF_VAR_INTERPRET,
-    // Boolean.FALSE)},
-    // {"Override verification (javascript)", prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE)},
-    // {"Enable auto verification (javascript/beta)*", prefs.getBoolean(PREF_VERIF, Boolean.FALSE)},
-    // {"Enable Strict Mode (javascript)", prefs.getBoolean(PREF_STRICT, Boolean.FALSE)},
-    // {"Soft tabs", prefs.getBoolean(PREF_INDENT_SPACES, Boolean.TRUE)},
-    // {"Spaces count for soft tabs", prefs.getInt(PREF_INDENT_SPACES_VALUE, 8)},}, new String[] {
-    // "Property", "Value"});
-    // }
-    //
-    // public PreferencesTableModel(boolean release)
-    // {
-    // super(new Object[][] {{"Indentation by spaces", prefs.getBoolean(PREF_INDENT_SPACES,
-    // Boolean.FALSE)}},
-    // new String[] {"Property", "Value"});
-    // }
-    //
-    // @Override
-    // public Class<?> getColumnClass(int columnIndex)
-    // {
-    // return columnTypes[columnIndex];
-    // }
-    //
-    // @Override
-    // public void setValueAt(Object aValue, int row, int column)
-    // {
-    // super.setValueAt(aValue, row, column);
-    // savePrefs();
-    // }
-    // }
-
-    public void savePrefs()
-    {
-        // prefs.putBoolean(PREF_VAR_INTERPRET, isVarInterpretationEnabled());
-        // prefs.putBoolean(PREF_OVERRIDE, isOverrideEnabled());
-        // prefs.putBoolean(PREF_VERIF, isAutoBuildEnabled());
-        // prefs.putBoolean(PREF_STRICT, isStrictModeEnabled());
-        prefs.putBoolean(PREF_INDENT_SPACES, isIndentSpacesEnabled());
-        prefs.putBoolean(PREF_FULL_AUTOCOMPLETE, isFullAutoCompleteEnabled());
-        prefs.putBoolean(PREF_AUTOCLEAR_OUTPUT, isAutoClearOutputEnabled());
-        prefs.putInt(PREF_INDENT_SPACES_VALUE, indentSpacesCount());
-    }
-
-    public void loadPrefs()
-    {
-        // cboxVarInterp.setSelected(prefs.getBoolean(PREF_VAR_INTERPRET, Boolean.TRUE));
-        // cboxOverride.setSelected(prefs.getBoolean(PREF_OVERRIDE, Boolean.TRUE));
-        // cboxAutoVerif.setSelected(prefs.getBoolean(PREF_VERIF, Boolean.TRUE));
-        // cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
-        cboxFullAutocomplete.setSelected(prefs.getBoolean(PREF_FULL_AUTOCOMPLETE, Boolean.TRUE));
-        cboxAutoClearOutput.setSelected(prefs.getBoolean(PREF_AUTOCLEAR_OUTPUT, true));
-        cboxSoft.setSelected(prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE));
-        tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
+    	preferences.setFullAutoCompleteEnabled(cboxFullAutocomplete.isSelected());
+    	preferences.setAutoClearOutputEnabled(cboxAutoClearOutput.isSelected());
+    	preferences.setSoftTabsEnabled(cboxSoft.isSelected());
+    	
+    	int tabWidth;
+    	try
+    	{
+    		tabWidth = Integer.valueOf(tfSpacesTab.getText());
+    	}
+    	catch (NumberFormatException e)
+    	{
+    		tabWidth = 8;
+    		tfSpacesTab.setValue("8");
+    	}
+    	preferences.setTabWidth(tabWidth);
+    	
+    	preferences.savePrefs();
+    	firePreferencesChanged();
     }
     
     private final EventListenerList listeners = new EventListenerList();
