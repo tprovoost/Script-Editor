@@ -459,8 +459,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			saveState();
-			
 			while (tabbedPane.getTabCount() > 1)
 			{
 				if (!closeTab(0))
@@ -506,7 +504,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		tabbedPane.addTab(name, panelCreated);
 		tabbedPane.setTitleAt(idx, name);
 		tabbedPane.repaint();
-		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(tabbedPane));
+		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, panelCreated));
 		tabbedPane.addTab("+", new JLabel());
 		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
@@ -992,11 +990,30 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			boolean res = ((ButtonTabComponent) c).deletePane();
-			saveState();
-			return res;
+			boolean ok = ((ButtonTabComponent) c).getPanel().close();
+			
+			if (ok)
+			{
+				// remove the tab
+		        int selectedIdx = tabbedPane.getSelectedIndex();
+		        if (i != -1)
+		        {
+		        	tabbedPane.remove(i);
+		            if (i == selectedIdx)
+		            	tabbedPane.setSelectedIndex(0);
+		        }
+		        
+				saveState();
+			}
+			return ok;
 		}
 		return true;
+	}
+	
+	protected boolean closeTab(ButtonTabComponent tabComponent)
+	{
+		int i = tabbedPane.indexOfTabComponent(tabComponent);
+		return closeTab(i);
 	}
 
 	/**

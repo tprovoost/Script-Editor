@@ -31,17 +31,20 @@ public class ButtonTabComponent extends JPanel
 {
     /** */
     private static final long serialVersionUID = 1L;
-    private final JTabbedPane pane;
+    private final ScriptingPanel panel;
+    private final ScriptingEditor editor;
 
-    public ButtonTabComponent(final JTabbedPane pane)
+    public ButtonTabComponent(ScriptingEditor scriptingEditor, final ScriptingPanel panelCreated)
     {
         // unset default FlowLayout' gaps
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        if (pane == null)
+        if (panelCreated == null)
         {
             throw new NullPointerException("TabbedPane is null");
         }
-        this.pane = pane;
+        this.panel = panelCreated;
+        this.editor = scriptingEditor;
+        
         setOpaque(false);
 
         // make JLabel read titles from JTabbedPane
@@ -52,12 +55,7 @@ public class ButtonTabComponent extends JPanel
 
             public String getText()
             {
-                int i = pane.indexOfTabComponent(ButtonTabComponent.this);
-                if (i != -1)
-                {
-                    return pane.getTitleAt(i);
-                }
-                return null;
+                return getPanel().getPanelName();
             }
         };
 
@@ -173,26 +171,10 @@ public class ButtonTabComponent extends JPanel
      */
     public boolean deletePane()
     {
-        Component c = pane.getComponentAt(pane.indexOfTabComponent(ButtonTabComponent.this));
-        boolean ok = true;
-        if (c instanceof ScriptingPanel)
-        {
-            ScriptingPanel sp = ((ScriptingPanel) c);
-            ok = sp.close();
-        }
-        if (ok)
-        {
-	        int i = pane.indexOfTabComponent(ButtonTabComponent.this);
-	        int selectedIdx = pane.getSelectedIndex();
-	        if (i != -1)
-	        {
-	            pane.remove(i);
-	            if (i == selectedIdx)
-	                pane.setSelectedIndex(0);
-	        }
-	        return true;
-        }
-        
-        return ok;
+        return editor.closeTab(this);
     }
+
+	public ScriptingPanel getPanel() {
+		return panel;
+	}
 }
