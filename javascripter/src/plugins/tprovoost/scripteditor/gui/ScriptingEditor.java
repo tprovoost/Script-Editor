@@ -13,7 +13,7 @@ import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.preferences.IcyPreferences;
-import icy.preferences.PluginPreferences;
+import icy.preferences.PluginsPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
@@ -97,7 +97,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
 	private static final int MAX_RECENT_FILES = 20;
 	private static final String STRING_LAST_DIRECTORY = "lastDirectory";
-	private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
+	private XMLPreferences prefs = PluginsPreferences.getPreferences().node("scripteditor");
 
 	private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
 	private static final String PREF_IDX = "idxTab";
