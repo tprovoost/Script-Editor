@@ -124,6 +124,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public JButton btnStop;
 	private ScriptingEditor editor;
 	private boolean integrated;
+	
+	/**
+	 * This listener is called when there are changes applied in the preferences window.
+	 * It applies the preferences to the opened ScriptingPanels.
+	 */
+	private PreferencesListener applyPrefsListener = new PreferencesListener() {
+		
+		@Override
+		public void preferencesChanged() {
+			Preferences preferences = Preferences.getPreferences();
+
+			textArea.setTabsEmulated(preferences.isSoftTabsEnabled());
+			textArea.setTabSize(preferences.indentSpacesCount());
+		}
+	};
 
 	public ScriptingPanel(ScriptingEditor editor, String name, String language)
 	{
@@ -205,6 +220,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		// set the default theme: eclipse.
 		setTheme("eclipse");
 		textArea.requestFocus();
+		
+		// load the preferences
+		applyPrefsListener.preferencesChanged();
+		
+		// frame listener on preferences
+		PreferencesWindow.getPreferencesWindow().addPreferencesListener(applyPrefsListener);
 	}
 
 	/**
@@ -454,6 +475,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         if (canClose)
         {
         	cleanup();
+    		PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
         	return true;
         }
         else
@@ -463,7 +485,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	}
 	
 	/**
-	 * Removes the listeners
+	 * Removes the script listeners, release completion objects...
 	 */
 	void cleanup()
 	{

@@ -63,8 +63,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.Document;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
@@ -119,8 +117,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			// close all the tabs, asking the user confirmation
 			// do not save tab state (was already done at last file open/close)
 			closeAll(false);
-			
-			PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
 		}
 	};
 	private AcceptListener acceptlistener = new AcceptListener()
@@ -131,32 +127,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			// close all the tabs, asking the user confirmation
 			// do not save tab state (was already done at last file open/close)
 			return closeAll(false);
-		}
-	};
-	
-	/**
-	 * This listener is called when there are changes applied in the preferences window.
-	 * It applies the preferences to the opened ScriptingPanels.
-	 */
-	private PreferencesListener applyPrefsListener = new PreferencesListener() {
-		
-		@Override
-		public void preferencesChanged() {
-			Preferences preferences = Preferences.getPreferences();
-
-			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
-			{
-				Component comp = tabbedPane.getComponentAt(i);
-				if (comp instanceof ScriptingPanel)
-				{
-					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
-					if (!textArea.getText().isEmpty())
-					{
-						textArea.setTabsEmulated(preferences.isSoftTabsEnabled());
-						textArea.setTabSize(preferences.indentSpacesCount());
-					}
-				}
-			}
 		}
 	};
 	
@@ -365,9 +335,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// exit listener
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
-		// frame listener on preferences
-		PreferencesWindow.getPreferencesWindow().addPreferencesListener(applyPrefsListener);
-		
 		restoreState();
 	}
 
