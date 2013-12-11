@@ -590,7 +590,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		JMenuItem toReturn = null;
 		if (f.exists())
 		{
-			toReturn = new JMenuItem(f.getPath());
+			toReturn = new JMenuItem(f.getName() + " - " + f.getParent());
 			toReturn.addActionListener(new ActionListener()
 			{
 
