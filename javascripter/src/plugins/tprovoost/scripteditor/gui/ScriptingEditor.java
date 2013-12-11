@@ -92,12 +92,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 	// Preferences and recent files
 	private JMenu menuOpenRecent;
-	private ArrayList<String> previousFiles = new ArrayList<String>();
 	static String currentDirectoryPath = "";
 	private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
-	private static final int MAX_RECENT_FILES = 20;
 	private static final String STRING_LAST_DIRECTORY = "lastDirectory";
 	private XMLPreferences prefs = PluginsPreferences.getPreferences().node("plugins.tprovoost.scripteditor.main.ScriptEditorPlugin");
+
+	private final RecentFiles recentFiles = new RecentFiles(prefs);
 
 	private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
 	private static final String PREF_IDX = "idxTab";
@@ -390,13 +390,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		final ArrayList<String> toOpen = new ArrayList<String>();
 		for (XMLPreferences key : openedFiles.getChildren())
 		{
-			String fileName = key.get("name", "");
-			previousFiles.add(fileName);
-			boolean opened = key.getBoolean("opened", false);
-			key.putBoolean("opened", false);
-			if (opened)
-				toOpen.add(fileName);
+			String fileName = key.get("file0", "");
+			toOpen.add(fileName);
 		}
+		
+		recentFiles.load();
+		updateRecentFilesMenu();
 		
 		if (toOpen.isEmpty())
 		{
@@ -432,9 +431,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	private void saveState()
 	{
 		int idx = tabbedPane.getSelectedIndex();
+		
 		// Saving state of the opened files.
 		XMLPreferences openedFiles = prefs.node("openedFiles");
-		openedFiles.putInt(PREF_IDX, 0);
+
+		// remove previous settings
+		openedFiles.removeChildren();
+		
 		for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
 		{
 			Component c = tabbedPane.getComponentAt(i);
@@ -443,16 +446,18 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				File f = ((ScriptingPanel) c).getSaveFile();
 				if (f != null)
 				{
-					String path = f.getAbsolutePath().replace('/', '.');
-					XMLPreferences key = openedFiles.node(path);
-					key.putBoolean("opened", true);
+					XMLPreferences key = openedFiles.node("entry" + i);
+					key.put("file0", f.getAbsolutePath());					
 				}
 			}
 		}
 		openedFiles.putInt(PREF_IDX, idx);
 		
+		recentFiles.save();
+		
 		// actually save on disk now
 		IcyPreferences.save();
+		//IcyPreferences.load();
 	}
 
 	/**
@@ -565,19 +570,14 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		saveState();
 	}
 
-	private void updateRecentFiles()
+	private void updateRecentFilesMenu()
 	{
 		menuOpenRecent.removeAll();
-		ArrayList<String> copy = new ArrayList<String>(previousFiles);
-		for (int i = 0; i < copy.size(); ++i)
+		for (int i = 0; i < recentFiles.getFiles().size(); ++i)
 		{
-			String path = copy.get(i);
+			String path = recentFiles.getFiles().get(i);
 			JMenuItem item = createRecentFileItem(path);
-			if (item == null)
-			{
-				previousFiles.remove(path);
-				prefs.node("openedFiles").remove(path.replace('/', '.'));
-			} else
+			if (item != null)
 			{
 				menuOpenRecent.add(item);
 			}
@@ -983,7 +983,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// toReturn.add(menuTools);
 		toReturn.add(menuOptions);
 
-		updateRecentFiles();
+		updateRecentFilesMenu();
 
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		addFrameListener(frameListener);
@@ -1163,27 +1163,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 	public void addRecentFile(File f)
 	{
-		String path = f.getAbsolutePath();
-		String pathR = path.replace('/', '.');
-		XMLPreferences openedFiles = prefs.node("openedFiles");
-		if (!previousFiles.contains(path))
-		{
-			previousFiles.add(path);
-			XMLPreferences key = openedFiles.node(pathR);
-			key.put("name", path);
-		}
-		if (previousFiles.size() > MAX_RECENT_FILES)
-		{
-			path = previousFiles.get(0);
-			pathR = path.replace('/', '.');
-			XMLPreferences key = openedFiles.node(pathR);
-			if (key.exists())
-			{
-				openedFiles.remove(pathR);
-			}
-			previousFiles.remove(0);
-		}
-		updateRecentFiles();
+		recentFiles.add(f);
+		updateRecentFilesMenu();
 	}
 
 	public static String getDefaultFolder()
