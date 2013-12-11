@@ -228,7 +228,7 @@ public class PreferencesWindow extends IcyFrame
         panelSoft.setLayout(new BoxLayout(panelSoft, BoxLayout.X_AXIS));
         panel.add(panelSoft);
 
-        JLabel lblSoft = new JLabel("Use Soft tabs (spaces instead of tabulations): ");
+        JLabel lblSoft = new JLabel("Use Soft tabs (auto-expand tabs to spaces): ");
         panelSoft.add(lblSoft);
 
         cboxSoft = new JCheckBox("");
@@ -243,7 +243,7 @@ public class PreferencesWindow extends IcyFrame
         panel.add(panelSpacesTab);
         panelSpacesTab.setLayout(new BoxLayout(panelSpacesTab, BoxLayout.X_AXIS));
 
-        JLabel lblSpacesTab = new JLabel("Spaces count for soft tabs: ");
+        JLabel lblSpacesTab = new JLabel("Tab width: ");
         panelSpacesTab.add(lblSpacesTab);
 
         tfSpacesTab = new IcyTextField();
@@ -260,16 +260,7 @@ public class PreferencesWindow extends IcyFrame
         // panelCenter.add(lblNeedsRestarting, BorderLayout.SOUTH);
 
         loadPrefs();
-
-        cboxSoft.addActionListener(new ActionListener()
-        {
-
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                tfSpacesTab.setEnabled(cboxSoft.isSelected());
-            }
-        });
+        
         return toReturn;
     }
 
@@ -397,11 +388,7 @@ public class PreferencesWindow extends IcyFrame
         // cboxStrict.setSelected(prefs.getBoolean(PREF_STRICT, Boolean.FALSE));
         cboxFullAutocomplete.setSelected(prefs.getBoolean(PREF_FULL_AUTOCOMPLETE, Boolean.TRUE));
         cboxAutoClearOutput.setSelected(prefs.getBoolean(PREF_AUTOCLEAR_OUTPUT, true));
-
-        boolean active = prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE);
-        cboxSoft.setSelected(active);
-        tfSpacesTab.setEnabled(active);
-
+        cboxSoft.setSelected(prefs.getBoolean(PREF_INDENT_SPACES, Boolean.FALSE));
         tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
     }
     
