@@ -992,9 +992,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			return ((ButtonTabComponent) c).deletePane();
+			boolean res = ((ButtonTabComponent) c).deletePane();
+			saveState();
+			return res;
 		}
-		saveState();
 		return true;
 	}
 

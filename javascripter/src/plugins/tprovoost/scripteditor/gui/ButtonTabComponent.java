@@ -168,6 +168,8 @@ public class ButtonTabComponent extends JPanel
 
     /**
      * Remove this pane from the {@link JTabbedPane}.
+     * 
+     * @return false if the user has cancelled the operation
      */
     public boolean deletePane()
     {
@@ -190,9 +192,7 @@ public class ButtonTabComponent extends JPanel
 	        }
 	        return true;
         }
-        else
-        {
-        	return false;
-        }
+        
+        return ok;
     }
 }
