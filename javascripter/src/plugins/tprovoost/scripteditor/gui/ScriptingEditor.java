@@ -115,7 +115,11 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				BindingsScriptFrame.getInstance().setEngine(null);
 			}
 			console.close();
-			closeAll();
+			
+			// close all the tabs, asking the user confirmation
+			// do not save tab state (was already done at last file open/close)
+			closeAll(false);
+			
 			PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
 		}
 	};
@@ -124,7 +128,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		@Override
 		public boolean accept(Object source)
 		{
-			return closeAll();
+			// close all the tabs, asking the user confirmation
+			// do not save tab state (was already done at last file open/close)
+			return closeAll(false);
 		}
 	};
 	
@@ -455,13 +461,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	 * @return Returns if success in closing. False means the user decided to
 	 *         cancel the closing.
 	 */
-	private boolean closeAll()
+	private boolean closeAll(boolean save)
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
 			while (tabbedPane.getTabCount() > 1)
 			{
-				if (!closeTab(0))
+				if (!closeTab(0, save))
 					return false;
 			}
 
@@ -469,6 +475,11 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			close();
 		}
 		return true;
+	}
+	
+	private boolean closeAll()
+	{
+		return closeAll(true);
 	}
 
 	public ScriptingPanel createNewPane()
@@ -985,7 +996,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		FindAndReplaceDialog.showDialog(this);
 	}
 
-	protected boolean closeTab(int i)
+	protected boolean closeTab(int i, boolean save)
 	{
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
@@ -1003,11 +1014,20 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		            	tabbedPane.setSelectedIndex(0);
 		        }
 		        
-				saveState();
+		        if (save)
+		        {
+		        	saveState();
+		        }
+				
 			}
 			return ok;
 		}
 		return true;
+	}
+	
+	protected boolean closeTab(int i)
+	{
+		return closeTab(i, true);
 	}
 	
 	protected boolean closeTab(ButtonTabComponent tabComponent)
