@@ -40,7 +40,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.prefs.PreferenceChangeEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -147,20 +146,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
 					if (!textArea.getText().isEmpty())
 					{
-						boolean indentWanted = prefWin.isIndentSpacesEnabled();
-						// if (textArea.getTabsEmulated() != indentWanted)
-						// {
-						// a change occured
-						textArea.setTabsEmulated(indentWanted);
+						textArea.setTabsEmulated(prefWin.isIndentSpacesEnabled());
 						textArea.setTabSize(prefWin.indentSpacesCount());
-						if (indentWanted)
-						{
-							textArea.convertTabsToSpaces();
-						} else
-						{
-							textArea.convertSpacesToTabs();
-						}
-						// }
 					}
 				}
 			}
@@ -854,6 +841,19 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				{
 					ScriptingPanel panel = ((ScriptingPanel) c);
 					// panel.getScriptHandler().organizeImports();
+					
+					// do the tab-to-space (or space-to-tab) conversion
+					PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+					RSyntaxTextArea textArea = panel.getTextArea();
+					if (prefWin.isIndentSpacesEnabled())
+					{
+						textArea.convertTabsToSpaces();
+					} else
+					{
+						textArea.convertSpacesToTabs();
+					}
+					
+					// do a language-specific formatting
 					panel.getScriptHandler().format();
 				}
 			}
