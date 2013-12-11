@@ -154,11 +154,11 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 						textArea.setTabsEmulated(indentWanted);
 						if (indentWanted)
 						{
-							textArea.convertSpacesToTabs();
-						} else
-						{
 							textArea.setTabSize(prefWin.indentSpacesCount());
 							textArea.convertTabsToSpaces();
+						} else
+						{
+							textArea.convertSpacesToTabs();
 						}
 						// }
 					}
