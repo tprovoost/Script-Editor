@@ -19,6 +19,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.EventListenerList;
 
 public class PreferencesWindow extends IcyFrame
 {
@@ -80,6 +81,7 @@ public class PreferencesWindow extends IcyFrame
             public void actionPerformed(ActionEvent e)
             {
                 savePrefs();
+                firePreferencesChanged();
                 close();
             }
 
@@ -95,6 +97,7 @@ public class PreferencesWindow extends IcyFrame
             @Override
             public void actionPerformed(ActionEvent e)
             {
+            	// do not save and do not tell listeners
                 close();
             }
 
@@ -401,5 +404,24 @@ public class PreferencesWindow extends IcyFrame
 
         tfSpacesTab.setValue("" + prefs.getInt(PREF_INDENT_SPACES_VALUE, 8));
     }
-
+    
+    private final EventListenerList listeners = new EventListenerList();
+    
+    public void addPreferencesListener(PreferencesListener listener) {
+        listeners.add(PreferencesListener.class, listener);
+    }
+ 
+    public void removePreferencesListener(PreferencesListener listener) {
+        listeners.remove(PreferencesListener.class, listener);
+    }
+    
+    protected void firePreferencesChanged() {
+    	for(PreferencesListener listener : getPreferencesListeners()) {
+    		listener.preferencesChanged();
+    	}
+    }
+    
+    public PreferencesListener[] getPreferencesListeners() {
+        return listeners.getListeners(PreferencesListener.class);
+    }
 }

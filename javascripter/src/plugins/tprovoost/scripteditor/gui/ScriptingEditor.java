@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.prefs.PreferenceChangeEvent;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -116,7 +117,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			}
 			console.close();
 			closeAll();
-			PreferencesWindow.getPreferencesWindow().removeFrameListener(applyPrefsListener);
+			PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
 		}
 	};
 	private AcceptListener acceptlistener = new AcceptListener()
@@ -129,14 +130,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	};
 	
 	/**
-	 * This listener is called when the preferences window is closed.
+	 * This listener is called when there are changes applied in the preferences window.
 	 * It applies the preferences to the opened ScriptingPanels.
 	 */
-	private IcyFrameListener applyPrefsListener = new IcyFrameAdapter()
-	{
+	private PreferencesListener applyPrefsListener = new PreferencesListener() {
+		
 		@Override
-		public void icyFrameClosed(IcyFrameEvent e)
-		{
+		public void preferencesChanged() {
 			PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
 
 			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
@@ -373,7 +373,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
 		// frame listener on preferences
-		PreferencesWindow.getPreferencesWindow().addFrameListener(applyPrefsListener);
+		PreferencesWindow.getPreferencesWindow().addPreferencesListener(applyPrefsListener);
 		
 		restoreState();
 	}
