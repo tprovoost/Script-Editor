@@ -2,7 +2,7 @@ package plugins.tprovoost.scripteditor.gui;
 
 import icy.gui.component.IcyTextField;
 import icy.gui.frame.IcyFrame;
-import icy.preferences.PluginPreferences;
+import icy.preferences.PluginsPreferences;
 import icy.preferences.XMLPreferences;
 
 import java.awt.BorderLayout;
@@ -25,7 +25,7 @@ public class PreferencesWindow extends IcyFrame
 {
     private static PreferencesWindow singleton = new PreferencesWindow();
     private JPanel panel;
-    private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
+    private XMLPreferences prefs = PluginsPreferences.getPreferences().node("plugins.tprovoost.scripteditor.main.ScriptEditorPlugin");
     // private PreferencesTableModel tableModel;
     // private final String PREF_VAR_INTERPRET = "varinterp";
     // private final String PREF_OVERRIDE = "override";
