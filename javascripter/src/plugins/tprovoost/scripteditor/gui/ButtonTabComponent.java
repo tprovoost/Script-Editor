@@ -55,7 +55,13 @@ public class ButtonTabComponent extends JPanel
 
             public String getText()
             {
-                return getPanel().getPanelName();
+                JTabbedPane pane = editor.getTabbedPane();
+                int i = pane.indexOfTabComponent(ButtonTabComponent.this);
+                if (i != -1)
+                {
+                    return pane.getTitleAt(i);
+                }
+                return "";
             }
         };
 
