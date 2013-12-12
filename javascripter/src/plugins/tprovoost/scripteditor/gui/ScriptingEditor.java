@@ -20,6 +20,7 @@ import icy.system.FileDrop;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
 import icy.util.EventUtil;
+import icy.util.XMLUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -425,7 +426,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		XMLPreferences openedFiles = prefs.node("openedFiles");
 
 		// remove previous settings
-		openedFiles.removeChildren();
+		// Note: I do not use openedFiles.removeChildren() because it leaves blank lines
+		// in the XML file
+		XMLUtil.removeAllChildren(openedFiles.getXMLNode());
 		
 		for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
 		{

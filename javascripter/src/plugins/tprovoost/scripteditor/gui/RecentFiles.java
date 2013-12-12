@@ -1,6 +1,7 @@
 package plugins.tprovoost.scripteditor.gui;
 
 import icy.preferences.XMLPreferences;
+import icy.util.XMLUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -47,7 +48,9 @@ public class RecentFiles {
 	void save()
 	{
 		// remove previous settings
-		recentFilesPref.removeChildren();
+		// Note: I do not use recentFilesPref.removeChildren() because it leaves blank lines
+		// in the XML file
+		XMLUtil.removeAllChildren(recentFilesPref.getXMLNode());
 		
 		int i = 0;
 		for (String fileName:previousFiles)
