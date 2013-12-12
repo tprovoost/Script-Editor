@@ -96,6 +96,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	private XMLPreferences prefs = PluginsPreferences.getPreferences().node("plugins.tprovoost.scripteditor.main.ScriptEditorPlugin");
 
 	private final RecentFiles recentFiles = new RecentFiles(prefs);
+	
+	// flag that makes saveEditorState() a no-op
+	protected volatile boolean saveStateEnabled = true;
 
 	private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
 	private static final String PREF_IDX = "idxTab";
@@ -115,18 +118,25 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			console.close();
 			
 			// close all the tabs, asking the user confirmation
-			// do not save tab state (was already done at last file open/close)
-			closeAll(false);
+			// do not save tab state while closing (would break the saved state)
+			saveStateEnabled = false;
+			closeAll();
+			saveStateEnabled = true;
 		}
 	};
+	
+	// listener called when Icy exits, asking for user confirmation
 	private AcceptListener acceptlistener = new AcceptListener()
 	{
 		@Override
 		public boolean accept(Object source)
 		{
 			// close all the tabs, asking the user confirmation
-			// do not save tab state (was already done at last file open/close)
-			return closeAll(false);
+			// do not save tab state while closing (would break the saved state)
+			saveStateEnabled = false;
+			boolean canClose = closeAll();
+			saveStateEnabled = true;
+			return canClose;
 		}
 	};
 	
@@ -148,7 +158,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			public void setSelectedIndex(int index)
 			{
 				if (index < tabbedPane.getTabCount() - 1)
+				{
 					super.setSelectedIndex(index);
+					saveEditorState();
+				}
 			}
 		};
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -335,7 +348,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// exit listener
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
-		restoreState();
+		restoreEditorState();
 	}
 
 	/**
@@ -348,7 +361,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		return tabbedPane;
 	}
 	
-	void restoreState()
+	void restoreEditorState()
 	{
 		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
 
@@ -377,10 +390,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			@Override
 			public void run()
 			{
+				// disable the state saving (would break the state)
+				saveStateEnabled = false;
 				for (String s : toOpen)
 				{
 					try
 					{
+						// open the file, do not save editor state
 						openFile(new File(s));
 					} catch (IOException e1)
 					{
@@ -388,6 +404,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				}
 				int idx = openedFiles.getInt(PREF_IDX, 0);
 				tabbedPane.setSelectedIndex(idx);
+				// re-enable the state saving
+				saveStateEnabled = true;
 			}
 		});
 	}
@@ -395,8 +413,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	/**
 	 * Save the editor state (opened files, selected tab) to the disk
 	 */
-	private void saveState()
+	private void saveEditorState()
 	{
+		// do nothing when disabled
+		if (!saveStateEnabled)
+			return;
+		
 		int idx = tabbedPane.getSelectedIndex();
 		
 		// Saving state of the opened files.
@@ -424,7 +446,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		
 		// actually save on disk now
 		IcyPreferences.save();
-		//IcyPreferences.load();
 	}
 
 	/**
@@ -433,13 +454,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	 * @return Returns if success in closing. False means the user decided to
 	 *         cancel the closing.
 	 */
-	private boolean closeAll(boolean save)
+	private boolean closeAll()
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
 			while (tabbedPane.getTabCount() > 1)
 			{
-				if (!closeTab(0, save))
+				if (!closeTab(0))
 					return false;
 			}
 
@@ -447,11 +468,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			close();
 		}
 		return true;
-	}
-	
-	private boolean closeAll()
-	{
-		return closeAll(true);
 	}
 
 	public ScriptingPanel createNewPane()
@@ -534,7 +550,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
-		saveState();
+		saveEditorState();
 	}
 
 	private void updateRecentFilesMenu()
@@ -963,7 +979,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		FindAndReplaceDialog.showDialog(this);
 	}
 
-	protected boolean closeTab(int i, boolean save)
+	protected boolean closeTab(int i)
 	{
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
@@ -981,20 +997,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		            	tabbedPane.setSelectedIndex(0);
 		        }
 		        
-		        if (save)
-		        {
-		        	saveState();
-		        }
+		        saveEditorState();
 				
 			}
 			return ok;
 		}
 		return true;
-	}
-	
-	protected boolean closeTab(int i)
-	{
-		return closeTab(i, true);
 	}
 	
 	protected boolean closeTab(ButtonTabComponent tabComponent)
