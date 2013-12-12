@@ -97,6 +97,8 @@ public class PreferencesWindow extends IcyFrame
             @Override
             public void actionPerformed(ActionEvent e)
             {
+            	// restore the values
+            	initGUI();
             	// do not save and do not tell listeners
                 close();
             }
