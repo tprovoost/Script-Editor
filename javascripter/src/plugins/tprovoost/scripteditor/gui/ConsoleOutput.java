@@ -35,20 +35,20 @@ import javax.swing.text.StyleConstants;
 public class ConsoleOutput extends JPanel {
 
 	protected boolean scrollLocked;
-	final JTextPane consoleOutput;
+	final JTextPane textPane;
 	private JScrollPane scrollpane;
 
 	ConsoleOutput()
 	{
 		setLayout(new BorderLayout());
 		
-		consoleOutput = new JTextPane();
-		consoleOutput.setEditable(false);
-		consoleOutput.setFont(new Font("sansserif", Font.PLAIN, 12));
-		consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+		textPane = new JTextPane();
+		textPane.setEditable(false);
+		textPane.setFont(new Font("sansserif", Font.PLAIN, 12));
+		textPane.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 
 		// HANDLE RIGHT CLICK POPUP MENU
-		consoleOutput.addMouseListener(new MouseAdapter()
+		textPane.addMouseListener(new MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
@@ -63,11 +63,11 @@ public class ConsoleOutput extends JPanel {
 						@Override
 						public void actionPerformed(ActionEvent e)
 						{
-							consoleOutput.copy();
+							textPane.copy();
 						}
 					});
 					popup.add(itemCopy);
-					popup.show(consoleOutput, e.getX(), e.getY());
+					popup.show(textPane, e.getX(), e.getY());
 					e.consume();
 				}
 			}
@@ -79,10 +79,10 @@ public class ConsoleOutput extends JPanel {
 		class NonSrollingCaret extends DefaultCaret {
 			public void adjustVisibility(Rectangle rec) {}
 		}
-		consoleOutput.setCaret(new NonSrollingCaret());
+		textPane.setCaret(new NonSrollingCaret());
 
 		// Create the scrollpane around the output
-		scrollpane = new JScrollPane(consoleOutput);
+		scrollpane = new JScrollPane(textPane);
 		scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 		scrollpane.setAutoscrolls(true);
 		scrollpane.setPreferredSize(new Dimension(400, 200));
@@ -107,7 +107,7 @@ public class ConsoleOutput extends JPanel {
 					else
 						setScrollLocked(true);
 				}
-				if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
+				if (!isScrollLocked() && !textPane.getText().isEmpty())
 				{
 					brm.setValue(brm.getMaximum());
 				}
@@ -145,16 +145,16 @@ public class ConsoleOutput extends JPanel {
 	}
 
 	public JTextPane getTextPane() {
-		return consoleOutput;
+		return textPane;
 	}
 
 	public void append(String s) {
-		Document doc = consoleOutput.getDocument();
+		Document doc = textPane.getDocument();
 		try
 		{
-			Style style = consoleOutput.getStyle("normal");
+			Style style = textPane.getStyle("normal");
 			if (style == null)
-				style = consoleOutput.addStyle("normal", null);
+				style = textPane.addStyle("normal", null);
 			doc.insertString(doc.getLength(), s, style);
 		} catch (BadLocationException e2)
 		{
@@ -162,17 +162,17 @@ public class ConsoleOutput extends JPanel {
 	}
 
 	public void clear() {
-		consoleOutput.setText("");
+		textPane.setText("");
 	}
 
 	public void appendError(String s) {
-		Document doc = consoleOutput.getDocument();
+		Document doc = textPane.getDocument();
 		try
 		{
-			Style style = consoleOutput.getStyle("error");
+			Style style = textPane.getStyle("error");
 			if (style == null)
 			{
-				style = consoleOutput.addStyle("error", null);
+				style = textPane.addStyle("error", null);
 				StyleConstants.setForeground(style, Color.red);
 			}
 			doc.insertString(doc.getLength(), s, style);
