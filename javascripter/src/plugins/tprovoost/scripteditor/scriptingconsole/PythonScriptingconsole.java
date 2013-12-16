@@ -111,19 +111,10 @@ public class PythonScriptingconsole extends Scriptingconsole
 				String time = DateUtil.now("HH:mm:ss");
 				if (output != null)
 				{
-					Document doc = output.getTextPane().getDocument();
-					try
-					{
-						Style style = output.getTextPane().getStyle("normal");
-						if (style == null)
-							style = output.getTextPane().addStyle("normal", null);
-						if (waitingForMore)
-							doc.insertString(doc.getLength(), STRING_INPUT_MORE + getText() + "\n", style);
-						else
-							doc.insertString(doc.getLength(), STRING_INPUT + getText() + "\n", style);
-					} catch (BadLocationException e2)
-					{
-					}
+					if (waitingForMore)
+						output.append(STRING_INPUT_MORE + getText() + "\n");
+					else
+						output.append(STRING_INPUT + getText() + "\n");
 				} else
 					System.out.println(time + ": " + text);
 				try
@@ -160,16 +151,7 @@ public class PythonScriptingconsole extends Scriptingconsole
 			{
 				if (output != null)
 				{
-					Document doc = output.getTextPane().getDocument();
-					try
-					{
-						Style style = output.getTextPane().getStyle("normal");
-						if (style == null)
-							style = output.getTextPane().addStyle("normal", null);
-						doc.insertString(doc.getLength(), s, style);
-					} catch (BadLocationException e2)
-					{
-					}
+					output.append(s);
 				}
 			}
 		};

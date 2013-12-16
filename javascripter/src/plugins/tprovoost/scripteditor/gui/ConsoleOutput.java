@@ -3,6 +3,7 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.util.EventUtil;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Rectangle;
@@ -24,7 +25,11 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.border.BevelBorder;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
+import javax.swing.text.Document;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
 
 @SuppressWarnings("serial")
 public class ConsoleOutput extends JPanel {
@@ -141,5 +146,39 @@ public class ConsoleOutput extends JPanel {
 
 	public JTextPane getTextPane() {
 		return consoleOutput;
+	}
+
+	public void append(String s) {
+		Document doc = consoleOutput.getDocument();
+		try
+		{
+			Style style = consoleOutput.getStyle("normal");
+			if (style == null)
+				style = consoleOutput.addStyle("normal", null);
+			doc.insertString(doc.getLength(), s, style);
+		} catch (BadLocationException e2)
+		{
+		}
+	}
+
+	public void clear() {
+		consoleOutput.setText("");
+	}
+
+	public void appendError(String s) {
+		Document doc = consoleOutput.getDocument();
+		try
+		{
+			Style style = consoleOutput.getStyle("error");
+			if (style == null)
+			{
+				style = consoleOutput.addStyle("error", null);
+				StyleConstants.setForeground(style, Color.red);
+			}
+			doc.insertString(doc.getLength(), s, style);
+		}
+		catch (BadLocationException e)
+		{
+		}
 	}
 }

@@ -171,19 +171,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
 			if (errorOutput != null)
 			{
-				Document doc = errorOutput.getTextPane().getDocument();
-				try
-				{
-					Style style = errorOutput.getTextPane().getStyle("error");
-					if (style == null)
-					{
-						style = errorOutput.getTextPane().addStyle("error", null);
-						StyleConstants.setForeground(style, Color.red);
-					}
-					doc.insertString(doc.getLength(), lastErrortext + "\n", style);
-				} catch (BadLocationException e)
-				{
-				}
+				errorOutput.appendError(lastErrortext + "\n");
 			}
 		}
 	};
@@ -2677,16 +2665,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					ee.printStackTrace();
 					if (errorOutput != null)
 					{
-						Document doc = errorOutput.getTextPane().getDocument();
-						try
-						{
-							Style style = errorOutput.getTextPane().getStyle("normal");
-							if (style == null)
-								style = errorOutput.getTextPane().addStyle("normal", null);
-							doc.insertString(doc.getLength(), ee.getMessage() + "\n", style);
-						} catch (BadLocationException ble)
-						{
-						}
+						errorOutput.append(ee.getMessage() + "\n");
 					} else
 						System.out.println(ee.getMessage());
 				}
@@ -2728,16 +2707,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					se.printStackTrace();
 					if (errorOutput != null)
 					{
-						Document doc = errorOutput.getTextPane().getDocument();
-						try
-						{
-							Style style = errorOutput.getTextPane().getStyle("normal");
-							if (style == null)
-								style = errorOutput.getTextPane().addStyle("normal", null);
-							doc.insertString(doc.getLength(), se.getMessage() + "\n", style);
-						} catch (BadLocationException ble)
-						{
-						}
+						errorOutput.append(se.getMessage() + "\n");
 					}
 				}
 			} catch (BadLocationException e1)

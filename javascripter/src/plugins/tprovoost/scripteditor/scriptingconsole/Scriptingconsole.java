@@ -16,9 +16,6 @@ import java.util.List;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
-import javax.swing.text.Style;
 
 import org.fife.ui.autocomplete.Completion;
 
@@ -140,17 +137,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                     }
                     if (!s.endsWith("\n"))
                         s += "\n";
-                    Document doc = output.getTextPane().getDocument();
-                    try
-                    {
-                        Style style = output.getTextPane().getStyle("normal");
-                        if (style == null)
-                            style = output.getTextPane().addStyle("normal", null);
-                        doc.insertString(doc.getLength(), s, style);
-                    }
-                    catch (BadLocationException e2)
-                    {
-                    }
+                    output.append(s);
                     System.out.println(s);
                 }
                 break;
@@ -178,17 +165,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                     String time = DateUtil.now("HH:mm:ss");
                     if (output != null)
                     {
-                        Document doc = output.getTextPane().getDocument();
-                        try
-                        {
-                            Style style = output.getTextPane().getStyle("normal");
-                            if (style == null)
-                                style = output.getTextPane().addStyle("normal", null);
-                            doc.insertString(doc.getLength(), "> " + text + "\n", style);
-                        }
-                        catch (BadLocationException e2)
-                        {
-                        }
+                    	output.append("> " + text + "\n");
                     }
                     else
                         System.out.println(time + ": " + text);
@@ -219,7 +196,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
     public void clear()
     {
         if (output != null)
-            output.getTextPane().setText("");
+        	output.clear();
     }
 
     @Override

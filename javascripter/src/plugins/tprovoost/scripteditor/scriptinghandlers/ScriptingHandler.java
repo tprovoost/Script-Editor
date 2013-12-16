@@ -11,7 +11,6 @@ import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 import icy.util.EventUtil;
 
-import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -34,8 +33,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -167,16 +164,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						Document doc = errorOutput.getTextPane().getDocument();
-						try
-						{
-							Style style = errorOutput.getTextPane().getStyle("normal");
-							if (style == null)
-								style = errorOutput.getTextPane().addStyle("normal", null);
-							doc.insertString(doc.getLength(), s, style);
-						} catch (BadLocationException e)
-						{
-						}
+						errorOutput.append(s);
 					}
 				});
 			} else
@@ -552,20 +540,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				}
 				if (errorOutput != null)
 				{
-					Document doc = errorOutput.getTextPane().getDocument();
-					try
-					{
-						Style style = errorOutput.getTextPane().getStyle("error");
-						if (style == null)
-						{
-							style = errorOutput.getTextPane().addStyle("error", null);
-							StyleConstants.setForeground(style, Color.red);
-						}
-						doc.insertString(doc.getLength(), textResult, style);
-					} catch (BadLocationException e)
-					{
-					}
-				} else
+					errorOutput.appendError(textResult);
+				}
+				else
 					System.out.print(textResult);
 			}
 		});
@@ -667,7 +644,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				// errorOutput.append(str + "\n");
 				if (Preferences.getPreferences().isAutoClearOutputEnabled())
 				{
-					errorOutput.getTextPane().setText("");
+					errorOutput.clear();
 				}
 				// g.dispose();
 			}
