@@ -16,17 +16,14 @@ import java.util.List;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
-import javax.swing.JTextPane;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Caret;
 import javax.swing.text.Document;
 import javax.swing.text.Style;
 
 import org.fife.ui.autocomplete.Completion;
 
 import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
+import plugins.tprovoost.scripteditor.gui.ConsoleOutput;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 // import plugins.tprovoost.scripteditor.scriptinghandlers.JSScriptingHandler62;
 import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
@@ -46,7 +43,7 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
     protected ScriptingHandler scriptHandler;
     protected ArrayList<String> history = new ArrayList<String>();
     protected int posInHistory = 0;
-    protected JTextPane output;
+    protected ConsoleOutput output;
 
     public Scriptingconsole()
     {
@@ -143,12 +140,12 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                     }
                     if (!s.endsWith("\n"))
                         s += "\n";
-                    Document doc = output.getDocument();
+                    Document doc = output.getTextPane().getDocument();
                     try
                     {
-                        Style style = output.getStyle("normal");
+                        Style style = output.getTextPane().getStyle("normal");
                         if (style == null)
-                            style = output.addStyle("normal", null);
+                            style = output.getTextPane().addStyle("normal", null);
                         doc.insertString(doc.getLength(), s, style);
                     }
                     catch (BadLocationException e2)
@@ -181,12 +178,12 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
                     String time = DateUtil.now("HH:mm:ss");
                     if (output != null)
                     {
-                        Document doc = output.getDocument();
+                        Document doc = output.getTextPane().getDocument();
                         try
                         {
-                            Style style = output.getStyle("normal");
+                            Style style = output.getTextPane().getStyle("normal");
                             if (style == null)
-                                style = output.addStyle("normal", null);
+                                style = output.getTextPane().addStyle("normal", null);
                             doc.insertString(doc.getLength(), "> " + text + "\n", style);
                         }
                         catch (BadLocationException e2)
@@ -212,17 +209,17 @@ public class Scriptingconsole extends JTextField implements KeyListener, MouseLi
 
     }
 
-    public void setOutput(JTextPane output)
+    public void setOutput(ConsoleOutput consoleOutput)
     {
-        this.output = output;
+        this.output = consoleOutput;
         if (scriptHandler != null)
-            scriptHandler.setOutput(output);
+            scriptHandler.setOutput(consoleOutput);
     }
 
     public void clear()
     {
         if (output != null)
-            output.setText("");
+            output.getTextPane().setText("");
     }
 
     @Override

@@ -28,7 +28,6 @@ import java.util.List;
 
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
-import javax.swing.JTextPane;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -50,6 +49,7 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
+import plugins.tprovoost.scripteditor.gui.ConsoleOutput;
 import plugins.tprovoost.scripteditor.gui.Preferences;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
@@ -113,7 +113,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * This is where the warning / errors are displayed, contained in this
 	 * scrollpane.
 	 */
-	protected JTextPane errorOutput;
+	protected ConsoleOutput errorOutput;
 
 	/** Reference to the textarea scrollpane gutter. */
 	private Gutter gutter;
@@ -167,12 +167,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						Document doc = errorOutput.getDocument();
+						Document doc = errorOutput.getTextPane().getDocument();
 						try
 						{
-							Style style = errorOutput.getStyle("normal");
+							Style style = errorOutput.getTextPane().getStyle("normal");
 							if (style == null)
-								style = errorOutput.addStyle("normal", null);
+								style = errorOutput.getTextPane().addStyle("normal", null);
 							doc.insertString(doc.getLength(), s, style);
 						} catch (BadLocationException e)
 						{
@@ -249,9 +249,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		this(provider, engineType, textArea, gutter, forceRun, null);
 	}
 
-	public void setOutput(JTextPane errorOutput)
+	public void setOutput(ConsoleOutput consoleOutput)
 	{
-		this.errorOutput = errorOutput;
+		this.errorOutput = consoleOutput;
 	}
 
 	/**
@@ -552,13 +552,13 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				}
 				if (errorOutput != null)
 				{
-					Document doc = errorOutput.getDocument();
+					Document doc = errorOutput.getTextPane().getDocument();
 					try
 					{
-						Style style = errorOutput.getStyle("error");
+						Style style = errorOutput.getTextPane().getStyle("error");
 						if (style == null)
 						{
-							style = errorOutput.addStyle("error", null);
+							style = errorOutput.getTextPane().addStyle("error", null);
 							StyleConstants.setForeground(style, Color.red);
 						}
 						doc.insertString(doc.getLength(), textResult, style);
@@ -667,7 +667,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				// errorOutput.append(str + "\n");
 				if (Preferences.getPreferences().isAutoClearOutputEnabled())
 				{
-					errorOutput.setText("");
+					errorOutput.getTextPane().setText("");
 				}
 				// g.dispose();
 			}

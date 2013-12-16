@@ -85,11 +85,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	private JButton addPaneButton;
 
 	// Console
-	private JScrollPane scrollpane;
-	private JTextPane consoleOutput;
+	private ConsoleOutput consoleOutput;
 	private Scriptingconsole console;
 	private JButton btnClearConsole;
-	protected boolean scrollLocked;
 
 	// Preferences and recent files
 	private JMenu menuOpenRecent;
@@ -251,94 +249,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			}
 		});
 
-		consoleOutput = new JTextPane();
-		consoleOutput.setEditable(false);
-		consoleOutput.setFont(new Font("sansserif", Font.PLAIN, 12));
-		consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-
-		// HANDLE RIGHT CLICK POPUP MENU
-		consoleOutput.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mouseClicked(MouseEvent e)
-			{
-				if (EventUtil.isRightMouseButton(e))
-				{
-					JPopupMenu popup = new JPopupMenu();
-					JMenuItem itemCopy = new JMenuItem("Copy");
-					itemCopy.addActionListener(new ActionListener()
-					{
-
-						@Override
-						public void actionPerformed(ActionEvent e)
-						{
-							consoleOutput.copy();
-						}
-					});
-					popup.add(itemCopy);
-					popup.show(consoleOutput, e.getX(), e.getY());
-					e.consume();
-				}
-			}
-		});
-
-		// by default the JTextPane will autoscroll everytime something is modified
-		// in the document. So in our case it would always autoscroll to the bottom
-		// of the console. We want to disable that and do the scrolling at our discretion.
-		@SuppressWarnings("serial")
-		class NonSrollingCaret extends DefaultCaret {
-			public void adjustVisibility(Rectangle rec) {}
-			}
-		consoleOutput.setCaret(new NonSrollingCaret());
-
-		// Create the scrollpane around the output
-		scrollpane = new JScrollPane(consoleOutput);
-		scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-		scrollpane.setAutoscrolls(true);
-		scrollpane.setPreferredSize(new Dimension(400, 200));
-		final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
-
-		// Listener for the scrollbar, to achieve auto-scroll or scroll-lock
-		// depending on the position of the scrollbar
-		scrollbar.addAdjustmentListener(new AdjustmentListener()
-		{
-			final BoundedRangeModel brm = scrollbar.getModel();
-
-			@Override
-			public void adjustmentValueChanged(AdjustmentEvent e)
-			{
-				if (scrollbar.getValueIsAdjusting())
-				{
-					boolean atBottom = (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum());
-					if (atBottom)
-						setScrollLocked(false);
-					else
-						setScrollLocked(true);
-				}
-				if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
-				{
-					brm.setValue(brm.getMaximum());
-				}
-			}
-
-		});
-		scrollpane.addMouseWheelListener(new MouseWheelListener()
-		{
-			
-			@Override
-			public void mouseWheelMoved(MouseWheelEvent e)
-			{
-				boolean atBottom = (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum());
-				if (atBottom && e.getWheelRotation() >= 0)
-				{
-					// we are at bottom and asking to go down => we should disable the auto-scroll lock
-					// and let the console auto-scroll
-					setScrollLocked(false);
-				}
-				else
-					setScrollLocked(true);
-			}
-		});
+		consoleOutput = new ConsoleOutput();
 
 		if (btnClearConsole != null)
 			btnClearConsole.removeActionListener(ScriptingEditor.this);
@@ -346,7 +257,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		btnClearConsole.addActionListener(ScriptingEditor.this);
 
 		JPanel bottomPanel = new JPanel(new BorderLayout());
-		bottomPanel.add(scrollpane, BorderLayout.CENTER);
+		bottomPanel.add(consoleOutput, BorderLayout.CENTER);
 
 		panelSouth = new JPanel(new BorderLayout());
 		bottomPanel.add(panelSouth, BorderLayout.SOUTH);
@@ -1136,7 +1047,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// a reference to the output.
 		console.setOutput(consoleOutput);
 
-		console.setFont(consoleOutput.getFont());
+		console.setFont(consoleOutput.getTextPane().getFont());
 
 		if (panelSouth != null)
 		{
@@ -1168,20 +1079,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		return "";
 	}
 
-	private synchronized boolean isScrollLocked()
-	{
-		return scrollLocked;
-	}
-
-	private synchronized void setScrollLocked(boolean scrollLocked)
-	{
-		this.scrollLocked = scrollLocked;
-	}
-
 	/**
 	 * @return the consoleOutput
 	 */
-	public JTextPane getConsoleOutput()
+	public ConsoleOutput getConsoleOutput()
 	{
 		return consoleOutput;
 	}

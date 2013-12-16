@@ -108,12 +108,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			if (errorOutput != null)
 			{
-				Document doc = errorOutput.getDocument();
+				Document doc = errorOutput.getTextPane().getDocument();
 				try
 				{
-					Style style = errorOutput.getStyle("warning");
+					Style style = errorOutput.getTextPane().getStyle("warning");
 					if (style == null)
-						style = errorOutput.addStyle("warning", null);
+						style = errorOutput.getTextPane().addStyle("warning", null);
 					StyleConstants.setForeground(style, Color.blue);
 					String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column (" + lineOffset + ")";
 					doc.insertString(doc.getLength(), text + "\n", style);
@@ -137,10 +137,10 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				{
 					try
 					{
-						Style style = errorOutput.getStyle("error");
+						Style style = errorOutput.getTextPane().getStyle("error");
 						if (style == null)
 						{
-							style = errorOutput.addStyle("error", null);
+							style = errorOutput.getTextPane().addStyle("error", null);
 							StyleConstants.setForeground(style, Color.red);
 						}
 						String inLineSource = "";
@@ -153,7 +153,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 						{
 							atColumn = "\"\n at column (" + lineOffset + ")";
 						}
-						Document doc = errorOutput.getDocument();
+						Document doc = errorOutput.getTextPane().getDocument();
 						String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
 						doc.insertString(doc.getLength(), lastErrortext + "\n", style);
 					} catch (BadLocationException e)
@@ -171,13 +171,13 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
 			if (errorOutput != null)
 			{
-				Document doc = errorOutput.getDocument();
+				Document doc = errorOutput.getTextPane().getDocument();
 				try
 				{
-					Style style = errorOutput.getStyle("error");
+					Style style = errorOutput.getTextPane().getStyle("error");
 					if (style == null)
 					{
-						style = errorOutput.addStyle("error", null);
+						style = errorOutput.getTextPane().addStyle("error", null);
 						StyleConstants.setForeground(style, Color.red);
 					}
 					doc.insertString(doc.getLength(), lastErrortext + "\n", style);
@@ -2677,12 +2677,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					ee.printStackTrace();
 					if (errorOutput != null)
 					{
-						Document doc = errorOutput.getDocument();
+						Document doc = errorOutput.getTextPane().getDocument();
 						try
 						{
-							Style style = errorOutput.getStyle("normal");
+							Style style = errorOutput.getTextPane().getStyle("normal");
 							if (style == null)
-								style = errorOutput.addStyle("normal", null);
+								style = errorOutput.getTextPane().addStyle("normal", null);
 							doc.insertString(doc.getLength(), ee.getMessage() + "\n", style);
 						} catch (BadLocationException ble)
 						{
@@ -2728,12 +2728,12 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 					se.printStackTrace();
 					if (errorOutput != null)
 					{
-						Document doc = errorOutput.getDocument();
+						Document doc = errorOutput.getTextPane().getDocument();
 						try
 						{
-							Style style = errorOutput.getStyle("normal");
+							Style style = errorOutput.getTextPane().getStyle("normal");
 							if (style == null)
-								style = errorOutput.addStyle("normal", null);
+								style = errorOutput.getTextPane().addStyle("normal", null);
 							doc.insertString(doc.getLength(), se.getMessage() + "\n", style);
 						} catch (BadLocationException ble)
 						{
