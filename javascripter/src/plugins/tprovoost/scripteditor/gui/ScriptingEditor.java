@@ -27,6 +27,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -43,6 +44,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoundedRangeModel;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -62,7 +64,7 @@ import javax.swing.WindowConstants;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.text.Document;
+import javax.swing.text.DefaultCaret;
 
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
@@ -280,6 +282,15 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			}
 		});
 
+		// by default the JTextPane will autoscroll everytime something is modified
+		// in the document. So in our case it would always autoscroll to the bottom
+		// of the console. We want to disable that and do the scrolling at our discretion.
+		@SuppressWarnings("serial")
+		class NonSrollingCaret extends DefaultCaret {
+			public void adjustVisibility(Rectangle rec) {}
+			}
+		consoleOutput.setCaret(new NonSrollingCaret());
+
 		// Create the scrollpane around the output
 		scrollpane = new JScrollPane(consoleOutput);
 		scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
@@ -287,9 +298,11 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		scrollpane.setPreferredSize(new Dimension(400, 200));
 		final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
 
-		// LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
+		// Listener for the scrollbar, to achieve auto-scroll or scroll-lock
+		// depending on the position of the scrollbar
 		scrollbar.addAdjustmentListener(new AdjustmentListener()
 		{
+			final BoundedRangeModel brm = scrollbar.getModel();
 
 			@Override
 			public void adjustmentValueChanged(AdjustmentEvent e)
@@ -303,8 +316,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				}
 				if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
 				{
-					Document doc = consoleOutput.getDocument();
-					consoleOutput.setCaretPosition(doc.getLength());
+					brm.setValue(brm.getMaximum());
 				}
 			}
 
