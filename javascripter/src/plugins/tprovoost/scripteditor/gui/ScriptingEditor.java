@@ -309,7 +309,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			{
 				if (scrollbar.getValueIsAdjusting())
 				{
-					if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+					boolean atBottom = (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum());
+					if (atBottom)
 						setScrollLocked(false);
 					else
 						setScrollLocked(true);
@@ -323,12 +324,17 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		});
 		scrollpane.addMouseWheelListener(new MouseWheelListener()
 		{
-
+			
 			@Override
 			public void mouseWheelMoved(MouseWheelEvent e)
 			{
-				if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
+				boolean atBottom = (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum());
+				if (atBottom && e.getWheelRotation() >= 0)
+				{
+					// we are at bottom and asking to go down => we should disable the auto-scroll lock
+					// and let the console auto-scroll
 					setScrollLocked(false);
+				}
 				else
 					setScrollLocked(true);
 			}
