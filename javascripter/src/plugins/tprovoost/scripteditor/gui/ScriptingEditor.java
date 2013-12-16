@@ -250,7 +250,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		});
 
 		consoleOutput = new JTextPane();
-		consoleOutput.setPreferredSize(new Dimension(400, 200));
 		consoleOutput.setEditable(false);
 		consoleOutput.setFont(new Font("sansserif", Font.PLAIN, 12));
 		consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
@@ -285,6 +284,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		scrollpane = new JScrollPane(consoleOutput);
 		scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 		scrollpane.setAutoscrolls(true);
+		scrollpane.setPreferredSize(new Dimension(400, 200));
 		final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
 
 		// LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
