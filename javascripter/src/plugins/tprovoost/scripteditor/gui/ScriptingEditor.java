@@ -49,6 +49,7 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import plugins.tprovoost.scripteditor.gui.ScriptingPanel.SavedAsListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
@@ -121,6 +122,16 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			boolean canClose = closeAll();
 			saveStateEnabled = true;
 			return canClose;
+		}
+	};
+	
+	// listener called when a child ScriptingPanel saves a new file
+	private SavedAsListener savedAsListener = new SavedAsListener()
+	{
+
+		@Override
+		public void savedAs(File f) {
+			addRecentFile(f);
 		}
 	};
 	
@@ -410,6 +421,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			panelCreated = new ScriptingPanel(this, name, "Python");
 		else
 			panelCreated = new ScriptingPanel(this, name, "JavaScript");
+		
+		panelCreated.addSavedAsListener(savedAsListener);
+		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
 			tabbedPane.removeTabAt(idx);
@@ -899,10 +913,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			boolean ok = ((ButtonTabComponent) c).getPanel().close(getCurrentDirectory());
+			ScriptingPanel panel = ((ButtonTabComponent) c).getPanel(); 
+			boolean ok = panel.close(getCurrentDirectory());
 			
 			if (ok)
 			{
+				panel.removeSavedAsListener(savedAsListener);
+				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();
 		        if (i != -1)

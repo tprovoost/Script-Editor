@@ -38,6 +38,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.EventListener;
 
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -57,6 +58,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.EventListenerList;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.event.HyperlinkListener;
@@ -307,8 +309,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				panelName = f.getName();
 				scriptHandler.setFileName(f.getAbsolutePath());
 				updateTitle();
-				if (editor != null)
-					editor.addRecentFile(f);
+				fireSavedAs(f);
 				return true;
 			} catch (IOException e)
 			{
@@ -318,6 +319,32 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 		return false;
 	}
+	
+	// listener used to propagate the "Saved As" action up to the editor
+	// without making the ScriptingPanel dependent on the editor
+	public static interface SavedAsListener extends EventListener {
+		void savedAs(File f);
+	}
+	
+    private final EventListenerList savedAslisteners = new EventListenerList();
+    
+    public void addSavedAsListener(SavedAsListener listener) {
+    	savedAslisteners.add(SavedAsListener.class, listener);
+    }
+ 
+    public void removeSavedAsListener(SavedAsListener listener) {
+    	savedAslisteners.remove(SavedAsListener.class, listener);
+    }
+    
+    protected void fireSavedAs(File f) {
+    	for(SavedAsListener listener : getSavedAsListeners()) {
+    		listener.savedAs(f);
+    	}
+    }
+    
+    public SavedAsListener[] getSavedAsListeners() {
+        return savedAslisteners.getListeners(SavedAsListener.class);
+    }
 
 	/**
 	 * Save the file is dirty. Returns true if success or not dirty.
