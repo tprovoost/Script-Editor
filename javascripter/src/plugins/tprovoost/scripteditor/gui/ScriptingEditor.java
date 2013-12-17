@@ -899,7 +899,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			boolean ok = ((ButtonTabComponent) c).getPanel().close();
+			boolean ok = ((ButtonTabComponent) c).getPanel().close(getCurrentDirectory());
 			
 			if (ok)
 			{

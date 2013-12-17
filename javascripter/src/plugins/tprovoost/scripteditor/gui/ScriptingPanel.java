@@ -437,9 +437,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	/**
 	 * Ask the user whether to save the files.
 	 * 
+	 * @param defaultSaveDirectory Default directory
+	 * 
 	 * @return false is the close operation is cancelled
 	 */
-	boolean promptSave()
+	boolean promptSave(String defaultSaveDirectory)
 	{
         int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
                 "Some work has not been saved, are you sure you want to close?", getPanelName(),
@@ -452,7 +454,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (getSaveFile() != null)
             	return saveFile();
             else
-            	return showSaveFileDialog(editor.getCurrentDirectory());
+            	return showSaveFileDialog(defaultSaveDirectory);
         }
         
         return true;
@@ -462,14 +464,16 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 * Try to close this ScriptingPanel. The user will be asked whether to save the files
 	 * if they are modified. If the operation is not cancelled, the listeners are removed.
 	 * 
+	 * @param defaultSaveDirectory Default directory used if a file need to be saved
+	 * 
 	 * @return false is the close operation is cancelled
 	 */
-	boolean close()
+	boolean close(String defaultSaveDirectory)
 	{
 		boolean canClose = true;
         if (isDirty())
         {
-        	canClose = promptSave();
+        	canClose = promptSave(defaultSaveDirectory);
         }
 
         if (canClose)
@@ -489,9 +493,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	void cleanup()
 	{
-		// if (editor != null && editor.getConsoleOutput() != null)
-		// editor.getConsoleOutput().setText("");
-		
 		// Autocompletion is done with the following item
 		if (scriptHandler != null)
 		{
