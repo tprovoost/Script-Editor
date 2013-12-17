@@ -21,6 +21,7 @@ import javax.swing.text.Style;
 import org.python.core.PyException;
 import org.python.util.InteractiveConsole;
 
+import plugins.tprovoost.scripteditor.gui.ConsoleOutput;
 import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 public class PythonScriptingconsole extends Scriptingconsole
@@ -110,19 +111,10 @@ public class PythonScriptingconsole extends Scriptingconsole
 				String time = DateUtil.now("HH:mm:ss");
 				if (output != null)
 				{
-					Document doc = output.getDocument();
-					try
-					{
-						Style style = output.getStyle("normal");
-						if (style == null)
-							style = output.addStyle("normal", null);
-						if (waitingForMore)
-							doc.insertString(doc.getLength(), STRING_INPUT_MORE + getText() + "\n", style);
-						else
-							doc.insertString(doc.getLength(), STRING_INPUT + getText() + "\n", style);
-					} catch (BadLocationException e2)
-					{
-					}
+					if (waitingForMore)
+						output.append(STRING_INPUT_MORE + getText() + "\n");
+					else
+						output.append(STRING_INPUT + getText() + "\n");
 				} else
 					System.out.println(time + ": " + text);
 				try
@@ -148,7 +140,7 @@ public class PythonScriptingconsole extends Scriptingconsole
 
 	}
 
-	public void setOutput(JTextPane outputNew)
+	public void setOutput(ConsoleOutput outputNew)
 	{
 		output = outputNew;
 		final StringWriter sw = new StringWriter();
@@ -159,16 +151,7 @@ public class PythonScriptingconsole extends Scriptingconsole
 			{
 				if (output != null)
 				{
-					Document doc = output.getDocument();
-					try
-					{
-						Style style = output.getStyle("normal");
-						if (style == null)
-							style = output.addStyle("normal", null);
-						doc.insertString(doc.getLength(), s, style);
-					} catch (BadLocationException e2)
-					{
-					}
+					output.append(s);
 				}
 			}
 		};

@@ -11,7 +11,6 @@ import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 import icy.util.EventUtil;
 
-import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -28,15 +27,12 @@ import java.util.List;
 
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
-import javax.swing.JTextPane;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -50,7 +46,8 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
-import plugins.tprovoost.scripteditor.gui.PreferencesWindow;
+import plugins.tprovoost.scripteditor.gui.ConsoleOutput;
+import plugins.tprovoost.scripteditor.gui.Preferences;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
@@ -113,7 +110,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * This is where the warning / errors are displayed, contained in this
 	 * scrollpane.
 	 */
-	protected JTextPane errorOutput;
+	protected ConsoleOutput errorOutput;
 
 	/** Reference to the textarea scrollpane gutter. */
 	private Gutter gutter;
@@ -167,16 +164,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						Document doc = errorOutput.getDocument();
-						try
-						{
-							Style style = errorOutput.getStyle("normal");
-							if (style == null)
-								style = errorOutput.addStyle("normal", null);
-							doc.insertString(doc.getLength(), s, style);
-						} catch (BadLocationException e)
-						{
-						}
+						errorOutput.append(s);
 					}
 				});
 			} else
@@ -249,9 +237,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		this(provider, engineType, textArea, gutter, forceRun, null);
 	}
 
-	public void setOutput(JTextPane errorOutput)
+	public void setOutput(ConsoleOutput consoleOutput)
 	{
-		this.errorOutput = errorOutput;
+		this.errorOutput = consoleOutput;
 	}
 
 	/**
@@ -552,20 +540,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				}
 				if (errorOutput != null)
 				{
-					Document doc = errorOutput.getDocument();
-					try
-					{
-						Style style = errorOutput.getStyle("error");
-						if (style == null)
-						{
-							style = errorOutput.addStyle("error", null);
-							StyleConstants.setForeground(style, Color.red);
-						}
-						doc.insertString(doc.getLength(), textResult, style);
-					} catch (BadLocationException e)
-					{
-					}
-				} else
+					errorOutput.appendError(textResult);
+				}
+				else
 					System.out.print(textResult);
 			}
 		});
@@ -665,9 +642,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				// errorOutput.append(str + "\n");
 				// errorOutput.append("New Engine created" + "\n");
 				// errorOutput.append(str + "\n");
-				if (PreferencesWindow.getPreferencesWindow().isAutoClearOutputEnabled())
+				if (Preferences.getPreferences().isAutoClearOutputEnabled())
 				{
-					errorOutput.setText("");
+					errorOutput.clear();
 				}
 				// g.dispose();
 			}
@@ -966,7 +943,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		{
 			lastChange = true;
 			// System.out.println("changedUpdate");
-			if (PreferencesWindow.getPreferencesWindow().isAutoBuildEnabled())
+			if (Preferences.getPreferences().isAutoBuildEnabled())
 				timer.restart();
 		}
 

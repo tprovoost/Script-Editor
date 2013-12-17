@@ -13,35 +13,27 @@ import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.preferences.IcyPreferences;
-import icy.preferences.PluginPreferences;
+import icy.preferences.PluginsPreferences;
 import icy.preferences.XMLPreferences;
 import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
-import icy.util.EventUtil;
+import icy.util.XMLUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -49,21 +41,13 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollBar;
-import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.WindowConstants;
-import javax.swing.border.BevelBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.text.Document;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
@@ -84,20 +68,21 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	private JButton addPaneButton;
 
 	// Console
-	private JScrollPane scrollpane;
-	private JTextPane consoleOutput;
+	private ConsoleOutput consoleOutput;
 	private Scriptingconsole console;
 	private JButton btnClearConsole;
-	protected boolean scrollLocked;
 
 	// Preferences and recent files
 	private JMenu menuOpenRecent;
-	private ArrayList<String> previousFiles = new ArrayList<String>();
 	static String currentDirectoryPath = "";
 	private static final int ctrlMask = SystemUtil.getMenuCtrlMask();
-	private static final int MAX_RECENT_FILES = 20;
 	private static final String STRING_LAST_DIRECTORY = "lastDirectory";
-	private XMLPreferences prefs = PluginPreferences.getPreferences().node("scripteditor");
+	private XMLPreferences prefs = PluginsPreferences.getPreferences().node("plugins.tprovoost.scripteditor.main.ScriptEditorPlugin");
+
+	private final RecentFiles recentFiles = new RecentFiles(prefs);
+	
+	// flag that makes saveEditorState() a no-op
+	protected volatile boolean saveStateEnabled = true;
 
 	private static final boolean IS_PYTHON_INSTALLED = ScriptEngineHandler.factory.getEngineByExtension("py") != null;
 	private static final String PREF_IDX = "idxTab";
@@ -115,55 +100,27 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				BindingsScriptFrame.getInstance().setEngine(null);
 			}
 			console.close();
+			
+			// close all the tabs, asking the user confirmation
+			// do not save tab state while closing (would break the saved state)
+			saveStateEnabled = false;
 			closeAll();
-			PreferencesWindow.getPreferencesWindow().removeFrameListener(applyPrefsListener);
+			saveStateEnabled = true;
 		}
 	};
+	
+	// listener called when Icy exits, asking for user confirmation
 	private AcceptListener acceptlistener = new AcceptListener()
 	{
 		@Override
 		public boolean accept(Object source)
 		{
-			return closeAll();
-		}
-	};
-	
-	/**
-	 * This listener is called when the preferences window is closed.
-	 * It applies the preferences to the opened ScriptingPanels.
-	 */
-	private IcyFrameListener applyPrefsListener = new IcyFrameAdapter()
-	{
-		@Override
-		public void icyFrameClosed(IcyFrameEvent e)
-		{
-			PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
-
-			for (int i = 0; i < tabbedPane.getTabCount(); ++i)
-			{
-				Component comp = tabbedPane.getComponentAt(i);
-				if (comp instanceof ScriptingPanel)
-				{
-					RSyntaxTextArea textArea = ((ScriptingPanel) comp).getTextArea();
-					if (!textArea.getText().isEmpty())
-					{
-						boolean indentWanted = prefWin.isIndentSpacesEnabled();
-						// if (textArea.getTabsEmulated() != indentWanted)
-						// {
-						// a change occured
-						textArea.setTabsEmulated(indentWanted);
-						if (indentWanted)
-						{
-							textArea.convertSpacesToTabs();
-						} else
-						{
-							textArea.setTabSize(prefWin.indentSpacesCount());
-							textArea.convertTabsToSpaces();
-						}
-						// }
-					}
-				}
-			}
+			// close all the tabs, asking the user confirmation
+			// do not save tab state while closing (would break the saved state)
+			saveStateEnabled = false;
+			boolean canClose = closeAll();
+			saveStateEnabled = true;
+			return canClose;
 		}
 	};
 	
@@ -185,7 +142,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			public void setSelectedIndex(int index)
 			{
 				if (index < tabbedPane.getTabCount() - 1)
+				{
 					super.setSelectedIndex(index);
+					saveEditorState();
+				}
 			}
 		};
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -272,78 +232,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			}
 		});
 
-		consoleOutput = new JTextPane();
-		consoleOutput.setPreferredSize(new Dimension(400, 200));
-		consoleOutput.setEditable(false);
-		consoleOutput.setFont(new Font("sansserif", Font.PLAIN, 12));
-		consoleOutput.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-
-		// HANDLE RIGHT CLICK POPUP MENU
-		consoleOutput.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mouseClicked(MouseEvent e)
-			{
-				if (EventUtil.isRightMouseButton(e))
-				{
-					JPopupMenu popup = new JPopupMenu();
-					JMenuItem itemCopy = new JMenuItem("Copy");
-					itemCopy.addActionListener(new ActionListener()
-					{
-
-						@Override
-						public void actionPerformed(ActionEvent e)
-						{
-							consoleOutput.copy();
-						}
-					});
-					popup.add(itemCopy);
-					popup.show(consoleOutput, e.getX(), e.getY());
-					e.consume();
-				}
-			}
-		});
-
-		// Create the scrollpane around the output
-		scrollpane = new JScrollPane(consoleOutput);
-		scrollpane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-		scrollpane.setAutoscrolls(true);
-		final JScrollBar scrollbar = scrollpane.getVerticalScrollBar();
-
-		// LISTENER ON THE SCROLLBAR FOR SCROLL LOCK
-		scrollbar.addAdjustmentListener(new AdjustmentListener()
-		{
-
-			@Override
-			public void adjustmentValueChanged(AdjustmentEvent e)
-			{
-				if (scrollbar.getValueIsAdjusting())
-				{
-					if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
-						setScrollLocked(false);
-					else
-						setScrollLocked(true);
-				}
-				if (!isScrollLocked() && !consoleOutput.getText().isEmpty())
-				{
-					Document doc = consoleOutput.getDocument();
-					consoleOutput.setCaretPosition(doc.getLength());
-				}
-			}
-
-		});
-		scrollpane.addMouseWheelListener(new MouseWheelListener()
-		{
-
-			@Override
-			public void mouseWheelMoved(MouseWheelEvent e)
-			{
-				if (scrollbar.getValue() + scrollbar.getVisibleAmount() == scrollbar.getMaximum())
-					setScrollLocked(false);
-				else
-					setScrollLocked(true);
-			}
-		});
+		consoleOutput = new ConsoleOutput();
 
 		if (btnClearConsole != null)
 			btnClearConsole.removeActionListener(ScriptingEditor.this);
@@ -351,7 +240,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		btnClearConsole.addActionListener(ScriptingEditor.this);
 
 		JPanel bottomPanel = new JPanel(new BorderLayout());
-		bottomPanel.add(scrollpane, BorderLayout.CENTER);
+		bottomPanel.add(consoleOutput, BorderLayout.CENTER);
 
 		panelSouth = new JPanel(new BorderLayout());
 		bottomPanel.add(panelSouth, BorderLayout.SOUTH);
@@ -372,10 +261,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// exit listener
 		Icy.getMainInterface().addCanExitListener(acceptlistener);
 
-		// frame listener on preferences
-		PreferencesWindow.getPreferencesWindow().addFrameListener(applyPrefsListener);
-		
-		restoreState();
+		restoreEditorState();
 	}
 
 	/**
@@ -388,7 +274,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		return tabbedPane;
 	}
 	
-	void restoreState()
+	void restoreEditorState()
 	{
 		currentDirectoryPath = prefs.get(STRING_LAST_DIRECTORY, "");
 
@@ -397,13 +283,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		final ArrayList<String> toOpen = new ArrayList<String>();
 		for (XMLPreferences key : openedFiles.getChildren())
 		{
-			String fileName = key.get("name", "");
-			previousFiles.add(fileName);
-			boolean opened = key.getBoolean("opened", false);
-			key.putBoolean("opened", false);
-			if (opened)
-				toOpen.add(fileName);
+			String fileName = key.get("file0", "");
+			toOpen.add(fileName);
 		}
+		
+		recentFiles.load();
+		updateRecentFilesMenu();
 		
 		if (toOpen.isEmpty())
 		{
@@ -418,10 +303,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			@Override
 			public void run()
 			{
+				// disable the state saving (would break the state)
+				saveStateEnabled = false;
 				for (String s : toOpen)
 				{
 					try
 					{
+						// open the file, do not save editor state
 						openFile(new File(s));
 					} catch (IOException e1)
 					{
@@ -429,6 +317,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				}
 				int idx = openedFiles.getInt(PREF_IDX, 0);
 				tabbedPane.setSelectedIndex(idx);
+				// re-enable the state saving
+				saveStateEnabled = true;
 			}
 		});
 	}
@@ -436,12 +326,22 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	/**
 	 * Save the editor state (opened files, selected tab) to the disk
 	 */
-	private void saveState()
+	private void saveEditorState()
 	{
+		// do nothing when disabled
+		if (!saveStateEnabled)
+			return;
+		
 		int idx = tabbedPane.getSelectedIndex();
+		
 		// Saving state of the opened files.
 		XMLPreferences openedFiles = prefs.node("openedFiles");
-		openedFiles.putInt(PREF_IDX, 0);
+
+		// remove previous settings
+		// Note: I do not use openedFiles.removeChildren() because it leaves blank lines
+		// in the XML file
+		XMLUtil.removeAllChildren(openedFiles.getXMLNode());
+		
 		for (int i = 0; i < tabbedPane.getTabCount() - 1; ++i)
 		{
 			Component c = tabbedPane.getComponentAt(i);
@@ -450,13 +350,14 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				File f = ((ScriptingPanel) c).getSaveFile();
 				if (f != null)
 				{
-					String path = f.getAbsolutePath().replace('/', '.');
-					XMLPreferences key = openedFiles.node(path);
-					key.putBoolean("opened", true);
+					XMLPreferences key = openedFiles.node("entry" + i);
+					key.put("file0", f.getAbsolutePath());					
 				}
 			}
 		}
 		openedFiles.putInt(PREF_IDX, idx);
+		
+		recentFiles.save();
 		
 		// actually save on disk now
 		IcyPreferences.save();
@@ -472,8 +373,6 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			saveState();
-			
 			while (tabbedPane.getTabCount() > 1)
 			{
 				if (!closeTab(0))
@@ -519,7 +418,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		tabbedPane.addTab(name, panelCreated);
 		tabbedPane.setTitleAt(idx, name);
 		tabbedPane.repaint();
-		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(tabbedPane));
+		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, panelCreated));
 		tabbedPane.addTab("+", new JLabel());
 		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
@@ -566,22 +465,17 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
-		saveState();
+		saveEditorState();
 	}
 
-	private void updateRecentFiles()
+	private void updateRecentFilesMenu()
 	{
 		menuOpenRecent.removeAll();
-		ArrayList<String> copy = new ArrayList<String>(previousFiles);
-		for (int i = 0; i < copy.size(); ++i)
+		for (int i = 0; i < recentFiles.getFiles().size(); ++i)
 		{
-			String path = copy.get(i);
+			String path = recentFiles.getFiles().get(i);
 			JMenuItem item = createRecentFileItem(path);
-			if (item == null)
-			{
-				previousFiles.remove(path);
-				prefs.node("openedFiles").remove(path.replace('/', '.'));
-			} else
+			if (item != null)
 			{
 				menuOpenRecent.add(item);
 			}
@@ -594,7 +488,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		JMenuItem toReturn = null;
 		if (f.exists())
 		{
-			toReturn = new JMenuItem(f.getPath());
+			toReturn = new JMenuItem(f.getName() + " - " + f.getParent());
 			toReturn.addActionListener(new ActionListener()
 			{
 
@@ -853,8 +747,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				if (c instanceof ScriptingPanel)
 				{
 					ScriptingPanel panel = ((ScriptingPanel) c);
-					// panel.getScriptHandler().organizeImports();
-					panel.getScriptHandler().format();
+					panel.format();
 				}
 			}
 		});
@@ -988,7 +881,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// toReturn.add(menuTools);
 		toReturn.add(menuOptions);
 
-		updateRecentFiles();
+		updateRecentFilesMenu();
 
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 		addFrameListener(frameListener);
@@ -1006,10 +899,31 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			return ((ButtonTabComponent) c).deletePane();
+			boolean ok = ((ButtonTabComponent) c).getPanel().close();
+			
+			if (ok)
+			{
+				// remove the tab
+		        int selectedIdx = tabbedPane.getSelectedIndex();
+		        if (i != -1)
+		        {
+		        	tabbedPane.remove(i);
+		            if (i == selectedIdx)
+		            	tabbedPane.setSelectedIndex(0);
+		        }
+		        
+		        saveEditorState();
+				
+			}
+			return ok;
 		}
-		saveState();
 		return true;
+	}
+	
+	protected boolean closeTab(ButtonTabComponent tabComponent)
+	{
+		int i = tabbedPane.indexOfTabComponent(tabComponent);
+		return closeTab(i);
 	}
 
 	/**
@@ -1116,7 +1030,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		// a reference to the output.
 		console.setOutput(consoleOutput);
 
-		console.setFont(consoleOutput.getFont());
+		console.setFont(consoleOutput.getTextPane().getFont());
 
 		if (panelSouth != null)
 		{
@@ -1139,27 +1053,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 	public void addRecentFile(File f)
 	{
-		String path = f.getAbsolutePath();
-		String pathR = path.replace('/', '.');
-		XMLPreferences openedFiles = prefs.node("openedFiles");
-		if (!previousFiles.contains(path))
-		{
-			previousFiles.add(path);
-			XMLPreferences key = openedFiles.node(pathR);
-			key.put("name", path);
-		}
-		if (previousFiles.size() > MAX_RECENT_FILES)
-		{
-			path = previousFiles.get(0);
-			pathR = path.replace('/', '.');
-			XMLPreferences key = openedFiles.node(pathR);
-			if (key.exists())
-			{
-				openedFiles.remove(pathR);
-			}
-			previousFiles.remove(0);
-		}
-		updateRecentFiles();
+		recentFiles.add(f);
+		updateRecentFilesMenu();
 	}
 
 	public static String getDefaultFolder()
@@ -1167,20 +1062,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		return "";
 	}
 
-	private synchronized boolean isScrollLocked()
-	{
-		return scrollLocked;
-	}
-
-	private synchronized void setScrollLocked(boolean scrollLocked)
-	{
-		this.scrollLocked = scrollLocked;
-	}
-
 	/**
 	 * @return the consoleOutput
 	 */
-	public JTextPane getConsoleOutput()
+	public ConsoleOutput getConsoleOutput()
 	{
 		return consoleOutput;
 	}

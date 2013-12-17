@@ -54,7 +54,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
@@ -125,6 +124,21 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public JButton btnStop;
 	private ScriptingEditor editor;
 	private boolean integrated;
+	
+	/**
+	 * This listener is called when there are changes applied in the preferences window.
+	 * It applies the preferences to the opened ScriptingPanels.
+	 */
+	private PreferencesListener applyPrefsListener = new PreferencesListener() {
+		
+		@Override
+		public void preferencesChanged() {
+			Preferences preferences = Preferences.getPreferences();
+
+			textArea.setTabsEmulated(preferences.isSoftTabsEnabled());
+			textArea.setTabSize(preferences.indentSpacesCount());
+		}
+	};
 
 	public ScriptingPanel(ScriptingEditor editor, String name, String language)
 	{
@@ -206,6 +220,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		// set the default theme: eclipse.
 		setTheme("eclipse");
 		textArea.requestFocus();
+		
+		// load the preferences
+		applyPrefsListener.preferencesChanged();
+		
+		// frame listener on preferences
+		PreferencesWindow.getPreferencesWindow().addPreferencesListener(applyPrefsListener);
 	}
 
 	/**
@@ -396,7 +416,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	private void updateTitle()
 	{
 		// if this panel is in a tabbed pane: updates its title.
-		if (editor.getTabbedPane() != null)
+		if (editor != null && editor.getTabbedPane() != null)
 		{
 			int idx = editor.getTabbedPane().indexOfComponent(this);
 			if (idx != -1)
@@ -455,6 +475,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
         if (canClose)
         {
         	cleanup();
+    		PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
         	return true;
         }
         else
@@ -464,7 +485,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	}
 	
 	/**
-	 * Removes the listeners
+	 * Removes the script listeners, release completion objects...
 	 */
 	void cleanup()
 	{
@@ -495,7 +516,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	public synchronized void installLanguage(final String language)
 	{
-		final PreferencesWindow prefWin = PreferencesWindow.getPreferencesWindow();
+		final Preferences preferences = Preferences.getPreferences();
 
 		cleanup();
 
@@ -509,7 +530,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			{
 				provider = new IcyCompletionProvider();
 			}
-			boolean autoActivate = prefWin.isFullAutoCompleteEnabled();
+			boolean autoActivate = preferences.isFullAutoCompleteEnabled();
 			provider.setAutoActivationRules(autoActivate, ".");
 			ThreadUtil.invokeLater(new Runnable()
 			{
@@ -633,9 +654,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				if (scriptHandler != null)
 				{
 					scriptHandler.addScriptListener(ScriptingPanel.this);
-					scriptHandler.setVarInterpretation(prefWin.isVarInterpretationEnabled());
-					scriptHandler.setStrict(prefWin.isStrictModeEnabled());
-					scriptHandler.setForceRun(prefWin.isOverrideEnabled());
+					scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
+					scriptHandler.setStrict(preferences.isStrictModeEnabled());
+					scriptHandler.setForceRun(preferences.isOverrideEnabled());
 					// scriptHandler.interpret(false);
 					provider.setHandler(scriptHandler);
 					textArea.addKeyListener(scriptHandler);
@@ -960,7 +981,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 					}
 				}
 			}
-			PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+
+			Preferences preferences = Preferences.getPreferences();
+			
 			ThreadUtil.invokeLater(new Runnable()
 			{
 
@@ -974,9 +997,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			});
 			// consoleOutput.setText("");
 			scriptHandler.setNewEngine(true);
-			scriptHandler.setForceRun(prefs.isOverrideEnabled());
-			scriptHandler.setStrict(prefs.isStrictModeEnabled());
-			scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+			scriptHandler.setForceRun(preferences.isOverrideEnabled());
+			scriptHandler.setStrict(preferences.isStrictModeEnabled());
+			scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
 			scriptHandler.interpret(true);
 		}
 
@@ -994,7 +1017,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 					}
 				}
 			}
-			PreferencesWindow prefs = PreferencesWindow.getPreferencesWindow();
+			
+			Preferences preferences = Preferences.getPreferences();
+			
 			ThreadUtil.invokeLater(new Runnable()
 			{
 
@@ -1009,9 +1034,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			if (!integrated)
 			{
 				scriptHandler.setNewEngine(false);
-				scriptHandler.setForceRun(prefs.isOverrideEnabled());
-				scriptHandler.setStrict(prefs.isStrictModeEnabled());
-				scriptHandler.setVarInterpretation(prefs.isVarInterpretationEnabled());
+				scriptHandler.setForceRun(preferences.isOverrideEnabled());
+				scriptHandler.setStrict(preferences.isStrictModeEnabled());
+				scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
 				scriptHandler.interpret(true);
 			}
 		}
@@ -1148,6 +1173,30 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			{
 			}
 		}
+	}
+
+	/**
+	 * Format the text in this panel.
+	 * Do a space/tab conversion according to the preferences, and
+	 * perform a language-specific beautification.
+	 * 
+	 */
+	public void format() {
+		// getScriptHandler().organizeImports();
+		
+		// do the tab-to-space (or space-to-tab) conversion
+		Preferences preferences = Preferences.getPreferences();
+		RSyntaxTextArea textArea = getTextArea();
+		if (preferences.isSoftTabsEnabled())
+		{
+			textArea.convertTabsToSpaces();
+		} else
+		{
+			textArea.convertSpacesToTabs();
+		}
+		
+		// do a language-specific formatting
+		getScriptHandler().format();
 	}
 
 }
