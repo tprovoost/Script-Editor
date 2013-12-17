@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -50,6 +51,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel.SavedAsListener;
+import plugins.tprovoost.scripteditor.gui.ScriptingPanel.TitleChangedListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
@@ -132,6 +134,26 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		@Override
 		public void savedAs(File f) {
 			addRecentFile(f);
+		}
+	};
+	
+	// listener called when a child ScriptingPanel wants its title to be changed
+	private TitleChangedListener titleChangedListener = new TitleChangedListener()
+	{
+
+		@Override
+		public void titleChanged(ScriptingPanel panel, String title)
+		{
+			int idx = tabbedPane.indexOfComponent(panel);
+			if (idx != -1)
+			{
+				tabbedPane.setTitleAt(idx, title);
+				Component c = tabbedPane.getTabComponentAt(idx);
+				if (c instanceof JComponent)
+					((JComponent) c).revalidate();
+				else
+					c.repaint();
+			}
 		}
 	};
 	
@@ -423,6 +445,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			panelCreated = new ScriptingPanel(this, name, "JavaScript");
 		
 		panelCreated.addSavedAsListener(savedAsListener);
+		panelCreated.addTitleChangedListener(titleChangedListener);
 		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
@@ -919,6 +942,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			if (ok)
 			{
 				panel.removeSavedAsListener(savedAsListener);
+				panel.removeTitleChangedListener(titleChangedListener);
 				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();

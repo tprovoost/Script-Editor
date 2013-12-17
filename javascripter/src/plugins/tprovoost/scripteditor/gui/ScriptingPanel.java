@@ -18,7 +18,6 @@ import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.MethodDeclaration;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -47,7 +46,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -456,26 +454,41 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 		}
 		return file;
 	}
+	
+	// listener used to propagate the "Saved As" action up to the editor
+	// without making the ScriptingPanel dependent on the editor
+	public static interface TitleChangedListener extends EventListener {
+		void titleChanged(ScriptingPanel panel, String title);
+	}
+	
+    private final EventListenerList titleChangedListeners = new EventListenerList();
+    
+    public void addTitleChangedListener(TitleChangedListener listener) {
+    	titleChangedListeners.add(TitleChangedListener.class, listener);
+    }
+ 
+    public void removeTitleChangedListener(TitleChangedListener listener) {
+    	titleChangedListeners.remove(TitleChangedListener.class, listener);
+    }
+    
+    protected void fireTitleChanged(String title) {
+    	for(TitleChangedListener listener : getTitleChangedListeners()) {
+    		listener.titleChanged(this, title);
+    	}
+    }
+    
+    public TitleChangedListener[] getTitleChangedListeners() {
+        return titleChangedListeners.getListeners(TitleChangedListener.class);
+    }
 
 	private void updateTitle()
 	{
-		// if this panel is in a tabbed pane: updates its title.
-		if (editor != null && editor.getTabbedPane() != null)
-		{
-			int idx = editor.getTabbedPane().indexOfComponent(this);
-			if (idx != -1)
-			{
-				if (isDirty())
-					editor.getTabbedPane().setTitleAt(idx, panelName + "*");
-				else
-					editor.getTabbedPane().setTitleAt(idx, panelName);
-				Component c = editor.getTabbedPane().getTabComponentAt(idx);
-				if (c instanceof JComponent)
-					((JComponent) c).revalidate();
-				else
-					c.repaint();
-			}
-		}
+		String title;
+		if (isDirty())
+			title = panelName + "*";
+		else
+			title = panelName;
+		fireTitleChanged(title);
 	}
 	
 	/**
