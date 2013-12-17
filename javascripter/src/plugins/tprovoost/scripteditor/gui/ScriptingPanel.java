@@ -416,7 +416,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	private void updateTitle()
 	{
 		// if this panel is in a tabbed pane: updates its title.
-		if (editor.getTabbedPane() != null)
+		if (editor != null && editor.getTabbedPane() != null)
 		{
 			int idx = editor.getTabbedPane().indexOfComponent(this);
 			if (idx != -1)
