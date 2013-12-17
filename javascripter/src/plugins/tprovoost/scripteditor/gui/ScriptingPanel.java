@@ -56,8 +56,8 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.EventListenerList;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkEvent.EventType;
@@ -96,7 +96,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandle
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, HyperlinkListener
+public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkListener
 {
 	/** */
 	private static final long serialVersionUID = 1L;
@@ -171,7 +171,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		textArea.setAutoIndentEnabled(true);
 		textArea.setCloseCurlyBraces(true);
 		textArea.setMarkOccurrences(true);
-		textArea.addCaretListener(this);
 		textArea.setCodeFoldingEnabled(true);
 		textArea.setPaintMarkOccurrencesBorder(true);
 		textArea.setPaintMatchedBracketPair(true);
@@ -210,6 +209,24 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				NetworkUtil.openBrowser(e.getURL());
 			}
 
+		});
+		textArea.getDocument().addDocumentListener(new DocumentListener() {
+			
+			@Override
+			public void removeUpdate(DocumentEvent arg0) {
+				updateTitle();
+			}
+			
+			@Override
+			public void insertUpdate(DocumentEvent arg0) {
+				updateTitle();
+			}
+			
+			@Override
+			public void changedUpdate(DocumentEvent arg0) {
+				// this is fired when the style changes
+				// ignore
+			}
 		});
 
 		pane = new RTextScrollPane(textArea);
@@ -1078,12 +1095,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	public void setText(String text)
 	{
 		textArea.setText(text);
-	}
-
-	@Override
-	public void caretUpdate(CaretEvent e)
-	{
-		updateTitle();
 	}
 
 	/**
