@@ -467,9 +467,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		ScriptingPanel panelCreated;
 		String ext = FileUtil.getFileExtension(name, false);
 		if (ext.contentEquals("py"))
-			panelCreated = new ScriptingPanel(this, name, "Python");
+			panelCreated = new ScriptingPanel(name, "Python", consoleOutput);
 		else
-			panelCreated = new ScriptingPanel(this, name, "JavaScript");
+			panelCreated = new ScriptingPanel(name, "JavaScript", consoleOutput);
 		
 		panelCreated.addSavedAsListener(savedAsListener);
 		panelCreated.addTitleChangedListener(titleChangedListener);

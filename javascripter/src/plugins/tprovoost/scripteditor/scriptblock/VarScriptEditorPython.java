@@ -32,8 +32,8 @@ public class VarScriptEditorPython extends VarScriptEditorV3
     @Override
     protected JComponent createEditorComponent()
     {
-	panelIn = new ScriptingPanel(null, "Internal Editor", "Python", true);
-	panelOut = new ScriptingPanel(null, "External Editor", "Python", true);
+	panelIn = new ScriptingPanel("Internal Editor", "Python");
+	panelOut = new ScriptingPanel("External Editor", "Python");
 	panelOut.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
 	frame = new IcyFrame("External Editor", true, true, true, true);

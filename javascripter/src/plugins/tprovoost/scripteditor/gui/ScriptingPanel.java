@@ -120,7 +120,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	public JMenuItem btnRun;
 	private JSplitButton btnSplitRun;
 	public JButton btnStop;
-	private ScriptingEditor editor;
+	private ConsoleOutput consoleOutput; // may be null !
 	private boolean integrated;
 	
 	/**
@@ -138,9 +138,14 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 		}
 	};
 
-	public ScriptingPanel(ScriptingEditor editor, String name, String language)
+	public ScriptingPanel(String name, String language)
 	{
-		this(editor, name, language, false);
+		this(name, language, true, null);
+	}
+	
+	public ScriptingPanel(String name, String language, ConsoleOutput consoleOutput)
+	{
+		this(name, language, false, consoleOutput);
 	}
 
 	/**
@@ -151,11 +156,12 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	 * 
 	 * @param name
 	 */
-	public ScriptingPanel(ScriptingEditor editor, String name, String language, boolean integrated)
+	public ScriptingPanel(String name, String language, boolean integrated, ConsoleOutput consoleOutput)
 	{
 		this.panelName = name;
-		this.editor = editor;
 		this.integrated = integrated;
+		this.consoleOutput = consoleOutput;
+		
 		setLayout(new BorderLayout());
 
 		// creates the text area and set it up
@@ -677,8 +683,8 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 				}
 				if (scriptHandler != null)
 				{
-					if (!integrated && editor != null)
-						scriptHandler.setOutput(editor.getConsoleOutput());
+					if (!integrated && consoleOutput != null)
+						scriptHandler.setOutput(consoleOutput);
 					
 					scriptHandler.addScriptListener(ScriptingPanel.this);
 					scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
