@@ -28,6 +28,8 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
@@ -196,6 +198,20 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				catch (IOException e1)
 				{
 				}
+			}
+		}
+	};
+	
+	// listen to changes of language in a child panel
+	public ItemListener languageListener = new ItemListener()
+	{
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if (e.getStateChange() == ItemEvent.SELECTED)
+			{
+				String language = (String) e.getItem();
+				changeConsoleLanguage(language);
 			}
 		}
 	};
@@ -459,6 +475,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		panelCreated.addTitleChangedListener(titleChangedListener);
 		panelCreated.addFileDropListener(fileDropListener);
 		panelCreated.addHyperlinkListener(hyperlinkListener);
+		panelCreated.addLanguageListener(languageListener);
+		
+		// initialize the console corresponding to this panel
+		changeConsoleLanguage(panelCreated.getLanguage());
 		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
@@ -958,6 +978,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				panel.removeTitleChangedListener(titleChangedListener);
 				panel.removeFileDropListeners();
 				panel.removeHyperlinkListener(hyperlinkListener);
+				panel.removeLanguageListener(languageListener);
 				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();

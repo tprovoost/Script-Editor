@@ -656,9 +656,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 			@Override
 			public void run()
 			{
-				if (editor != null)
-					editor.changeConsoleLanguage(language);
-
 				// add the scripting handler, which handles the compilation
 				// and the parsing of the code for advanced features.
 				if (language.contentEquals("JavaScript"))
@@ -1221,5 +1218,13 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 
 	public void removeHyperlinkListener(HyperlinkListener listener) {
 		((RSyntaxTextArea) textArea).removeHyperlinkListener(listener);
+	}
+	
+	public void addLanguageListener(ItemListener listener) {
+		options.comboLanguages.addItemListener(listener);
+	}
+
+	public void removeLanguageListener(ItemListener listener) {
+		options.comboLanguages.removeItemListener(listener);
 	}
 }
