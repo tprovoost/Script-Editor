@@ -157,6 +157,25 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		}
 	};
 	
+	private FileDrop.FileDropListener fileDropListener = new FileDrop.FileDropListener()
+	{
+
+		@Override
+		public void filesDropped(File[] files)
+		{
+			for (File f : files)
+				if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
+					try
+					{
+						openFile(f);
+					} catch (IOException e)
+					{
+					}
+				else
+					Loader.load(f, true);
+		}
+	};
+	
 	private JPanel panelSouth;
 
 	public ScriptingEditor()
@@ -211,42 +230,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 			}
 		});
-		new FileDrop(getExternalFrame(), new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-						try
-						{
-							openFile(f);
-						} catch (IOException e)
-						{
-						}
-					else
-						Loader.load(f, true);
-			}
-		});
-		new FileDrop(getInternalFrame(), new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-						try
-						{
-							openFile(f);
-						} catch (IOException e)
-						{
-						}
-					else
-						Loader.load(f, true);
-			}
-		});
+		
+		new FileDrop(getExternalFrame(), fileDropListener);
+		new FileDrop(getInternalFrame(), fileDropListener);
+		
 		addPaneButton = new IcyButton(new IcyIcon("plus"));
 		addPaneButton.setBorderPainted(false);
 		addPaneButton.setPreferredSize(new Dimension(20, 20));
@@ -446,6 +433,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		
 		panelCreated.addSavedAsListener(savedAsListener);
 		panelCreated.addTitleChangedListener(titleChangedListener);
+		panelCreated.addFileDropListener(fileDropListener);
 		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
@@ -943,6 +931,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			{
 				panel.removeSavedAsListener(savedAsListener);
 				panel.removeTitleChangedListener(titleChangedListener);
+				panel.removeFileDropListeners();
 				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();

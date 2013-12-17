@@ -1,7 +1,6 @@
 package plugins.tprovoost.scripteditor.gui;
 
 import icy.file.FileUtil;
-import icy.file.Loader;
 import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
@@ -13,6 +12,7 @@ import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
 import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
+import icy.system.FileDrop.FileDropListener;
 import icy.system.thread.ThreadUtil;
 import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.MethodDeclaration;
@@ -175,29 +175,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 		textArea.setPaintTabLines(true);
 		textArea.setTabsEmulated(false);
 		((RSyntaxTextArea) textArea).addHyperlinkListener(this);
-		new FileDrop(textArea, new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-				{
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-					{
-						try
-						{
-							ScriptingPanel.this.editor.openFile(f);
-						} catch (IOException e)
-						{
-						}
-					} else
-					{
-						Loader.load(f, true);
-					}
-				}
-			}
-		});
 		textArea.addHyperlinkListener(new HyperlinkListener()
 		{
 
@@ -1251,4 +1228,11 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 		getScriptHandler().format();
 	}
 
+	public void addFileDropListener(FileDropListener fileDropListener) {
+		new FileDrop(textArea, fileDropListener);
+	}
+
+	public void removeFileDropListeners() {
+		FileDrop.remove(textArea);
+	}
 }
