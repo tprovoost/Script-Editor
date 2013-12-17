@@ -32,6 +32,7 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
@@ -49,6 +50,9 @@ import javax.swing.KeyStroke;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import javax.swing.event.HyperlinkEvent.EventType;
 
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel.SavedAsListener;
 import plugins.tprovoost.scripteditor.gui.ScriptingPanel.TitleChangedListener;
@@ -173,6 +177,26 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 					}
 				else
 					Loader.load(f, true);
+		}
+	};
+	
+	private HyperlinkListener hyperlinkListener = new HyperlinkListener()
+	{
+
+		@Override
+		public void hyperlinkUpdate(HyperlinkEvent e) {
+			if (e.getEventType() == EventType.ACTIVATED)
+			{
+				URL url = e.getURL();
+				String res = url == null ? e.getDescription() : url.getFile();
+				try
+				{
+					openFile(new File(res));
+				}
+				catch (IOException e1)
+				{
+				}
+			}
 		}
 	};
 	
@@ -434,6 +458,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		panelCreated.addSavedAsListener(savedAsListener);
 		panelCreated.addTitleChangedListener(titleChangedListener);
 		panelCreated.addFileDropListener(fileDropListener);
+		panelCreated.addHyperlinkListener(hyperlinkListener);
 		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
@@ -932,6 +957,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				panel.removeSavedAsListener(savedAsListener);
 				panel.removeTitleChangedListener(titleChangedListener);
 				panel.removeFileDropListeners();
+				panel.removeHyperlinkListener(hyperlinkListener);
 				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();

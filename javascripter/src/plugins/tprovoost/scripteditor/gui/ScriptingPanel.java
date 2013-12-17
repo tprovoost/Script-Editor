@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.EventListener;
 
@@ -58,7 +57,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.EventListenerList;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
@@ -94,7 +92,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandle
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkListener
+public class ScriptingPanel extends JPanel implements ScriptListener
 {
 	/** */
 	private static final long serialVersionUID = 1L;
@@ -174,7 +172,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 		textArea.setPaintMatchedBracketPair(true);
 		textArea.setPaintTabLines(true);
 		textArea.setTabsEmulated(false);
-		((RSyntaxTextArea) textArea).addHyperlinkListener(this);
 		textArea.addHyperlinkListener(new HyperlinkListener()
 		{
 
@@ -1188,22 +1185,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 		}
 	}
 
-	@Override
-	public void hyperlinkUpdate(HyperlinkEvent e)
-	{
-		if (e.getEventType() == EventType.ACTIVATED)
-		{
-			URL url = e.getURL();
-			String res = url == null ? e.getDescription() : url.getFile();
-			try
-			{
-				editor.openFile(new File(res));
-			} catch (IOException e1)
-			{
-			}
-		}
-	}
-
 	/**
 	 * Format the text in this panel.
 	 * Do a space/tab conversion according to the preferences, and
@@ -1234,5 +1215,13 @@ public class ScriptingPanel extends JPanel implements ScriptListener, HyperlinkL
 
 	public void removeFileDropListeners() {
 		FileDrop.remove(textArea);
+	}
+	
+	public void addHyperlinkListener(HyperlinkListener listener) {
+		((RSyntaxTextArea) textArea).addHyperlinkListener(listener);
+	}
+
+	public void removeHyperlinkListener(HyperlinkListener listener) {
+		((RSyntaxTextArea) textArea).removeHyperlinkListener(listener);
 	}
 }
