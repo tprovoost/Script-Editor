@@ -833,7 +833,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 		removeAll();
 		add(pane);
 
-		if (editor != null)
+		if (!integrated)
 			add(options, BorderLayout.NORTH);
 		revalidate();
 	}
