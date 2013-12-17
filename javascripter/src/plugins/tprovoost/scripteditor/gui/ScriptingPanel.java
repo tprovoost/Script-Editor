@@ -671,20 +671,18 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 					// textArea,
 					// pane.getGutter(), true);
 					// }
-					if (!integrated && editor != null)
-						scriptHandler.setOutput(editor.getConsoleOutput());
-
 				} else if (language.contentEquals("Python"))
 				{
 					scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
-					if (!integrated)
-						scriptHandler.setOutput(editor.getConsoleOutput());
 				} else
 				{
 					scriptHandler = null;
 				}
 				if (scriptHandler != null)
 				{
+					if (!integrated && editor != null)
+						scriptHandler.setOutput(editor.getConsoleOutput());
+					
 					scriptHandler.addScriptListener(ScriptingPanel.this);
 					scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
 					scriptHandler.setStrict(preferences.isStrictModeEnabled());
