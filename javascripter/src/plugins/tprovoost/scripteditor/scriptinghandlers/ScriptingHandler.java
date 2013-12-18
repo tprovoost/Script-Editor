@@ -628,6 +628,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	public void run()
 	{
+		ScriptEngine engine;
+		
 		if (isNewEngine())
 		{
 			if (errorOutput != null)
@@ -648,16 +650,16 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				}
 				// g.dispose();
 			}
-			ScriptEngine engine = createNewEngine();
-			thread = new EvalThread(engine, textArea.getText());
-			thread.setPriority(Thread.MIN_PRIORITY);
-			thread.start();
+			engine = createNewEngine();
+
 		} else
 		{
-			ScriptEngine engine = getEngine();
-			EvalThread thread = new EvalThread(engine, textArea.getText());
-			thread.start();
+			engine = getEngine();
 		}
+		
+		thread = new EvalThread(engine, textArea.getText());
+		thread.setPriority(Thread.MIN_PRIORITY);
+		thread.start();
 	}
 
 	/**
