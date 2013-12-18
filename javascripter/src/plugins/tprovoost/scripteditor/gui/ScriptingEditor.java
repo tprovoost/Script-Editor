@@ -251,23 +251,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				if (!(comp instanceof ScriptingPanel))
 					return;
 				ScriptingPanel panel = (ScriptingPanel) comp;
-				final ScriptingHandler handler = panel.getScriptHandler();
-				ThreadUtil.bgRun(new Runnable()
-				{
-
-					@Override
-					public void run()
-					{
-						int max = 20;
-						int i = 0;
-						while (handler == null && i < max)
-						{
-							ThreadUtil.sleep(500);
-							++i;
-						}
-					}
-				});
-
+				// update the console language according to the selected panel
+				changeConsoleLanguage(panel.getLanguage());
 			}
 		});
 		
