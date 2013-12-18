@@ -60,6 +60,8 @@ public class PyScriptEngine extends ScriptEngine
 		{
 			getErrorWriter().write(pe.toString());
 			getErrorWriter().flush();
+			//re-throw the exception so that it can be handled by the GUI
+			throw pe;
 		}
 	}
 
@@ -86,6 +88,8 @@ public class PyScriptEngine extends ScriptEngine
 		{
 			getErrorWriter().write(pe.toString());
 			getErrorWriter().flush();
+			//re-throw the exception so that it can be handled by the GUI
+			throw pe;
 		}
 	}
 
