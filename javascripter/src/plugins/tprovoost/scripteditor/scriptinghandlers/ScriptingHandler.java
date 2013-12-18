@@ -76,8 +76,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	/** Reference to the provider used for the autocompletion. */
 	protected DefaultCompletionProvider provider;
 
-	private String engineType;
-
 	/**
 	 * Is the compilation a success? The script will never be run if the
 	 * compilation / parsing contains issues.
@@ -259,7 +257,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 */
 	private void setLanguage(String engineType)
 	{
-		this.engineType = engineType;
 		try
 		{
 			installDefaultLanguageCompletions(engineType);
@@ -518,36 +515,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		});
 	}
 
-	private void updateOutput()
-	{
-		ThreadUtil.invokeLater(new Runnable()
-		{
-
-			@Override
-			public void run()
-			{
-				if (thread != null)
-				{
-					ThreadUtil.sleep(200);
-				}
-				String textResult = "";
-				for (ScriptEditorException see : ignoredLines)
-				{
-					String msg = see.getLocalizedMessage();
-
-					// System.out.println(msg);
-					textResult += msg + "\n";
-				}
-				if (errorOutput != null)
-				{
-					errorOutput.appendError(textResult);
-				}
-				else
-					System.out.print(textResult);
-			}
-		});
-	}
-
 	/**
 	 * This method interprets the code in one or two steps (depending on the
 	 * user willing to immediately run the code or not). First, the code is
@@ -679,7 +646,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			ArrayList<Method> functions = engineHandler.getFunctions();
 
 			// unregister the old engine (will do the housekeeping)
-			engineHandler.disposeEngine(oldEngine);
+			ScriptEngineHandler.disposeEngine(oldEngine);
 			
 			// create a new engine
 			String newEngineType = oldEngine.getName();
@@ -1012,7 +979,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		private String s;
 		private ScriptEngine evalEngine;
-		private String filename;
 
 		public EvalThread(ScriptEngine engine, String script)
 		{

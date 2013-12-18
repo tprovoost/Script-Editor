@@ -9,7 +9,6 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
 import icy.util.ClassUtil;
 
-import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -32,11 +31,7 @@ import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
-import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
@@ -48,7 +43,6 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ErrorReporter;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeArray;
@@ -98,84 +92,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	 * {@link #resolveCallType(AstNode, String, boolean)}.
 	 */
 	private LinkedList<IcyFunctionBlock> functionBlocksToResolve = new LinkedList<IcyFunctionBlock>();
-	private ErrorReporter errorReporter = new ErrorReporter()
-	{
-
-		private EvaluatorException exception;
-
-		@Override
-		public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			if (errorOutput != null)
-			{
-				Document doc = errorOutput.getTextPane().getDocument();
-				try
-				{
-					Style style = errorOutput.getTextPane().getStyle("warning");
-					if (style == null)
-						style = errorOutput.getTextPane().addStyle("warning", null);
-					StyleConstants.setForeground(style, Color.blue);
-					String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column (" + lineOffset + ")";
-					doc.insertString(doc.getLength(), text + "\n", style);
-				} catch (BadLocationException e)
-				{
-				}
-			}
-		}
-
-		@Override
-		public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			if (exception != null)
-			{
-				EvaluatorException e = exception;
-				exception = null;
-				return e;
-			} else
-			{
-				if (errorOutput != null)
-				{
-					try
-					{
-						Style style = errorOutput.getTextPane().getStyle("error");
-						if (style == null)
-						{
-							style = errorOutput.getTextPane().addStyle("error", null);
-							StyleConstants.setForeground(style, Color.red);
-						}
-						String inLineSource = "";
-						String atColumn = "";
-						if (lineSource != null)
-						{
-							inLineSource = "\n in \"" + lineSource;
-						}
-						if (lineOffset > 0)
-						{
-							atColumn = "\"\n at column (" + lineOffset + ")";
-						}
-						Document doc = errorOutput.getTextPane().getDocument();
-						String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
-						doc.insertString(doc.getLength(), lastErrortext + "\n", style);
-					} catch (BadLocationException e)
-					{
-					}
-				}
-			}
-			return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
-		}
-
-		@Override
-		public void error(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column (" + lineOffset + ")";
-			exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
-			if (errorOutput != null)
-			{
-				errorOutput.appendError(lastErrortext + "\n");
-			}
-		}
-	};
-
 	public JSScriptingHandlerRhino(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation)
 	{
 		super(provider, "javascript", textArea, gutter, autocompilation);

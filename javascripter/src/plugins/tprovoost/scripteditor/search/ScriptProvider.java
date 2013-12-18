@@ -1,13 +1,11 @@
 package plugins.tprovoost.scripteditor.search;
 
-import icy.file.FileUtil;
 import icy.gui.frame.progress.DownloadFrame;
 import icy.network.NetworkUtil;
 import icy.network.URLUtil;
 import icy.search.SearchResult;
 import icy.search.SearchResultConsumer;
 import icy.search.SearchResultProducer;
-import icy.sequence.SequenceUtil;
 import icy.system.SystemUtil;
 import icy.system.thread.ThreadUtil;
 import icy.util.StringUtil;

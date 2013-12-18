@@ -62,7 +62,6 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 /**
  * Main GUI of the class

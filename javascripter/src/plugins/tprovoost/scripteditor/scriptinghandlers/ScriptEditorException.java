@@ -2,6 +2,7 @@ package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import javax.script.ScriptException;
 
+@SuppressWarnings("serial")
 public class ScriptEditorException extends ScriptException
 {
 
