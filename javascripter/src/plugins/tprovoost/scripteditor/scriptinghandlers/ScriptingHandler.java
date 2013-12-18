@@ -503,7 +503,13 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 						// {
 						// tooltip = tooltip.substring(0, 127) + "...";
 						// }
-						gutter.addLineTrackingIcon(see.getLineNumber() - 1, icon, tooltip);
+
+						// Warning! The Gutter displays lines starting from 1, BUT its
+						// internal implementation is based on a JTextArea that expects
+						// the line numbers to be counted from 0.
+						int textAreaLineNumber = see.getLineNumber()-1;
+
+						gutter.addLineTrackingIcon(textAreaLineNumber, icon, tooltip);
 						gutter.repaint();
 					} catch (BadLocationException e)
 					{

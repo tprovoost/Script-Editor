@@ -86,6 +86,11 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 public class JSScriptingHandlerRhino extends ScriptingHandler
 {
 	private String currentText;
+	
+	// used to tell Rhino that it should count the lines starting from 1,
+	// as in the GUI
+	private static int LINE_NUMBER_START = 1;
+	
 
 	/**
 	 * Contains all functions created in
@@ -517,7 +522,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 			try
 			{
-				root = parser.parse(s, "", 1);
+				root = parser.parse(s, "", LINE_NUMBER_START);
 			} catch (EvaluatorException e)
 			{
 				throw new ScriptEditorException(e.getMessage(), fileName, e.lineNumber(), e.columnNumber(), true);
@@ -2535,7 +2540,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 
 	@Override
 	protected void processError(String s, Exception e)
-	{
+	{	
 		RTextArea textArea = null;
 		try
 		{
@@ -2548,19 +2553,24 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			EvaluatorException ee = (EvaluatorException) e;
 			// get the line and column of error
-			int lineError = ee.lineNumber() - 1;
+			int lineError = ee.lineNumber();
 			int columnNumber = ee.columnNumber();
 			if (columnNumber == -1)
 				columnNumber = 0;
+
+			// Warning! JTextArea counts lines from 0, whereas the GUI displays them starting from 1.
+			// To get consistent error messages for the user, we tell Rhino to count from 1.
+			int textAreaErrorLine = lineError - 1;
+			
 			try
 			{
 				// verify if exists (> 0 and < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
+				if (textAreaErrorLine >= 0 && textAreaErrorLine <= textArea.getLineCount())
 				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
+					int lineStartOffset = textArea.getLineStartOffset(textAreaErrorLine);
+					int lineEndOffset = textArea.getLineEndOffset(textAreaErrorLine);
 
-					String textToRemove = s.substring(lineOffset, lineEndOffset);
+					String textToRemove = s.substring(lineStartOffset, lineEndOffset);
 
 					textToRemove = "\n";
 					for (ScriptEditorException see : ignoredLines)
@@ -2569,7 +2579,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 							return;
 					}
 					ignoredLines.add(new ScriptEditorException(ee.getMessage(), fileName, lineError, true));
-					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
+					s = s.substring(0, lineStartOffset) + textToRemove + s.substring(lineEndOffset);
 
 					// interpret again, without the faulty line.
 					interpret(s);
@@ -2593,25 +2603,36 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		{
 			ScriptEditorException se = (ScriptEditorException) e;
 			// get line error
-			int lineError = lineNumber(se) - 1;
+			int lineError = lineNumber(se);
 			Integer columnNumberI = columnNumber(se);
 			int columnNumber = columnNumberI != null ? columnNumberI : -1;
 			if (columnNumber == -1)
 				columnNumber = 0;
+			
+			// Warning! JTextArea counts lines from 0, whereas the GUI displays them starting from 1.
+			// To get consistent error messages for the user, we tell Rhino to count from 1.
+			int textAreaErrorLine = lineError - 1;
+			
 			try
 			{
 				// verify integrity (>0, < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
+				if (textAreaErrorLine >= 0 && textAreaErrorLine <= textArea.getLineCount())
 				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
+					int lineStartOffset = textArea.getLineStartOffset(textAreaErrorLine);
+					int lineEndOffset = textArea.getLineEndOffset(textAreaErrorLine);
+					
+					s = s.substring(0, lineStartOffset) + "\n" + s.substring(lineEndOffset);
+					
 					for (ScriptEditorException see : ignoredLines)
 					{
+						// We find the same error again...
+						// This can occur when the actual error lies at the line immediately above
+						// the one that was identified first.
+						// In that case, abandon and return!
 						if (see.getLineNumber() == lineError)
 							return;
 					}
+					
 					ignoredLines.add(se);
 
 					// interpret again, without the faulty line.

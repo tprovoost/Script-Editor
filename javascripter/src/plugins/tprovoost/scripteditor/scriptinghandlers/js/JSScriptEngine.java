@@ -26,6 +26,10 @@ public class JSScriptEngine extends ScriptEngine
 
 	public ScriptableObject scriptable;
 	public String lastFileName = "";
+	
+	// used to tell Rhino that it should count the lines starting from 1,
+	// as in the GUI
+	private static int LINE_NUMBER_START = 1;
 
 	public JSScriptEngine()
 	{
@@ -53,7 +57,7 @@ public class JSScriptEngine extends ScriptEngine
 			// Object o = bs.get(key);
 			// scriptable.put(key, scriptable, o);
 			// }
-			Script script = context.compileString(s, "script", 0, null);
+			Script script = context.compileString(s, "script", LINE_NUMBER_START, null);
 			script.exec(context, scriptable);
 			// for (Object o : scriptable.getIds())
 			// {
@@ -63,11 +67,11 @@ public class JSScriptEngine extends ScriptEngine
 		} catch (EvaluatorException e)
 		{
 			getErrorWriter().write(e.getMessage());
-			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -106,16 +110,16 @@ public class JSScriptEngine extends ScriptEngine
 		// context.setErrorReporter(errorReporter);
 		try
 		{
-			Script script = context.compileString(s, "script", 0, null);
+			Script script = context.compileString(s, "script", LINE_NUMBER_START, null);
 			script.exec(context, scriptable);
 		} catch (EvaluatorException e)
 		{
 			getErrorWriter().write(e.getMessage());
-			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -190,16 +194,16 @@ public class JSScriptEngine extends ScriptEngine
 			context.setApplicationClassLoader(PluginLoader.getLoader());
 			try
 			{
-				Script script = context.compileString(s, "script", 0, null);
+				Script script = context.compileString(s, "script", LINE_NUMBER_START, null);
 				script.exec(context, scriptable);
 			} catch (EvaluatorException e)
 			{
 				// getErrorWriter().write(e.getMessage());
-				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber() + 1, e.columnNumber());
+				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 			} catch (RhinoException e3)
 			{
 				// getErrorWriter().write(e3.getMessage());
-				throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber() + 1, e3.columnNumber());
+				throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 			} finally
 			{
 				Context.exit();
