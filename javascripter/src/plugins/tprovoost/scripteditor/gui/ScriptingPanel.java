@@ -1,16 +1,13 @@
 package plugins.tprovoost.scripteditor.gui;
 
 import icy.file.FileUtil;
-import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
-import icy.image.ImageUtil;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
-import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
 import icy.system.FileDrop.FileDropListener;
 import icy.system.thread.ThreadUtil;
@@ -18,14 +15,12 @@ import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.MethodDeclaration;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -35,22 +30,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.EventListener;
 
-import javax.script.ScriptEngineFactory;
-import javax.script.ScriptEngineManager;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.event.DocumentEvent;
@@ -79,13 +63,11 @@ import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
-import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptblock.Javascript;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
@@ -96,11 +78,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 {
 	/** */
 	private static final long serialVersionUID = 1L;
-
-	public static final BufferedImage imgPlayback2 = ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/playback_erase_play_alpha.png"));
-
-	public static final int STRUT_SIZE = 4;
 
 	private ScriptingHandler scriptHandler;
 	private RSyntaxTextArea textArea;
@@ -117,9 +94,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	/** Auto-completion system. Uses provider item. */
 	private IcyAutoCompletion ac;
 
-	public JMenuItem btnRun;
-	private JSplitButton btnSplitRun;
-	public JButton btnStop;
 	private ConsoleOutput consoleOutput; // may be null !
 	private boolean integrated;
 	
@@ -135,6 +109,50 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 
 			textArea.setTabsEmulated(preferences.isSoftTabsEnabled());
 			textArea.setTabSize(preferences.indentSpacesCount());
+		}
+	};
+	
+	// listen to changes of language in a child panel
+	private ItemListener languageListener = new ItemListener()
+	{
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if (e.getStateChange() == ItemEvent.SELECTED)
+			{
+				String language = (String) e.getItem();
+				installLanguage(language);
+			}
+		}
+	};
+	
+	private ActionListener runInNewListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			runInNew();
+		}
+	};
+
+	private ActionListener runInSameListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			runInSame();
+		}
+	};
+	
+	private ActionListener stopListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			stopScript();
 		}
 	};
 
@@ -212,7 +230,11 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 
 		// creates the options panel
 		options = new PanelOptions(language);
-		installLanguage(options.comboLanguages.getSelectedItem().toString());
+		installLanguage(options.getLanguage());
+		options.addLanguageListener(languageListener);
+		options.addRunInSameListener(runInSameListener);
+		options.addRunInNewListener(runInNewListener);
+		options.addStopListener(stopListener);
 
 		// set the default theme: eclipse.
 		setTheme("eclipse");
@@ -517,6 +539,10 @@ public class ScriptingPanel extends JPanel implements ScriptListener
         {
         	cleanup();
     		PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
+    		options.removeLanguageListener(languageListener);
+    		options.removeRunInSameListener(runInSameListener);
+    		options.removeRunInNewListener(runInNewListener);
+    		options.removeStopListener(stopListener);
         	return true;
         }
         else
@@ -602,8 +628,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 				@Override
 				public void run()
 				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
+					options.setRunButtonsEnabled(false);
 				}
 			});
 			return;
@@ -845,237 +870,6 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	}
 
 	/**
-	 * This panel creates the tools needed to choose the language (for each
-	 * language) and run the code.
-	 * 
-	 * @author Thomas Provoost
-	 */
-	class PanelOptions extends JPanel
-	{
-
-		/** */
-		private static final long serialVersionUID = 1L;
-		private JComboBox comboLanguages;
-
-		private ActionListener runInNewListener = new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				if (!lastIsNew)
-				{
-					lastIsNew = true;
-					btnSplitRun.setIcon(new IcyIcon("playback_play", 16));
-					btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
-					btnSplitRun.repaint();
-				}
-				runInNew();
-			}
-		};
-
-		private ActionListener runInSameListener = new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				if (lastIsNew)
-				{
-					lastIsNew = false;
-					btnSplitRun.setIcon(new IcyIcon(imgPlayback2, 16));
-					btnSplitRun.setToolTipText("All variables in the bindings are re-usable.");
-					btnSplitRun.repaint();
-				}
-				runInSame();
-			}
-		};
-		protected boolean lastIsNew = true;
-
-		public PanelOptions()
-		{
-			this("JavaScript");
-		}
-
-		public PanelOptions(String language)
-		{
-			// final JButton btnBuild = new JButton("Verify");
-			btnRun = new JMenuItem("Run in Current Context", new IcyIcon(imgPlayback2, 16));
-			btnRun.setToolTipText("All variables in the bindings are re-usable.");
-
-			btnSplitRun = new JSplitButton("  ", new IcyIcon("playback_play", 16));
-			btnSplitRun.setPreferredSize(new Dimension(45, 20));
-			btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
-
-			JMenuItem btnRunNew2 = new JMenuItem("Run in New Context", new IcyIcon("playback_play", 16));
-			btnRunNew2.setToolTipText("Creates a new context and run the script. The previous context and its bindings will be lost.");
-
-			JPopupMenu popupRun = new JPopupMenu();
-			popupRun.add(btnRunNew2);
-			popupRun.add(btnRun);
-			btnSplitRun.setPopupMenu(popupRun);
-
-			btnStop = new IcyButton(new IcyIcon("square_shape", 16));
-			btnStop.setToolTipText("Stops the current script.");
-			btnStop.setEnabled(false);
-
-			setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-			setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-
-			add(new JLabel("Lang: "));
-			ArrayList<String> values = new ArrayList<String>();
-			ScriptEngineManager manager = new ScriptEngineManager(PluginLoader.getLoader());
-			for (ScriptEngineFactory factory : manager.getEngineFactories())
-			{
-				values.add(ScriptEngineHandler.getLanguageName(factory));
-			}
-			comboLanguages = new JComboBox(values.toArray());
-			comboLanguages.setSelectedItem(language);
-			comboLanguages.addItemListener(new ItemListener()
-			{
-				@Override
-				public void itemStateChanged(final ItemEvent e)
-				{
-					ThreadUtil.bgRun(new Runnable()
-					{
-
-						@Override
-						public void run()
-						{
-							if (e.getStateChange() == ItemEvent.SELECTED)
-							{
-								String language = comboLanguages.getSelectedItem().toString();
-								installLanguage(language);
-							}
-						}
-					});
-
-				}
-			});
-			add(comboLanguages);
-
-			if (integrated)
-				return;
-
-			btnRun.addActionListener(runInSameListener);
-
-			btnSplitRun.addSplitButtonActionListener(new SplitButtonActionListener()
-			{
-
-				@Override
-				public void splitButtonClicked(ActionEvent e)
-				{
-				}
-
-				@Override
-				public void buttonClicked(ActionEvent e)
-				{
-					if (lastIsNew)
-						runInNew();
-					else
-						runInSame();
-				}
-			});
-			btnRunNew2.addActionListener(runInNewListener);
-
-			btnStop.addActionListener(new ActionListener()
-			{
-
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					if (scriptHandler == null)
-						return;
-					if (scriptHandler.isRunning())
-					{
-						scriptHandler.killScript();
-					}
-				}
-			});
-
-			add(Box.createHorizontalStrut(STRUT_SIZE * 3));
-			add(btnSplitRun);
-			add(Box.createHorizontalStrut(STRUT_SIZE));
-			add(btnStop);
-			add(Box.createHorizontalGlue());
-		}
-
-		protected void runInNew()
-		{
-			if (scriptHandler == null)
-				return;
-			if (!integrated)
-			{
-				if (isDirty())
-				{
-					if (saveFile != null)
-					{
-						saveFile();
-					}
-				}
-			}
-
-			Preferences preferences = Preferences.getPreferences();
-			
-			ThreadUtil.invokeLater(new Runnable()
-			{
-
-				@Override
-				public void run()
-				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
-					btnStop.setEnabled(true);
-				}
-			});
-			// consoleOutput.setText("");
-			scriptHandler.setNewEngine(true);
-			scriptHandler.setForceRun(preferences.isOverrideEnabled());
-			scriptHandler.setStrict(preferences.isStrictModeEnabled());
-			scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
-			scriptHandler.interpret(true);
-		}
-
-		protected void runInSame()
-		{
-			if (scriptHandler == null)
-				return;
-			if (!integrated)
-			{
-				if (isDirty())
-				{
-					if (saveFile != null)
-					{
-						saveFile();
-					}
-				}
-			}
-			
-			Preferences preferences = Preferences.getPreferences();
-			
-			ThreadUtil.invokeLater(new Runnable()
-			{
-
-				@Override
-				public void run()
-				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
-					btnStop.setEnabled(true);
-				}
-			});
-			if (!integrated)
-			{
-				scriptHandler.setNewEngine(false);
-				scriptHandler.setForceRun(preferences.isOverrideEnabled());
-				scriptHandler.setStrict(preferences.isStrictModeEnabled());
-				scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
-				scriptHandler.interpret(true);
-			}
-		}
-	}
-
-	/**
 	 * Sets the text in the textArea.
 	 * 
 	 * @param text
@@ -1092,7 +886,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	 */
 	public String getLanguage()
 	{
-		return (String) options.comboLanguages.getSelectedItem();
+		return (String) options.getLanguage();
 	}
 
 	/**
@@ -1159,9 +953,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 			@Override
 			public void run()
 			{
-				btnRun.setEnabled(true);
-				btnSplitRun.setEnabled(true);
-				btnStop.setEnabled(false);
+				options.setStopButtonEnabled(false);
 			}
 		});
 	}
@@ -1227,10 +1019,69 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	}
 	
 	public void addLanguageListener(ItemListener listener) {
-		options.comboLanguages.addItemListener(listener);
+		options.addLanguageListener(listener);
 	}
 
 	public void removeLanguageListener(ItemListener listener) {
-		options.comboLanguages.removeItemListener(listener);
+		options.removeLanguageListener(listener);
+	}
+	
+	protected void runInNew()
+	{
+		runScript(true);
+	}
+
+	protected void runInSame()
+	{
+		runScript(false);
+	}
+	
+	protected void runScript(boolean newEngine)
+	{
+		if (scriptHandler == null)
+			return;
+
+		if (!integrated)
+		{
+			if (isDirty())
+			{
+				if (saveFile != null)
+				{
+					saveFile();
+				}
+			}
+		}
+		
+		Preferences preferences = Preferences.getPreferences();
+		
+		ThreadUtil.invokeLater(new Runnable()
+		{
+
+			@Override
+			public void run()
+			{
+				options.setStopButtonEnabled(true);
+			}
+		});
+
+		if (!integrated)
+		{
+			scriptHandler.setNewEngine(newEngine);
+			scriptHandler.setForceRun(preferences.isOverrideEnabled());
+			scriptHandler.setStrict(preferences.isStrictModeEnabled());
+			scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
+			scriptHandler.interpret(true);
+		}
+	}
+	
+	protected void stopScript()
+	{
+		if (scriptHandler == null)
+			return;
+
+		if (scriptHandler.isRunning())
+		{
+			scriptHandler.killScript();
+		}
 	}
 }
