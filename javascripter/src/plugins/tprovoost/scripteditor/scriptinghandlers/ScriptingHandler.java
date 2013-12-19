@@ -1,12 +1,9 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
-import icy.image.ImageUtil;
 import icy.plugin.PluginDescriptor;
-import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
 import icy.plugin.abstract_.Plugin;
-import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 import icy.util.EventUtil;
@@ -60,19 +57,10 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
  */
 public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener, LinkGenerator
 {
-
 	/**
-	 * {@link ArrayList} containing all the errors found when parsing the file.
+	 * Reference to errors and warnings found when parsing or running the file.
 	 */
-	protected ArrayList<ScriptException> errors = new ArrayList<ScriptException>();
-	/**
-	 * {@link ArrayList} containing all the warnings found when parsing the file.
-	 */
-	protected ArrayList<ScriptException> warnings = new ArrayList<ScriptException>();
-	/**
-	 * The error that stopped the script, if any.
-	 */
-	protected ScriptException runtimeError = null;
+	protected ScriptingErrors errors = new ScriptingErrors();
 	
 	/**
 	 * List of the variable completions found when script was parsed. Functions
@@ -148,12 +136,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	public static final int RELEVANCE_MIN = 1;
 	public static final int RELEVANCE_LOW = 2;
 	public static final int RELEVANCE_HIGH = 10;
-
-	private static final IcyIcon ICON_ERROR_TOOLTIP = new IcyIcon(ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/quickfix_warning_obj.gif")), 16, false);
-
-	private static final IcyIcon ICON_ERROR = new IcyIcon(ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/error.gif")), 15, false);
 
 	private StringWriter sw = new StringWriter();
 	private PrintWriter pw = new PrintWriter(sw, true)
@@ -495,96 +477,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					return;
 				gutter.removeAllTrackingIcons();
 
-				// The parser may have found multiple errors/warnings on each line
-				// We walk the list to merge them.
-				ArrayList<Integer> lines = new ArrayList<Integer>();
-				ArrayList<Boolean> areWarning = new ArrayList<Boolean>();
-				ArrayList<String> messages = new ArrayList<String>();
-				
-				if (runtimeError != null)
-				{
-					lines.add(runtimeError.getLineNumber());
-					areWarning.add(false);
-					
-					// We will wrap the message in HTML to handle multiple errors on a single line
-					// so first make sure we have nothing that could break HTML in the raw messages
-					String normalizedMessage = runtimeError.getMessage().replaceAll("<", "").replaceAll(">", "");
-					messages.add(normalizedMessage);
-				}
-
-				for (ScriptException see : errors)
-				{
-					// We will wrap the message in HTML to handle multiple errors on a single line
-					// so first make sure we have nothing that could break HTML in the raw messages
-					String normalizedMessage = see.getMessage().replaceAll("<", "").replaceAll(">", "");
-
-					if (lines.contains(see.getLineNumber()))
-					{
-						// there was already an error on this line
-						int index = lines.indexOf(see.getLineNumber());
-						String message = messages.get(index) + "<br>" + normalizedMessage;
-						messages.set(index, message);
-						// if there is an error, make it an error, not a warning
-						areWarning.set(index, false);
-					}
-					else
-					{
-						lines.add(see.getLineNumber());
-						areWarning.add(false);
-						messages.add(normalizedMessage);
-					}
-				}
-				
-				for (ScriptException see : warnings)
-				{
-					// We will wrap the message in HTML to handle multiple errors on a single line
-					// so first make sure we have nothing that could break HTML in the raw messages
-					String normalizedMessage = see.getMessage().replaceAll("<", "").replaceAll(">", "");
-
-					if (lines.contains(see.getLineNumber()))
-					{
-						// there was already an error on this line
-						int index = lines.indexOf(see.getLineNumber());
-						String message = messages.get(index) + "<br>" + normalizedMessage;
-						messages.set(index, message);
-						// no need to change areWarning here
-					}
-					else
-					{
-						lines.add(see.getLineNumber());
-						areWarning.add(false);
-						messages.add(normalizedMessage);
-					}
-				}
-
-				for (int i=0; i<lines.size(); i++)
-				{
-					try
-					{
-						IcyIcon icon;
-						if (areWarning.get(i))
-							icon = ICON_ERROR_TOOLTIP;
-						else
-							icon = ICON_ERROR;
-						//wrap the tooltip in html to handle multi-lines
-						String tooltip = "<html>" + messages.get(i) + "</html>";
-						// if (tooltip.length() > 127)
-						// {
-						// tooltip = tooltip.substring(0, 127) + "...";
-						// }
-
-						// Warning! The Gutter displays lines starting from 1, BUT its
-						// internal implementation is based on a JTextArea that expects
-						// the line numbers to be counted from 0.
-						int textAreaLineNumber = lines.get(i)-1;
-						gutter.addLineTrackingIcon(textAreaLineNumber, icon, tooltip);
-						gutter.repaint();
-					} catch (BadLocationException e)
-					{
-						// if (DEBUG)
-						e.printStackTrace();
-					}
-				}
+				errors.displayOnGutter(gutter);
 			}
 		});
 	}
@@ -613,25 +506,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			registerImports();
 			if (varInterpretation)
 			{
-				cleanupErrors();
+				errors.cleanup();
 				detectVariables(s);
 			}
 			setCompilationOk(true);
 		} catch (ScriptException e)
 		{
-			runtimeError = e;
+			errors.setRuntimeError(e);
 		}
 		// update the icons for warning/errors now that the script has been interpreted
 		updateGutter();
 	}
 	
-	private void cleanupErrors()
-	{
-		errors.clear();
-		warnings.clear();
-		runtimeError = null;
-	}
-
 	protected void addExternalVariables()
 	{
 		for (String s : externalVariables.keySet())
@@ -1102,7 +988,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						runtimeError = e;
+						errors.setRuntimeError(e);
 						updateGutter();
 					}
 				});

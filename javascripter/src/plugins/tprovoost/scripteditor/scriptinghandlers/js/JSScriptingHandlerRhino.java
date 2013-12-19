@@ -102,14 +102,14 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		public void warning(String message, String sourceName, int line,
 				String lineSource, int lineOffset) {
 			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
-			warnings.add(se);
+			errors.addWarning(se);
 		}
 
 		@Override
 		public void error(String message, String sourceName, int line,
 				String lineSource, int lineOffset) {
 			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
-			errors.add(se);
+			errors.addError(se);
 		}
 
 		@Override
@@ -118,7 +118,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				int lineOffset) {
 			System.out.println("runtimeError " + message + " " + sourceName + " " + line + " " + lineSource + " " + lineOffset);
 			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
-			errors.add(se);
+			errors.addError(se);
 			return null;
 		}
 	}
@@ -908,7 +908,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			// unknown type
 			if (vt == null)
 			{
-				warnings.add(new ScriptException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno()));
+				errors.addWarning(new ScriptException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno()));
 				return null;
 			}
 
@@ -983,11 +983,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 							returnType = f.getType();
 						} catch (SecurityException e)
 						{
-							warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
+							errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						} catch (NoSuchFieldException e)
 						{
-							warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
+							errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						}
 					}
@@ -1005,11 +1005,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 						returnType = f.getType();
 					} catch (SecurityException e)
 					{
-						warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
+						errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					} catch (NoSuchFieldException e)
 					{
-						warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
+						errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					}
 				}
@@ -2588,17 +2588,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			detectVariables(currentText);
-			ArrayList<ScriptException> listCopy = new ArrayList<ScriptException>(errors);
-			for (ScriptException e : listCopy)
-			{
-				String message = e.getMessage();
-				if (message.contains("Unknown field or method: "))
-				{
-					message.substring("Unknown field or method: ".length());
-				}
-			}
 		} catch (ScriptException e)
 		{
+			errors.setRuntimeError(e);
 		}
 	}
 }
