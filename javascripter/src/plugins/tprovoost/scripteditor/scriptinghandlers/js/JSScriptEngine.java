@@ -10,6 +10,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 
+import javax.script.ScriptException;
+
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.ImporterTopLevel;
@@ -40,7 +42,7 @@ public class JSScriptEngine extends ScriptEngine
 	}
 
 	@Override
-	public void eval(String s) throws ScriptEditorException, EvaluatorException
+	public void eval(String s) throws ScriptException
 	{
 		// uses Context from Rhino integrated in JRE or impossibility
 		// to use already defined methods in ScriptEngine, such as println or
@@ -64,14 +66,10 @@ public class JSScriptEngine extends ScriptEngine
 			// String key = (String) o;
 			// bs.put(key, scriptable.get(key, scriptable));
 			// }
-		} catch (EvaluatorException e)
-		{
-			getErrorWriter().write(e.getMessage());
-			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
+			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -83,7 +81,7 @@ public class JSScriptEngine extends ScriptEngine
 		}
 	}
 
-	public void evalFile(String fileName) throws ScriptEditorException, EvaluatorException
+	public void evalFile(String fileName) throws ScriptException
 	{
 		this.lastFileName = fileName;
 		File f = new File(fileName);
@@ -112,14 +110,10 @@ public class JSScriptEngine extends ScriptEngine
 		{
 			Script script = context.compileString(s, "script", LINE_NUMBER_START, null);
 			script.exec(context, scriptable);
-		} catch (EvaluatorException e)
-		{
-			getErrorWriter().write(e.getMessage());
-			throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 		} catch (RhinoException e3)
 		{
 			getErrorWriter().write(e3.getMessage());
-			throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
+			throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 		} finally
 		{
 			bindings.clear();
@@ -196,10 +190,6 @@ public class JSScriptEngine extends ScriptEngine
 			{
 				Script script = context.compileString(s, "script", LINE_NUMBER_START, null);
 				script.exec(context, scriptable);
-			} catch (EvaluatorException e)
-			{
-				// getErrorWriter().write(e.getMessage());
-				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 			} catch (RhinoException e3)
 			{
 				// getErrorWriter().write(e3.getMessage());

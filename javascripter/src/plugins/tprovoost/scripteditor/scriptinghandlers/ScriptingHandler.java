@@ -498,11 +498,15 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 				for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
 				{
+					// We will wrap the message in HTML to handle multiple errors on a single line
+					// so first make sure we have nothing that could break HTML in the raw messages
+					String normalizedMessage = see.getMessage().replaceAll("<", "").replaceAll(">", "");
+
 					if (lines.contains(see.getLineNumber()))
 					{
 						// there was already an error on this line
 						int index = lines.indexOf(see.getLineNumber());
-						String message = messages.get(index) + "<br>" + see.getMessage();
+						String message = messages.get(index) + "<br>" + normalizedMessage;
 						// if there is an error, make it an error, not a warning
 						boolean warning = warnings.get(index) && see.isWarning();
 						messages.set(index, message);
@@ -512,7 +516,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					{
 						lines.add(see.getLineNumber());
 						warnings.add(see.isWarning());
-						messages.add(see.getMessage());
+						messages.add(normalizedMessage);
 					}
 				}
 
@@ -525,7 +529,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 							icon = ICON_ERROR_TOOLTIP;
 						else
 							icon = ICON_ERROR;
-						//wrap the tooltip in html to handle mutli-lines
+						//wrap the tooltip in html to handle multi-lines
 						String tooltip = "<html>" + messages.get(i) + "</html>";
 						// if (tooltip.length() > 127)
 						// {
@@ -559,6 +563,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 *            : the code to interpret.
 	 * @param exec
 	 *            : run after compile or not.
+	 * @throws ScriptException 
 	 */
 	protected void interpret(String s)
 	{
@@ -574,7 +579,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				detectVariables(s);
 			}
 			setCompilationOk(true);
-		} catch (Exception e)
+		} catch (ScriptException e)
 		{
 			processError(s, e);
 		}
@@ -582,7 +587,10 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		updateGutter();
 	}
 
-	protected abstract void processError(String s, Exception e);
+	protected void processError(String s, ScriptException e)
+	{
+    	ignoredLines.add(new ScriptEditorException(e.getMessage(), e.getFileName(), e.getLineNumber(), e.getColumnNumber(), false));
+	}
 
 	protected void addExternalVariables()
 	{
@@ -718,10 +726,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * This method will detect the variables and add them to the provider.
 	 * 
 	 * @param s
-	 * @param context
-	 * @throws Exception
+	 * @throws ScriptException
 	 */
-	protected abstract void detectVariables(String s) throws Exception;
+	protected abstract void detectVariables(String s) throws ScriptException;
 
 	@Override
 	public void keyTyped(KeyEvent e)
@@ -1047,7 +1054,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			} catch (ThreadDeath td)
 			{
 				System.out.println("shutdown");
-			} catch (final Exception e)
+			} catch (final ScriptException e)
 			{
 				ThreadUtil.invokeLater(new Runnable()
 				{
@@ -1056,11 +1063,11 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					public void run()
 					{
 						processError(s, e);
+						updateGutter();
 					}
 				});
 			} finally
 			{
-				updateGutter();
 				fireEvaluationOver();
 				thread = null;
 			}

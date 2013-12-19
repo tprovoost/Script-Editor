@@ -2,6 +2,13 @@ package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import javax.script.ScriptException;
 
+/**
+ * An exception class that extends ScriptException to describe either errors
+ * or warnings.
+ * 
+ * @author tprovoost
+ *
+ */
 @SuppressWarnings("serial")
 public class ScriptEditorException extends ScriptException
 {

@@ -50,6 +50,7 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Parser;
+import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
@@ -559,9 +560,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			try
 			{
 				root = parser.parse(s, fileName, LINE_NUMBER_START);
-			} catch (EvaluatorException e)
+			} catch (RhinoException e)
 			{
-				throw new ScriptEditorException(e.getMessage(), fileName, e.lineNumber(), e.columnNumber(), true);
+				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber(), true);
 			}
 
 			if (root == null || !root.hasChildren())
@@ -2572,20 +2573,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	public ScriptEngine getEngine()
 	{
 		return ScriptEngineHandler.getEngine("javascript");
-	}
-
-	@Override
-	protected void processError(String s, Exception e)
-	{	
-		if (e instanceof EvaluatorException)
-		{
-			EvaluatorException ee = (EvaluatorException) e;
-			ignoredLines.add(new ScriptEditorException(ee.getMessage(), ee.sourceName(), ee.lineNumber(), false));
-		} else if (e instanceof ScriptEditorException)
-		{
-			ScriptEditorException se = (ScriptEditorException) e;
-			ignoredLines.add(se);
-		}
 	}
 
 	@Override

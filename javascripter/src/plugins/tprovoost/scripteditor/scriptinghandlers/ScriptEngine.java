@@ -3,6 +3,8 @@ package plugins.tprovoost.scripteditor.scriptinghandlers;
 import java.io.PrintWriter;
 import java.util.HashMap;
 
+import javax.script.ScriptException;
+
 public abstract class ScriptEngine
 {
 	protected HashMap<String, Object> bindings = new HashMap<String, Object>();
@@ -24,9 +26,9 @@ public abstract class ScriptEngine
 		this.pwE = pwE;
 	}
 
-	public abstract void eval(String string) throws ScriptEditorException;
+	public abstract void eval(String string) throws ScriptException;
 
-	public abstract void evalFile(String fileName) throws ScriptEditorException;
+	public abstract void evalFile(String fileName) throws ScriptException;
 
 	public PrintWriter getWriter()
 	{
