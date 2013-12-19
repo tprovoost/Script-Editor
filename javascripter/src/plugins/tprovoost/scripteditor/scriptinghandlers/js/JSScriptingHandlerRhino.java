@@ -41,7 +41,6 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
-import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ErrorReporter;
@@ -2578,185 +2577,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	@Override
 	protected void processError(String s, Exception e)
 	{	
-		RTextArea textArea = null;
-		try
-		{
-			textArea = new RTextArea();
-		} catch (Exception toignore)
-		{
-		}
-		textArea.setText(s);
 		if (e instanceof EvaluatorException)
 		{
 			EvaluatorException ee = (EvaluatorException) e;
-			// get the line and column of error
-			int lineError = ee.lineNumber();
-			int columnNumber = ee.columnNumber();
-			if (columnNumber == -1)
-				columnNumber = 0;
-
-			// Warning! JTextArea counts lines from 0, whereas the GUI displays them starting from 1.
-			// To get consistent error messages for the user, we tell Rhino to count from 1.
-			int textAreaErrorLine = lineError - 1;
-			
-			try
-			{
-				// verify if exists (> 0 and < lineCount)
-				if (textAreaErrorLine >= 0 && textAreaErrorLine <= textArea.getLineCount())
-				{
-					int lineStartOffset = textArea.getLineStartOffset(textAreaErrorLine);
-					int lineEndOffset = textArea.getLineEndOffset(textAreaErrorLine);
-
-					String textToRemove = s.substring(lineStartOffset, lineEndOffset);
-
-					textToRemove = "\n";
-					for (ScriptEditorException see : ignoredLines)
-					{
-						if (see.getLineNumber() == lineError)
-							return;
-					}
-					ignoredLines.add(new ScriptEditorException(ee.getMessage(), fileName, lineError, true));
-					s = s.substring(0, lineStartOffset) + textToRemove + s.substring(lineEndOffset);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stop interpretation
-					// System.out.println("error at unknown line: " +
-					// lineError);
-					ee.printStackTrace();
-					if (errorOutput != null)
-					{
-						errorOutput.append(ee.getMessage() + "\n");
-					} else
-						System.out.println(ee.getMessage());
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
+			ignoredLines.add(new ScriptEditorException(ee.getMessage(), ee.sourceName(), ee.lineNumber(), false));
 		} else if (e instanceof ScriptEditorException)
 		{
 			ScriptEditorException se = (ScriptEditorException) e;
-			// get line error
-			int lineError = lineNumber(se);
-			Integer columnNumberI = columnNumber(se);
-			int columnNumber = columnNumberI != null ? columnNumberI : -1;
-			if (columnNumber == -1)
-				columnNumber = 0;
-			
-			// Warning! JTextArea counts lines from 0, whereas the GUI displays them starting from 1.
-			// To get consistent error messages for the user, we tell Rhino to count from 1.
-			int textAreaErrorLine = lineError - 1;
-			
-			try
-			{
-				// verify integrity (>0, < lineCount)
-				if (textAreaErrorLine >= 0 && textAreaErrorLine <= textArea.getLineCount())
-				{
-					int lineStartOffset = textArea.getLineStartOffset(textAreaErrorLine);
-					int lineEndOffset = textArea.getLineEndOffset(textAreaErrorLine);
-					
-					s = s.substring(0, lineStartOffset) + "\n" + s.substring(lineEndOffset);
-					
-					for (ScriptEditorException see : ignoredLines)
-					{
-						// We find the same error again...
-						// This can occur when the actual error lies at the line immediately above
-						// the one that was identified first.
-						// In that case, abandon and return!
-						if (see.getLineNumber() == lineError)
-							return;
-					}
-					
-					ignoredLines.add(se);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stops interpretation
-					System.out.println("error at unknown line: " + lineError);
-					se.printStackTrace();
-					if (errorOutput != null)
-					{
-						errorOutput.append(se.getMessage() + "\n");
-					}
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
+			ignoredLines.add(se);
 		}
-	}
-
-	static private Method getMethod(Object object, String methodName)
-	{
-		try
-		{
-			if (object != null)
-				return object.getClass().getMethod(methodName);
-			return null;
-		} catch (NoSuchMethodException e)
-		{
-			return null;
-			/* gulp */
-		}
-	}
-
-	static private <T> T callMethod(Object object, String methodName, Class<T> cl)
-	{
-		try
-		{
-			Method m = getMethod(object, methodName);
-			if (m != null)
-			{
-				Object result = m.invoke(object);
-				return cl.cast(result);
-			}
-		} catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * Returns the column number where the error occurred. This function should
-	 * be called instead of {@link ScriptException#getColumnNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer columnNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int columnNumber = se.getColumnNumber();
-		if (cause == null || columnNumber >= 0)
-			return columnNumber;
-		return callMethod(cause, "columnNumber", Integer.class);
-	}
-
-	/**
-	 * Returns the line number where the error occurred. This function should be
-	 * called instead {@link ScriptException#getLineNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer lineNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int lineNumber = se.getLineNumber();
-		if (lineNumber >= 0)
-			return lineNumber;
-		if (cause == null)
-			return -1;
-		else
-			return callMethod(cause, "lineNumber", Integer.class);
 	}
 
 	@Override
