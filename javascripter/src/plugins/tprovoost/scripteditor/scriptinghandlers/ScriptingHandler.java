@@ -1,12 +1,9 @@
 package plugins.tprovoost.scripteditor.scriptinghandlers;
 
 import icy.gui.frame.progress.ProgressFrame;
-import icy.image.ImageUtil;
 import icy.plugin.PluginDescriptor;
-import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader.PluginRepositoryLoaderListener;
 import icy.plugin.abstract_.Plugin;
-import icy.resource.icon.IcyIcon;
 import icy.system.thread.ThreadUtil;
 import icy.util.ClassUtil;
 import icy.util.EventUtil;
@@ -60,13 +57,11 @@ import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
  */
 public abstract class ScriptingHandler implements KeyListener, PluginRepositoryLoaderListener, LinkGenerator
 {
-
 	/**
-	 * {@link HashMap} containing all ignored Lines if they contains errors.
-	 * This allows the parser to no stop at the first line where the error is.
+	 * Reference to errors and warnings found when parsing or running the file.
 	 */
-	protected ArrayList<ScriptEditorException> ignoredLines = new ArrayList<ScriptEditorException>();
-
+	protected ScriptingErrors errors = new ScriptingErrors();
+	
 	/**
 	 * List of the variable completions found when script was parsed. Functions
 	 * and classes are considered as Variables too.
@@ -75,8 +70,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	/** Reference to the provider used for the autocompletion. */
 	protected DefaultCompletionProvider provider;
-
-	private String engineType;
 
 	/**
 	 * Is the compilation a success? The script will never be run if the
@@ -143,12 +136,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	public static final int RELEVANCE_MIN = 1;
 	public static final int RELEVANCE_LOW = 2;
 	public static final int RELEVANCE_HIGH = 10;
-
-	private static final IcyIcon ICON_ERROR_TOOLTIP = new IcyIcon(ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/quickfix_warning_obj.gif")), 16, false);
-
-	private static final IcyIcon ICON_ERROR = new IcyIcon(ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/error.gif")), 15, false);
 
 	private StringWriter sw = new StringWriter();
 	private PrintWriter pw = new PrintWriter(sw, true)
@@ -259,7 +246,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 */
 	private void setLanguage(String engineType)
 	{
-		this.engineType = engineType;
 		try
 		{
 			installDefaultLanguageCompletions(engineType);
@@ -462,8 +448,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 */
 	public void interpret(boolean exec)
 	{
-		ignoredLines.clear();
-
 		// use either selected text if any or all text
 		String s = textArea.getSelectedText();
 		if (s == null)
@@ -492,58 +476,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				if (gutter == null || !(textArea instanceof JTextArea))
 					return;
 				gutter.removeAllTrackingIcons();
-				for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
-				{
-					try
-					{
-						IcyIcon icon;
-						if (see.isWarning())
-							icon = ICON_ERROR_TOOLTIP;
-						else
-							icon = ICON_ERROR;
-						String tooltip = see.getMessage();
-						// if (tooltip.length() > 127)
-						// {
-						// tooltip = tooltip.substring(0, 127) + "...";
-						// }
-						gutter.addLineTrackingIcon(see.getLineNumber() - 1, icon, tooltip);
-						gutter.repaint();
-					} catch (BadLocationException e)
-					{
-						// if (DEBUG)
-						e.printStackTrace();
-					}
-				}
-			}
-		});
-	}
 
-	private void updateOutput()
-	{
-		ThreadUtil.invokeLater(new Runnable()
-		{
-
-			@Override
-			public void run()
-			{
-				if (thread != null)
-				{
-					ThreadUtil.sleep(200);
-				}
-				String textResult = "";
-				for (ScriptEditorException see : ignoredLines)
-				{
-					String msg = see.getLocalizedMessage();
-
-					// System.out.println(msg);
-					textResult += msg + "\n";
-				}
-				if (errorOutput != null)
-				{
-					errorOutput.appendError(textResult);
-				}
-				else
-					System.out.print(textResult);
+				errors.displayOnGutter(gutter);
 			}
 		});
 	}
@@ -559,6 +493,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 *            : the code to interpret.
 	 * @param exec
 	 *            : run after compile or not.
+	 * @throws ScriptException 
 	 */
 	protected void interpret(String s)
 	{
@@ -571,17 +506,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			registerImports();
 			if (varInterpretation)
 			{
+				errors.cleanup();
 				detectVariables(s);
 			}
 			setCompilationOk(true);
-		} catch (Exception e)
+		} catch (ScriptException e)
 		{
-			processError(s, e);
+			errors.setRuntimeError(e);
 		}
+		// update the icons for warning/errors now that the script has been interpreted
+		updateGutter();
 	}
-
-	protected abstract void processError(String s, Exception e);
-
+	
 	protected void addExternalVariables()
 	{
 		for (String s : externalVariables.keySet())
@@ -628,6 +564,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 	public void run()
 	{
+		ScriptEngine engine;
+		
 		if (isNewEngine())
 		{
 			if (errorOutput != null)
@@ -648,16 +586,16 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				}
 				// g.dispose();
 			}
-			ScriptEngine engine = createNewEngine();
-			thread = new EvalThread(engine, textArea.getText());
-			thread.setPriority(Thread.MIN_PRIORITY);
-			thread.start();
+			engine = createNewEngine();
+
 		} else
 		{
-			ScriptEngine engine = getEngine();
-			EvalThread thread = new EvalThread(engine, textArea.getText());
-			thread.start();
+			engine = getEngine();
 		}
+		
+		thread = new EvalThread(engine, textArea.getText());
+		thread.setPriority(Thread.MIN_PRIORITY);
+		thread.start();
 	}
 
 	/**
@@ -677,7 +615,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			ArrayList<Method> functions = engineHandler.getFunctions();
 
 			// unregister the old engine (will do the housekeeping)
-			engineHandler.disposeEngine(oldEngine);
+			ScriptEngineHandler.disposeEngine(oldEngine);
 			
 			// create a new engine
 			String newEngineType = oldEngine.getName();
@@ -714,10 +652,9 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 * This method will detect the variables and add them to the provider.
 	 * 
 	 * @param s
-	 * @param context
-	 * @throws Exception
+	 * @throws ScriptException
 	 */
-	protected abstract void detectVariables(String s) throws Exception;
+	protected abstract void detectVariables(String s) throws ScriptException;
 
 	@Override
 	public void keyTyped(KeyEvent e)
@@ -1010,7 +947,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 
 		private String s;
 		private ScriptEngine evalEngine;
-		private String filename;
 
 		public EvalThread(ScriptEngine engine, String script)
 		{
@@ -1044,7 +980,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			} catch (ThreadDeath td)
 			{
 				System.out.println("shutdown");
-			} catch (final Exception e)
+			} catch (final ScriptException e)
 			{
 				ThreadUtil.invokeLater(new Runnable()
 				{
@@ -1052,12 +988,12 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						processError(s, e);
+						errors.setRuntimeError(e);
+						updateGutter();
 					}
 				});
 			} finally
 			{
-				updateGutter();
 				fireEvaluationOver();
 				thread = null;
 			}

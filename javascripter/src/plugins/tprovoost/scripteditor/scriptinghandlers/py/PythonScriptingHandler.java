@@ -28,7 +28,6 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
-import org.python.antlr.ParseException;
 import org.python.antlr.PythonTree;
 import org.python.antlr.ast.Assign;
 import org.python.antlr.ast.Attribute;
@@ -50,17 +49,14 @@ import org.python.antlr.base.stmt;
 import org.python.core.CompilerFlags;
 import org.python.core.ParserFacade;
 import org.python.core.Py;
+import org.python.core.PyException;
 import org.python.core.PyList;
 import org.python.core.PyObject;
-import org.python.core.PySyntaxError;
-import org.python.core.PyTuple;
-import org.python.core.PyType;
 import org.python.util.InteractiveInterpreter;
 import org.python.util.PythonInterpreter;
 
 import plugins.tprovoost.scripteditor.completion.types.PythonModuleCompletion;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
@@ -125,7 +121,7 @@ public class PythonScriptingHandler extends ScriptingHandler
     }
 
     @Override
-    protected void detectVariables(String s) throws Exception
+    protected void detectVariables(String s) throws ScriptException
     {
 	// currentText = s;
 
@@ -137,7 +133,7 @@ public class PythonScriptingHandler extends ScriptingHandler
 	}
 	variableCompletions.clear();
 
-	// register external variables prio to detection.
+	// register external variables prior to detection.
 	// Otherwise, references to external variables will not
 	// be detected.
 	addExternalVariables();
@@ -145,7 +141,17 @@ public class PythonScriptingHandler extends ScriptingHandler
 	// avoid SyntaxErrors due to encoding declarations
 	s = mangleCodingDeclaration(s);
 
-	mod node = ParserFacade.parseExpressionOrModule(new StringReader(s), "<script>", cflags);
+	mod node;
+	try
+	{
+		// parsing the code may raise a PyException, for syntax errors for example
+		node = ParserFacade.parseExpressionOrModule(new StringReader(s), fileName, cflags);
+	}
+	catch (PyException pye)
+	{
+		throw PyScriptEngine.scriptException(pye);
+	}
+
 	if (node.getChildren() == null)
 	    return;
 	if (DEBUG)
@@ -973,30 +979,6 @@ public class PythonScriptingHandler extends ScriptingHandler
 	    return toReturn;
 	} else
 	    return toReturn;
-    }
-
-    @Override
-    protected void processError(String s, Exception e)
-    {
-	if (e instanceof PySyntaxError)
-	{
-	    PySyntaxError se = (PySyntaxError) e;
-
-	    String error = ((PyTuple) se.value).get(0).toString();
-	    PyTuple position = (PyTuple) ((PyTuple) se.value).get(1);
-	    int lineno = (Integer) position.get(1);
-	    int indent = (Integer) position.get(2);
-
-	    String message = ((PyType) se.type).getName() + ": " + error + ". Character index: " + indent;
-	    ignoredLines.add(new ScriptEditorException(message, fileName, lineno, true));
-	    updateGutter();
-
-	} else if (e instanceof ParseException)
-	{
-	    ParseException pe = (ParseException) e;
-	    ignoredLines.add(new ScriptEditorException(pe.getMessage(), fileName, pe.line, true));
-	} else
-	    e.printStackTrace();
     }
 
     public HashMap<String, File> getModules()

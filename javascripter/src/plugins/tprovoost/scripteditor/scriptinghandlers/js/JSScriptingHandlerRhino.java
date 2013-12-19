@@ -9,7 +9,6 @@ import icy.plugin.PluginRepositoryLoader;
 import icy.sequence.Sequence;
 import icy.util.ClassUtil;
 
-import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -32,10 +31,7 @@ import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
-import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -45,7 +41,6 @@ import org.fife.ui.autocomplete.VariableCompletion;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.Gutter;
-import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ErrorReporter;
@@ -55,6 +50,7 @@ import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Parser;
+import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
@@ -82,7 +78,6 @@ import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
@@ -92,90 +87,51 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.VariableType;
 public class JSScriptingHandlerRhino extends ScriptingHandler
 {
 	private String currentText;
+	
+	// used to tell Rhino that it should count the lines starting from 1,
+	// as in the GUI
+	private static int LINE_NUMBER_START = 1;
+	
+	/**
+	 *  Registers all the warnings and errors that have been found by Rhino when parsing 
+	 */
+	class Reporter implements ErrorReporter
+	{
+
+		@Override
+		public void warning(String message, String sourceName, int line,
+				String lineSource, int lineOffset) {
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			errors.addWarning(se);
+		}
+
+		@Override
+		public void error(String message, String sourceName, int line,
+				String lineSource, int lineOffset) {
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			errors.addError(se);
+		}
+
+		@Override
+		public EvaluatorException runtimeError(String message,
+				String sourceName, int line, String lineSource,
+				int lineOffset) {
+			System.out.println("runtimeError " + message + " " + sourceName + " " + line + " " + lineSource + " " + lineOffset);
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			errors.addError(se);
+			return null;
+		}
+	}
+	/**
+	 *  Registers all the warnings and errors that have been found by Rhino when parsing 
+	 */
+	Reporter reporter = new Reporter();
 
 	/**
 	 * Contains all functions created in
 	 * {@link #resolveCallType(AstNode, String, boolean)}.
 	 */
 	private LinkedList<IcyFunctionBlock> functionBlocksToResolve = new LinkedList<IcyFunctionBlock>();
-	private ErrorReporter errorReporter = new ErrorReporter()
-	{
-
-		private EvaluatorException exception;
-
-		@Override
-		public void warning(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			if (errorOutput != null)
-			{
-				Document doc = errorOutput.getTextPane().getDocument();
-				try
-				{
-					Style style = errorOutput.getTextPane().getStyle("warning");
-					if (style == null)
-						style = errorOutput.getTextPane().addStyle("warning", null);
-					StyleConstants.setForeground(style, Color.blue);
-					String text = message + " at " + (line + 1) + "\n   in " + lineSource + "\n      at column (" + lineOffset + ")";
-					doc.insertString(doc.getLength(), text + "\n", style);
-				} catch (BadLocationException e)
-				{
-				}
-			}
-		}
-
-		@Override
-		public EvaluatorException runtimeError(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			if (exception != null)
-			{
-				EvaluatorException e = exception;
-				exception = null;
-				return e;
-			} else
-			{
-				if (errorOutput != null)
-				{
-					try
-					{
-						Style style = errorOutput.getTextPane().getStyle("error");
-						if (style == null)
-						{
-							style = errorOutput.getTextPane().addStyle("error", null);
-							StyleConstants.setForeground(style, Color.red);
-						}
-						String inLineSource = "";
-						String atColumn = "";
-						if (lineSource != null)
-						{
-							inLineSource = "\n in \"" + lineSource;
-						}
-						if (lineOffset > 0)
-						{
-							atColumn = "\"\n at column (" + lineOffset + ")";
-						}
-						Document doc = errorOutput.getTextPane().getDocument();
-						String lastErrortext = message + " at " + (line + 1) + inLineSource + atColumn;
-						doc.insertString(doc.getLength(), lastErrortext + "\n", style);
-					} catch (BadLocationException e)
-					{
-					}
-				}
-			}
-			return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
-		}
-
-		@Override
-		public void error(String message, String sourceName, int line, String lineSource, int lineOffset)
-		{
-			String lastErrortext = message + " at " + (line + 1) + "\n in \"" + lineSource + "\"\n at column (" + lineOffset + ")";
-			exception = new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
-			if (errorOutput != null)
-			{
-				errorOutput.appendError(lastErrortext + "\n");
-			}
-		}
-	};
-
 	public JSScriptingHandlerRhino(DefaultCompletionProvider provider, JTextComponent textArea, Gutter gutter, boolean autocompilation)
 	{
 		super(provider, "javascript", textArea, gutter, autocompilation);
@@ -590,21 +546,24 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	@Override
 	protected void detectVariables(String s) throws ScriptException
 	{
-		Context context = Context.enter();
+		Context.enter();
 		try
 		{
 			currentText = s;
-			final CompilerEnvirons comp = new CompilerEnvirons();
-			comp.initFromContext(context);
-			final Parser parser = new Parser(comp, comp.getErrorReporter());
+			final CompilerEnvirons comp = CompilerEnvirons.ideEnvirons();
+			// report errors and warnings through our own reporter class
+			comp.setErrorReporter(reporter);
+			// do not complain about missing commas when they are not strictly needed
+			comp.setStrictMode(false);
+			final Parser parser = new Parser(comp);
 			AstRoot root = null;
 
 			try
 			{
-				root = parser.parse(s, "", 1);
-			} catch (EvaluatorException e)
+				root = parser.parse(s, fileName, LINE_NUMBER_START);
+			} catch (RhinoException e)
 			{
-				throw new ScriptEditorException(e.getMessage(), fileName, e.lineNumber(), e.columnNumber(), true);
+				throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 			}
 
 			if (root == null || !root.hasChildren())
@@ -751,7 +710,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				VariableType type = getRealType(right);
 				if (type != null && type.getClazz() == void.class)
 				{
-					throw new ScriptEditorException("This method returns \"void\" and cannot be assigned", fileName, n.getLineno(), -1, false);
+					throw new ScriptException("This method returns \"void\" and cannot be assigned", fileName, n.getLineno(), -1);
 				}
 				String typeString = "";
 				if (type != null)
@@ -949,7 +908,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			// unknown type
 			if (vt == null)
 			{
-				ignoredLines.add(new ScriptEditorException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno(), true));
+				errors.addWarning(new ScriptException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno()));
 				return null;
 			}
 
@@ -1024,11 +983,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 							returnType = f.getType();
 						} catch (SecurityException e)
 						{
-							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+							errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						} catch (NoSuchFieldException e)
 						{
-							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+							errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						}
 					}
@@ -1046,11 +1005,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 						returnType = f.getType();
 					} catch (SecurityException e)
 					{
-						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					} catch (NoSuchFieldException e)
 					{
-						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						errors.addWarning(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					}
 				}
@@ -2618,174 +2577,6 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	}
 
 	@Override
-	protected void processError(String s, Exception e)
-	{
-		RTextArea textArea = null;
-		try
-		{
-			textArea = new RTextArea();
-		} catch (Exception toignore)
-		{
-		}
-		textArea.setText(s);
-		if (e instanceof EvaluatorException)
-		{
-			EvaluatorException ee = (EvaluatorException) e;
-			// get the line and column of error
-			int lineError = ee.lineNumber() - 1;
-			int columnNumber = ee.columnNumber();
-			if (columnNumber == -1)
-				columnNumber = 0;
-			try
-			{
-				// verify if exists (> 0 and < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-					String textToRemove = s.substring(lineOffset, lineEndOffset);
-
-					textToRemove = "\n";
-					for (ScriptEditorException see : ignoredLines)
-					{
-						if (see.getLineNumber() == lineError)
-							return;
-					}
-					ignoredLines.add(new ScriptEditorException(ee.getMessage(), fileName, lineError, true));
-					s = s.substring(0, lineOffset) + textToRemove + s.substring(lineEndOffset);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stop interpretation
-					// System.out.println("error at unknown line: " +
-					// lineError);
-					ee.printStackTrace();
-					if (errorOutput != null)
-					{
-						errorOutput.append(ee.getMessage() + "\n");
-					} else
-						System.out.println(ee.getMessage());
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
-		} else if (e instanceof ScriptEditorException)
-		{
-			ScriptEditorException se = (ScriptEditorException) e;
-			// get line error
-			int lineError = lineNumber(se) - 1;
-			Integer columnNumberI = columnNumber(se);
-			int columnNumber = columnNumberI != null ? columnNumberI : -1;
-			if (columnNumber == -1)
-				columnNumber = 0;
-			try
-			{
-				// verify integrity (>0, < lineCount)
-				if (lineError >= 0 && lineError <= textArea.getLineOfOffset(s.length() - 1))
-				{
-					int lineOffset = textArea.getLineStartOffset(lineError);
-					int lineEndOffset = textArea.getLineEndOffset(lineError);
-
-					s = s.substring(0, lineOffset) + "\n" + s.substring(lineEndOffset);
-					for (ScriptEditorException see : ignoredLines)
-					{
-						if (see.getLineNumber() == lineError)
-							return;
-					}
-					ignoredLines.add(se);
-
-					// interpret again, without the faulty line.
-					interpret(s);
-				} else
-				{
-					// stops interpretation
-					System.out.println("error at unknown line: " + lineError);
-					se.printStackTrace();
-					if (errorOutput != null)
-					{
-						errorOutput.append(se.getMessage() + "\n");
-					}
-				}
-			} catch (BadLocationException e1)
-			{
-				e1.printStackTrace();
-			}
-		}
-	}
-
-	static private Method getMethod(Object object, String methodName)
-	{
-		try
-		{
-			if (object != null)
-				return object.getClass().getMethod(methodName);
-			return null;
-		} catch (NoSuchMethodException e)
-		{
-			return null;
-			/* gulp */
-		}
-	}
-
-	static private <T> T callMethod(Object object, String methodName, Class<T> cl)
-	{
-		try
-		{
-			Method m = getMethod(object, methodName);
-			if (m != null)
-			{
-				Object result = m.invoke(object);
-				return cl.cast(result);
-			}
-		} catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * Returns the column number where the error occurred. This function should
-	 * be called instead of {@link ScriptException#getColumnNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer columnNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int columnNumber = se.getColumnNumber();
-		if (cause == null || columnNumber >= 0)
-			return columnNumber;
-		return callMethod(cause, "columnNumber", Integer.class);
-	}
-
-	/**
-	 * Returns the line number where the error occurred. This function should be
-	 * called instead {@link ScriptException#getLineNumber()}.
-	 * 
-	 * @param se
-	 *            : the ScriptException raised.
-	 * @return
-	 */
-	private Integer lineNumber(ScriptException se)
-	{
-		Throwable cause = se.getCause();
-		int lineNumber = se.getLineNumber();
-		if (lineNumber >= 0)
-			return lineNumber;
-		if (cause == null)
-			return -1;
-		else
-			return callMethod(cause, "lineNumber", Integer.class);
-	}
-
-	@Override
 	public LinkGeneratorResult isLinkAtOffset(RSyntaxTextArea textArea, int offs)
 	{
 		return null;
@@ -2797,17 +2588,9 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			detectVariables(currentText);
-			ArrayList<ScriptEditorException> listCopy = new ArrayList<ScriptEditorException>(ignoredLines);
-			for (ScriptEditorException e : listCopy)
-			{
-				String message = e.getMessage();
-				if (message.contains("Unknown field or method: "))
-				{
-					message.substring("Unknown field or method: ".length());
-				}
-			}
 		} catch (ScriptException e)
 		{
+			errors.setRuntimeError(e);
 		}
 	}
 }

@@ -1,32 +1,26 @@
 package plugins.tprovoost.scripteditor.gui;
 
 import icy.file.FileUtil;
-import icy.file.Loader;
-import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.progress.AnnounceFrame;
 import icy.gui.frame.progress.FailedAnnounceFrame;
-import icy.image.ImageUtil;
 import icy.main.Icy;
 import icy.network.NetworkUtil;
 import icy.plugin.PluginLoader;
 import icy.plugin.PluginRepositoryLoader;
-import icy.resource.icon.IcyIcon;
 import icy.system.FileDrop;
+import icy.system.FileDrop.FileDropListener;
 import icy.system.thread.ThreadUtil;
 import japa.parser.ast.body.ConstructorDeclaration;
 import japa.parser.ast.body.MethodDeclaration;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -36,29 +30,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.util.ArrayList;
+import java.util.EventListener;
 
-import javax.script.ScriptEngineFactory;
-import javax.script.ScriptEngineManager;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.EventListenerList;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
@@ -81,28 +63,21 @@ import plugins.tprovoost.scripteditor.completion.PythonAutoCompletion;
 import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.NewInstanceCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
-import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.javasource.ClassSource;
 import plugins.tprovoost.scripteditor.javasource.JarAccess;
 import plugins.tprovoost.scripteditor.main.ScriptListener;
 import plugins.tprovoost.scripteditor.scriptblock.Javascript;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.js.JSScriptingHandlerRhino;
 import plugins.tprovoost.scripteditor.scriptinghandlers.py.PythonScriptingHandler;
 
 // import plugins.tprovoost.scripteditor.main.scriptinghandlers.JSScriptingHandler7;
 
-public class ScriptingPanel extends JPanel implements CaretListener, ScriptListener, HyperlinkListener
+public class ScriptingPanel extends JPanel implements ScriptListener
 {
 	/** */
 	private static final long serialVersionUID = 1L;
-
-	public static final BufferedImage imgPlayback2 = ImageUtil.load(PluginLoader
-			.getResourceAsStream("plugins/tprovoost/scripteditor/resources/icons/playback_erase_play_alpha.png"));
-
-	public static final int STRUT_SIZE = 4;
 
 	private ScriptingHandler scriptHandler;
 	private RSyntaxTextArea textArea;
@@ -119,10 +94,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	/** Auto-completion system. Uses provider item. */
 	private IcyAutoCompletion ac;
 
-	public JMenuItem btnRun;
-	private JSplitButton btnSplitRun;
-	public JButton btnStop;
-	private ScriptingEditor editor;
+	private ConsoleOutput consoleOutput; // may be null !
 	private boolean integrated;
 	
 	/**
@@ -139,10 +111,59 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			textArea.setTabSize(preferences.indentSpacesCount());
 		}
 	};
-
-	public ScriptingPanel(ScriptingEditor editor, String name, String language)
+	
+	// listen to changes of language in a child panel
+	private ItemListener languageListener = new ItemListener()
 	{
-		this(editor, name, language, false);
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if (e.getStateChange() == ItemEvent.SELECTED)
+			{
+				String language = (String) e.getItem();
+				installLanguage(language);
+			}
+		}
+	};
+	
+	private ActionListener runInNewListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			runInNew();
+		}
+	};
+
+	private ActionListener runInSameListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			runInSame();
+		}
+	};
+	
+	private ActionListener stopListener = new ActionListener()
+	{
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			stopScript();
+		}
+	};
+
+	public ScriptingPanel(String name, String language)
+	{
+		this(name, language, true, null);
+	}
+	
+	public ScriptingPanel(String name, String language, ConsoleOutput consoleOutput)
+	{
+		this(name, language, false, consoleOutput);
 	}
 
 	/**
@@ -153,11 +174,12 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 * 
 	 * @param name
 	 */
-	public ScriptingPanel(ScriptingEditor editor, String name, String language, boolean integrated)
+	public ScriptingPanel(String name, String language, boolean integrated, ConsoleOutput consoleOutput)
 	{
 		this.panelName = name;
-		this.editor = editor;
 		this.integrated = integrated;
+		this.consoleOutput = consoleOutput;
+		
 		setLayout(new BorderLayout());
 
 		// creates the text area and set it up
@@ -169,36 +191,11 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		textArea.setAutoIndentEnabled(true);
 		textArea.setCloseCurlyBraces(true);
 		textArea.setMarkOccurrences(true);
-		textArea.addCaretListener(this);
 		textArea.setCodeFoldingEnabled(true);
 		textArea.setPaintMarkOccurrencesBorder(true);
 		textArea.setPaintMatchedBracketPair(true);
 		textArea.setPaintTabLines(true);
 		textArea.setTabsEmulated(false);
-		((RSyntaxTextArea) textArea).addHyperlinkListener(this);
-		new FileDrop(textArea, new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-				{
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-					{
-						try
-						{
-							ScriptingPanel.this.editor.openFile(f);
-						} catch (IOException e)
-						{
-						}
-					} else
-					{
-						Loader.load(f, true);
-					}
-				}
-			}
-		});
 		textArea.addHyperlinkListener(new HyperlinkListener()
 		{
 
@@ -209,13 +206,35 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			}
 
 		});
+		textArea.getDocument().addDocumentListener(new DocumentListener() {
+			
+			@Override
+			public void removeUpdate(DocumentEvent arg0) {
+				updateTitle();
+			}
+			
+			@Override
+			public void insertUpdate(DocumentEvent arg0) {
+				updateTitle();
+			}
+			
+			@Override
+			public void changedUpdate(DocumentEvent arg0) {
+				// this is fired when the style changes
+				// ignore
+			}
+		});
 
 		pane = new RTextScrollPane(textArea);
 		pane.setIconRowHeaderEnabled(true);
 
 		// creates the options panel
 		options = new PanelOptions(language);
-		installLanguage(options.comboLanguages.getSelectedItem().toString());
+		installLanguage(options.getLanguage());
+		options.addLanguageListener(languageListener);
+		options.addRunInSameListener(runInSameListener);
+		options.addRunInNewListener(runInNewListener);
+		options.addStopListener(stopListener);
 
 		// set the default theme: eclipse.
 		setTheme("eclipse");
@@ -307,8 +326,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				panelName = f.getName();
 				scriptHandler.setFileName(f.getAbsolutePath());
 				updateTitle();
-				if (editor != null)
-					editor.addRecentFile(f);
+				fireSavedAs(f);
 				return true;
 			} catch (IOException e)
 			{
@@ -318,6 +336,32 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 		return false;
 	}
+	
+	// listener used to propagate the "Saved As" action up to the editor
+	// without making the ScriptingPanel dependent on the editor
+	public static interface SavedAsListener extends EventListener {
+		void savedAs(File f);
+	}
+	
+    private final EventListenerList savedAslisteners = new EventListenerList();
+    
+    public void addSavedAsListener(SavedAsListener listener) {
+    	savedAslisteners.add(SavedAsListener.class, listener);
+    }
+ 
+    public void removeSavedAsListener(SavedAsListener listener) {
+    	savedAslisteners.remove(SavedAsListener.class, listener);
+    }
+    
+    protected void fireSavedAs(File f) {
+    	for(SavedAsListener listener : getSavedAsListeners()) {
+    		listener.savedAs(f);
+    	}
+    }
+    
+    public SavedAsListener[] getSavedAsListeners() {
+        return savedAslisteners.getListeners(SavedAsListener.class);
+    }
 
 	/**
 	 * Save the file is dirty. Returns true if success or not dirty.
@@ -412,34 +456,51 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		}
 		return file;
 	}
+	
+	// listener used to propagate the "Saved As" action up to the editor
+	// without making the ScriptingPanel dependent on the editor
+	public static interface TitleChangedListener extends EventListener {
+		void titleChanged(ScriptingPanel panel, String title);
+	}
+	
+    private final EventListenerList titleChangedListeners = new EventListenerList();
+    
+    public void addTitleChangedListener(TitleChangedListener listener) {
+    	titleChangedListeners.add(TitleChangedListener.class, listener);
+    }
+ 
+    public void removeTitleChangedListener(TitleChangedListener listener) {
+    	titleChangedListeners.remove(TitleChangedListener.class, listener);
+    }
+    
+    protected void fireTitleChanged(String title) {
+    	for(TitleChangedListener listener : getTitleChangedListeners()) {
+    		listener.titleChanged(this, title);
+    	}
+    }
+    
+    public TitleChangedListener[] getTitleChangedListeners() {
+        return titleChangedListeners.getListeners(TitleChangedListener.class);
+    }
 
 	private void updateTitle()
 	{
-		// if this panel is in a tabbed pane: updates its title.
-		if (editor != null && editor.getTabbedPane() != null)
-		{
-			int idx = editor.getTabbedPane().indexOfComponent(this);
-			if (idx != -1)
-			{
-				if (isDirty())
-					editor.getTabbedPane().setTitleAt(idx, panelName + "*");
-				else
-					editor.getTabbedPane().setTitleAt(idx, panelName);
-				Component c = editor.getTabbedPane().getTabComponentAt(idx);
-				if (c instanceof JComponent)
-					((JComponent) c).revalidate();
-				else
-					c.repaint();
-			}
-		}
+		String title;
+		if (isDirty())
+			title = panelName + "*";
+		else
+			title = panelName;
+		fireTitleChanged(title);
 	}
 	
 	/**
 	 * Ask the user whether to save the files.
 	 * 
+	 * @param defaultSaveDirectory Default directory
+	 * 
 	 * @return false is the close operation is cancelled
 	 */
-	boolean promptSave()
+	boolean promptSave(String defaultSaveDirectory)
 	{
         int n = JOptionPane.showOptionDialog(Icy.getMainInterface().getMainFrame(),
                 "Some work has not been saved, are you sure you want to close?", getPanelName(),
@@ -452,7 +513,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
             if (getSaveFile() != null)
             	return saveFile();
             else
-            	return showSaveFileDialog(editor.getCurrentDirectory());
+            	return showSaveFileDialog(defaultSaveDirectory);
         }
         
         return true;
@@ -462,20 +523,26 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 * Try to close this ScriptingPanel. The user will be asked whether to save the files
 	 * if they are modified. If the operation is not cancelled, the listeners are removed.
 	 * 
+	 * @param defaultSaveDirectory Default directory used if a file need to be saved
+	 * 
 	 * @return false is the close operation is cancelled
 	 */
-	boolean close()
+	boolean close(String defaultSaveDirectory)
 	{
 		boolean canClose = true;
         if (isDirty())
         {
-        	canClose = promptSave();
+        	canClose = promptSave(defaultSaveDirectory);
         }
 
         if (canClose)
         {
         	cleanup();
     		PreferencesWindow.getPreferencesWindow().removePreferencesListener(applyPrefsListener);
+    		options.removeLanguageListener(languageListener);
+    		options.removeRunInSameListener(runInSameListener);
+    		options.removeRunInNewListener(runInNewListener);
+    		options.removeStopListener(stopListener);
         	return true;
         }
         else
@@ -489,9 +556,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	void cleanup()
 	{
-		// if (editor != null && editor.getConsoleOutput() != null)
-		// editor.getConsoleOutput().setText("");
-		
 		// Autocompletion is done with the following item
 		if (scriptHandler != null)
 		{
@@ -564,8 +628,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 				@Override
 				public void run()
 				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
+					options.setRunButtonsEnabled(false);
 				}
 			});
 			return;
@@ -624,9 +687,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			@Override
 			public void run()
 			{
-				if (editor != null)
-					editor.changeConsoleLanguage(language);
-
 				// add the scripting handler, which handles the compilation
 				// and the parsing of the code for advanced features.
 				if (language.contentEquals("JavaScript"))
@@ -639,20 +699,18 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 					// textArea,
 					// pane.getGutter(), true);
 					// }
-					if (!integrated && editor != null)
-						scriptHandler.setOutput(editor.getConsoleOutput());
-
 				} else if (language.contentEquals("Python"))
 				{
 					scriptHandler = new PythonScriptingHandler(provider, textArea, pane.getGutter(), true);
-					if (!integrated)
-						scriptHandler.setOutput(editor.getConsoleOutput());
 				} else
 				{
 					scriptHandler = null;
 				}
 				if (scriptHandler != null)
 				{
+					if (!integrated && consoleOutput != null)
+						scriptHandler.setOutput(consoleOutput);
+					
 					scriptHandler.addScriptListener(ScriptingPanel.this);
 					scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
 					scriptHandler.setStrict(preferences.isStrictModeEnabled());
@@ -806,240 +864,9 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		removeAll();
 		add(pane);
 
-		if (editor != null)
+		if (!integrated)
 			add(options, BorderLayout.NORTH);
 		revalidate();
-	}
-
-	/**
-	 * This panel creates the tools needed to choose the language (for each
-	 * language) and run the code.
-	 * 
-	 * @author Thomas Provoost
-	 */
-	class PanelOptions extends JPanel
-	{
-
-		/** */
-		private static final long serialVersionUID = 1L;
-		private JComboBox comboLanguages;
-
-		private ActionListener runInNewListener = new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				if (!lastIsNew)
-				{
-					lastIsNew = true;
-					btnSplitRun.setIcon(new IcyIcon("playback_play", 16));
-					btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
-					btnSplitRun.repaint();
-				}
-				runInNew();
-			}
-		};
-
-		private ActionListener runInSameListener = new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				if (lastIsNew)
-				{
-					lastIsNew = false;
-					btnSplitRun.setIcon(new IcyIcon(imgPlayback2, 16));
-					btnSplitRun.setToolTipText("All variables in the bindings are re-usable.");
-					btnSplitRun.repaint();
-				}
-				runInSame();
-			}
-		};
-		protected boolean lastIsNew = true;
-
-		public PanelOptions()
-		{
-			this("JavaScript");
-		}
-
-		public PanelOptions(String language)
-		{
-			// final JButton btnBuild = new JButton("Verify");
-			btnRun = new JMenuItem("Run in Current Context", new IcyIcon(imgPlayback2, 16));
-			btnRun.setToolTipText("All variables in the bindings are re-usable.");
-
-			btnSplitRun = new JSplitButton("  ", new IcyIcon("playback_play", 16));
-			btnSplitRun.setPreferredSize(new Dimension(45, 20));
-			btnSplitRun.setToolTipText("Creates a new context and run the script. The previous context will be lost.");
-
-			JMenuItem btnRunNew2 = new JMenuItem("Run in New Context", new IcyIcon("playback_play", 16));
-			btnRunNew2.setToolTipText("Creates a new context and run the script. The previous context and its bindings will be lost.");
-
-			JPopupMenu popupRun = new JPopupMenu();
-			popupRun.add(btnRunNew2);
-			popupRun.add(btnRun);
-			btnSplitRun.setPopupMenu(popupRun);
-
-			btnStop = new IcyButton(new IcyIcon("square_shape", 16));
-			btnStop.setToolTipText("Stops the current script.");
-			btnStop.setEnabled(false);
-
-			setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-			setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-
-			add(new JLabel("Lang: "));
-			ArrayList<String> values = new ArrayList<String>();
-			ScriptEngineManager manager = new ScriptEngineManager(PluginLoader.getLoader());
-			for (ScriptEngineFactory factory : manager.getEngineFactories())
-			{
-				values.add(ScriptEngineHandler.getLanguageName(factory));
-			}
-			comboLanguages = new JComboBox(values.toArray());
-			comboLanguages.setSelectedItem(language);
-			comboLanguages.addItemListener(new ItemListener()
-			{
-				@Override
-				public void itemStateChanged(final ItemEvent e)
-				{
-					ThreadUtil.bgRun(new Runnable()
-					{
-
-						@Override
-						public void run()
-						{
-							if (e.getStateChange() == ItemEvent.SELECTED)
-							{
-								String language = comboLanguages.getSelectedItem().toString();
-								installLanguage(language);
-							}
-						}
-					});
-
-				}
-			});
-			add(comboLanguages);
-
-			if (integrated)
-				return;
-
-			btnRun.addActionListener(runInSameListener);
-
-			btnSplitRun.addSplitButtonActionListener(new SplitButtonActionListener()
-			{
-
-				@Override
-				public void splitButtonClicked(ActionEvent e)
-				{
-				}
-
-				@Override
-				public void buttonClicked(ActionEvent e)
-				{
-					if (lastIsNew)
-						runInNew();
-					else
-						runInSame();
-				}
-			});
-			btnRunNew2.addActionListener(runInNewListener);
-
-			btnStop.addActionListener(new ActionListener()
-			{
-
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					if (scriptHandler == null)
-						return;
-					if (scriptHandler.isRunning())
-					{
-						scriptHandler.killScript();
-					}
-				}
-			});
-
-			add(Box.createHorizontalStrut(STRUT_SIZE * 3));
-			add(btnSplitRun);
-			add(Box.createHorizontalStrut(STRUT_SIZE));
-			add(btnStop);
-			add(Box.createHorizontalGlue());
-		}
-
-		protected void runInNew()
-		{
-			if (scriptHandler == null)
-				return;
-			if (!integrated)
-			{
-				if (isDirty())
-				{
-					if (saveFile != null)
-					{
-						saveFile();
-					}
-				}
-			}
-
-			Preferences preferences = Preferences.getPreferences();
-			
-			ThreadUtil.invokeLater(new Runnable()
-			{
-
-				@Override
-				public void run()
-				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
-					btnStop.setEnabled(true);
-				}
-			});
-			// consoleOutput.setText("");
-			scriptHandler.setNewEngine(true);
-			scriptHandler.setForceRun(preferences.isOverrideEnabled());
-			scriptHandler.setStrict(preferences.isStrictModeEnabled());
-			scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
-			scriptHandler.interpret(true);
-		}
-
-		protected void runInSame()
-		{
-			if (scriptHandler == null)
-				return;
-			if (!integrated)
-			{
-				if (isDirty())
-				{
-					if (saveFile != null)
-					{
-						saveFile();
-					}
-				}
-			}
-			
-			Preferences preferences = Preferences.getPreferences();
-			
-			ThreadUtil.invokeLater(new Runnable()
-			{
-
-				@Override
-				public void run()
-				{
-					btnRun.setEnabled(false);
-					btnSplitRun.setEnabled(false);
-					btnStop.setEnabled(true);
-				}
-			});
-			if (!integrated)
-			{
-				scriptHandler.setNewEngine(false);
-				scriptHandler.setForceRun(preferences.isOverrideEnabled());
-				scriptHandler.setStrict(preferences.isStrictModeEnabled());
-				scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
-				scriptHandler.interpret(true);
-			}
-		}
 	}
 
 	/**
@@ -1052,12 +879,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		textArea.setText(text);
 	}
 
-	@Override
-	public void caretUpdate(CaretEvent e)
-	{
-		updateTitle();
-	}
-
 	/**
 	 * Get the current selected language in the combobox.
 	 * 
@@ -1065,7 +886,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 	 */
 	public String getLanguage()
 	{
-		return (String) options.comboLanguages.getSelectedItem();
+		return (String) options.getLanguage();
 	}
 
 	/**
@@ -1132,9 +953,7 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 			@Override
 			public void run()
 			{
-				btnRun.setEnabled(true);
-				btnSplitRun.setEnabled(true);
-				btnStop.setEnabled(false);
+				options.setStopButtonEnabled(false);
 			}
 		});
 	}
@@ -1156,22 +975,6 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		{
 		} catch (BadLocationException e)
 		{
-		}
-	}
-
-	@Override
-	public void hyperlinkUpdate(HyperlinkEvent e)
-	{
-		if (e.getEventType() == EventType.ACTIVATED)
-		{
-			URL url = e.getURL();
-			String res = url == null ? e.getDescription() : url.getFile();
-			try
-			{
-				editor.openFile(new File(res));
-			} catch (IOException e1)
-			{
-			}
 		}
 	}
 
@@ -1199,4 +1002,86 @@ public class ScriptingPanel extends JPanel implements CaretListener, ScriptListe
 		getScriptHandler().format();
 	}
 
+	public void addFileDropListener(FileDropListener fileDropListener) {
+		new FileDrop(textArea, fileDropListener);
+	}
+
+	public void removeFileDropListeners() {
+		FileDrop.remove(textArea);
+	}
+	
+	public void addHyperlinkListener(HyperlinkListener listener) {
+		((RSyntaxTextArea) textArea).addHyperlinkListener(listener);
+	}
+
+	public void removeHyperlinkListener(HyperlinkListener listener) {
+		((RSyntaxTextArea) textArea).removeHyperlinkListener(listener);
+	}
+	
+	public void addLanguageListener(ItemListener listener) {
+		options.addLanguageListener(listener);
+	}
+
+	public void removeLanguageListener(ItemListener listener) {
+		options.removeLanguageListener(listener);
+	}
+	
+	protected void runInNew()
+	{
+		runScript(true);
+	}
+
+	protected void runInSame()
+	{
+		runScript(false);
+	}
+	
+	protected void runScript(boolean newEngine)
+	{
+		if (scriptHandler == null)
+			return;
+
+		if (!integrated)
+		{
+			if (isDirty())
+			{
+				if (saveFile != null)
+				{
+					saveFile();
+				}
+			}
+		}
+		
+		Preferences preferences = Preferences.getPreferences();
+		
+		ThreadUtil.invokeLater(new Runnable()
+		{
+
+			@Override
+			public void run()
+			{
+				options.setStopButtonEnabled(true);
+			}
+		});
+
+		if (!integrated)
+		{
+			scriptHandler.setNewEngine(newEngine);
+			scriptHandler.setForceRun(preferences.isOverrideEnabled());
+			scriptHandler.setStrict(preferences.isStrictModeEnabled());
+			scriptHandler.setVarInterpretation(preferences.isVarInterpretationEnabled());
+			scriptHandler.interpret(true);
+		}
+	}
+	
+	protected void stopScript()
+	{
+		if (scriptHandler == null)
+			return;
+
+		if (scriptHandler.isRunning())
+		{
+			scriptHandler.killScript();
+		}
+	}
 }

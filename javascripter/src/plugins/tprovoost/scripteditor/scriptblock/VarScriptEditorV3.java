@@ -46,8 +46,8 @@ public class VarScriptEditorV3 extends SwingVarEditor<String>
     @Override
     protected JComponent createEditorComponent()
     {
-	panelIn = new ScriptingPanel(null, "Internal Editor", "JavaScript", true);
-	panelOut = new ScriptingPanel(null, "External Editor", "JavaScript", true);
+	panelIn = new ScriptingPanel("Internal Editor", "JavaScript");
+	panelOut = new ScriptingPanel("External Editor", "JavaScript");
 	panelOut.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
 	frame = new IcyFrame("External Editor", true, true, true, true);

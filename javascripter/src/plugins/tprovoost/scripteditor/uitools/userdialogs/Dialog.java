@@ -221,7 +221,7 @@ public class Dialog
         });
     }
 
-    public Number getNumber() throws Exception
+    public Number getNumber()
     {
         return (Number) listNumbers.pop().getValue();
     }

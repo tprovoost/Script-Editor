@@ -61,8 +61,9 @@ public class JarAccess
                 return urlResource;
             }
         }
-        catch (Exception e)
+        catch (ClassNotFoundException e)
         {
+        	// ignore
         }
         return null;
     }

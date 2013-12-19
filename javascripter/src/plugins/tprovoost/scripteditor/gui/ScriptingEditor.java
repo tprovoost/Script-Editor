@@ -28,13 +28,17 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -48,12 +52,16 @@ import javax.swing.KeyStroke;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import javax.swing.event.HyperlinkEvent.EventType;
 
+import plugins.tprovoost.scripteditor.gui.ScriptingPanel.SavedAsListener;
+import plugins.tprovoost.scripteditor.gui.ScriptingPanel.TitleChangedListener;
 import plugins.tprovoost.scripteditor.scriptingconsole.BindingsScriptFrame;
 import plugins.tprovoost.scripteditor.scriptingconsole.PythonScriptingconsole;
 import plugins.tprovoost.scripteditor.scriptingconsole.Scriptingconsole;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptingHandler;
 
 /**
  * Main GUI of the class
@@ -124,6 +132,89 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		}
 	};
 	
+	// listener called when a child ScriptingPanel saves a new file
+	private SavedAsListener savedAsListener = new SavedAsListener()
+	{
+
+		@Override
+		public void savedAs(File f) {
+			addRecentFile(f);
+		}
+	};
+	
+	// listener called when a child ScriptingPanel wants its title to be changed
+	private TitleChangedListener titleChangedListener = new TitleChangedListener()
+	{
+
+		@Override
+		public void titleChanged(ScriptingPanel panel, String title)
+		{
+			int idx = tabbedPane.indexOfComponent(panel);
+			if (idx != -1)
+			{
+				tabbedPane.setTitleAt(idx, title);
+				Component c = tabbedPane.getTabComponentAt(idx);
+				if (c instanceof JComponent)
+					((JComponent) c).revalidate();
+				else
+					c.repaint();
+			}
+		}
+	};
+	
+	private FileDrop.FileDropListener fileDropListener = new FileDrop.FileDropListener()
+	{
+
+		@Override
+		public void filesDropped(File[] files)
+		{
+			for (File f : files)
+				if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
+					try
+					{
+						openFile(f);
+					} catch (IOException e)
+					{
+					}
+				else
+					Loader.load(f, true);
+		}
+	};
+	
+	private HyperlinkListener hyperlinkListener = new HyperlinkListener()
+	{
+
+		@Override
+		public void hyperlinkUpdate(HyperlinkEvent e) {
+			if (e.getEventType() == EventType.ACTIVATED)
+			{
+				URL url = e.getURL();
+				String res = url == null ? e.getDescription() : url.getFile();
+				try
+				{
+					openFile(new File(res));
+				}
+				catch (IOException e1)
+				{
+				}
+			}
+		}
+	};
+	
+	// listen to changes of language in a child panel
+	public ItemListener languageListener = new ItemListener()
+	{
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if (e.getStateChange() == ItemEvent.SELECTED)
+			{
+				String language = (String) e.getItem();
+				changeConsoleLanguage(language);
+			}
+		}
+	};
+	
 	private JPanel panelSouth;
 
 	public ScriptingEditor()
@@ -159,61 +250,14 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				if (!(comp instanceof ScriptingPanel))
 					return;
 				ScriptingPanel panel = (ScriptingPanel) comp;
-				final ScriptingHandler handler = panel.getScriptHandler();
-				ThreadUtil.bgRun(new Runnable()
-				{
-
-					@Override
-					public void run()
-					{
-						int max = 20;
-						int i = 0;
-						while (handler == null && i < max)
-						{
-							ThreadUtil.sleep(500);
-							++i;
-						}
-					}
-				});
-
+				// update the console language according to the selected panel
+				changeConsoleLanguage(panel.getLanguage());
 			}
 		});
-		new FileDrop(getExternalFrame(), new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-						try
-						{
-							openFile(f);
-						} catch (IOException e)
-						{
-						}
-					else
-						Loader.load(f, true);
-			}
-		});
-		new FileDrop(getInternalFrame(), new FileDrop.FileDropListener()
-		{
-
-			@Override
-			public void filesDropped(File[] files)
-			{
-				for (File f : files)
-					if (f.getName().endsWith(".js") || f.getName().endsWith(".py"))
-						try
-						{
-							openFile(f);
-						} catch (IOException e)
-						{
-						}
-					else
-						Loader.load(f, true);
-			}
-		});
+		
+		new FileDrop(getExternalFrame(), fileDropListener);
+		new FileDrop(getInternalFrame(), fileDropListener);
+		
 		addPaneButton = new IcyButton(new IcyIcon("plus"));
 		addPaneButton.setBorderPainted(false);
 		addPaneButton.setPreferredSize(new Dimension(20, 20));
@@ -407,9 +451,19 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		ScriptingPanel panelCreated;
 		String ext = FileUtil.getFileExtension(name, false);
 		if (ext.contentEquals("py"))
-			panelCreated = new ScriptingPanel(this, name, "Python");
+			panelCreated = new ScriptingPanel(name, "Python", consoleOutput);
 		else
-			panelCreated = new ScriptingPanel(this, name, "JavaScript");
+			panelCreated = new ScriptingPanel(name, "JavaScript", consoleOutput);
+		
+		panelCreated.addSavedAsListener(savedAsListener);
+		panelCreated.addTitleChangedListener(titleChangedListener);
+		panelCreated.addFileDropListener(fileDropListener);
+		panelCreated.addHyperlinkListener(hyperlinkListener);
+		panelCreated.addLanguageListener(languageListener);
+		
+		// initialize the console corresponding to this panel
+		changeConsoleLanguage(panelCreated.getLanguage());
+		
 		int idx = tabbedPane.getTabCount() - 1;
 		if (idx != -1)
 			tabbedPane.removeTabAt(idx);
@@ -899,10 +953,17 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		Component c = tabbedPane.getTabComponentAt(i);
 		if (c instanceof ButtonTabComponent)
 		{
-			boolean ok = ((ButtonTabComponent) c).getPanel().close();
+			ScriptingPanel panel = ((ButtonTabComponent) c).getPanel(); 
+			boolean ok = panel.close(getCurrentDirectory());
 			
 			if (ok)
 			{
+				panel.removeSavedAsListener(savedAsListener);
+				panel.removeTitleChangedListener(titleChangedListener);
+				panel.removeFileDropListeners();
+				panel.removeHyperlinkListener(hyperlinkListener);
+				panel.removeLanguageListener(languageListener);
+				
 				// remove the tab
 		        int selectedIdx = tabbedPane.getSelectedIndex();
 		        if (i != -1)
