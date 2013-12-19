@@ -551,6 +551,8 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		{
 			processError(s, e);
 		}
+		// update the icons for warning/errors now that the script has been interpreted
+		updateGutter();
 	}
 
 	protected abstract void processError(String s, Exception e);

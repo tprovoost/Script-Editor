@@ -32,6 +32,7 @@ import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
 import javax.swing.text.JTextComponent;
+
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
@@ -43,6 +44,7 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextArea;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ErrorReporter;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.NativeArray;
@@ -91,6 +93,38 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	// as in the GUI
 	private static int LINE_NUMBER_START = 1;
 	
+	/**
+	 *  Registers all the warnings and errors that have been found by Rhino when parsing 
+	 */
+	class Reporter implements ErrorReporter
+	{
+
+		@Override
+		public void warning(String message, String sourceName, int line,
+				String lineSource, int lineOffset) {
+			ScriptEditorException se = new ScriptEditorException(message, sourceName, line, lineOffset, true);
+			ignoredLines.add(se);
+		}
+
+		@Override
+		public void error(String message, String sourceName, int line,
+				String lineSource, int lineOffset) {
+			ScriptEditorException se = new ScriptEditorException(message, sourceName, line, lineOffset, false);
+			ignoredLines.add(se);
+		}
+
+		@Override
+		public EvaluatorException runtimeError(String message,
+				String sourceName, int line, String lineSource,
+				int lineOffset) {
+			System.out.println("runtimeError " + message + " " + sourceName + " " + line + " " + lineSource + " " + lineOffset);
+			return null;
+		}
+	}
+	/**
+	 *  Registers all the warnings and errors that have been found by Rhino when parsing 
+	 */
+	Reporter reporter = new Reporter();
 
 	/**
 	 * Contains all functions created in
@@ -511,18 +545,21 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 	@Override
 	protected void detectVariables(String s) throws ScriptException
 	{
-		Context context = Context.enter();
+		Context.enter();
 		try
 		{
 			currentText = s;
-			final CompilerEnvirons comp = new CompilerEnvirons();
-			comp.initFromContext(context);
-			final Parser parser = new Parser(comp, comp.getErrorReporter());
+			final CompilerEnvirons comp = CompilerEnvirons.ideEnvirons();
+			// report errors and warnings through our own reporter class
+			comp.setErrorReporter(reporter);
+			// do not complain about missing commas when they are not strictly needed
+			comp.setStrictMode(false);
+			final Parser parser = new Parser(comp);
 			AstRoot root = null;
 
 			try
 			{
-				root = parser.parse(s, "", LINE_NUMBER_START);
+				root = parser.parse(s, fileName, LINE_NUMBER_START);
 			} catch (EvaluatorException e)
 			{
 				throw new ScriptEditorException(e.getMessage(), fileName, e.lineNumber(), e.columnNumber(), true);
