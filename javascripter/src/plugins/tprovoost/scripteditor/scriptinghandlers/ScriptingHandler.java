@@ -489,16 +489,44 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				if (gutter == null || !(textArea instanceof JTextArea))
 					return;
 				gutter.removeAllTrackingIcons();
+
+				// The parser may have found multiple errors/warnings on each line
+				// We walk the list to merge them.
+				ArrayList<Integer> lines = new ArrayList<Integer>();
+				ArrayList<Boolean> warnings = new ArrayList<Boolean>();
+				ArrayList<String> messages = new ArrayList<String>();
+
 				for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
+				{
+					if (lines.contains(see.getLineNumber()))
+					{
+						// there was already an error on this line
+						int index = lines.indexOf(see.getLineNumber());
+						String message = messages.get(index) + "<br>" + see.getMessage();
+						// if there is an error, make it an error, not a warning
+						boolean warning = warnings.get(index) && see.isWarning();
+						messages.set(index, message);
+						warnings.set(index, warning);
+					}
+					else
+					{
+						lines.add(see.getLineNumber());
+						warnings.add(see.isWarning());
+						messages.add(see.getMessage());
+					}
+				}
+
+				for (int i=0; i<lines.size(); i++)
 				{
 					try
 					{
 						IcyIcon icon;
-						if (see.isWarning())
+						if (warnings.get(i))
 							icon = ICON_ERROR_TOOLTIP;
 						else
 							icon = ICON_ERROR;
-						String tooltip = see.getMessage();
+						//wrap the tooltip in html to handle mutli-lines
+						String tooltip = "<html>" + messages.get(i) + "</html>";
 						// if (tooltip.length() > 127)
 						// {
 						// tooltip = tooltip.substring(0, 127) + "...";
@@ -507,8 +535,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 						// Warning! The Gutter displays lines starting from 1, BUT its
 						// internal implementation is based on a JTextArea that expects
 						// the line numbers to be counted from 0.
-						int textAreaLineNumber = see.getLineNumber()-1;
-
+						int textAreaLineNumber = lines.get(i)-1;
 						gutter.addLineTrackingIcon(textAreaLineNumber, icon, tooltip);
 						gutter.repaint();
 					} catch (BadLocationException e)
