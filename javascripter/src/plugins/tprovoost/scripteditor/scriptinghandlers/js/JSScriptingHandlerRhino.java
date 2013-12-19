@@ -78,7 +78,6 @@ import plugins.tprovoost.scripteditor.completion.types.BasicJavaClassCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion;
 import plugins.tprovoost.scripteditor.completion.types.ScriptFunctionCompletion.BindingFunction;
 import plugins.tprovoost.scripteditor.scriptinghandlers.IcyFunctionBlock;
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptVariable;
@@ -102,15 +101,15 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		@Override
 		public void warning(String message, String sourceName, int line,
 				String lineSource, int lineOffset) {
-			ScriptEditorException se = new ScriptEditorException(message, sourceName, line, lineOffset, true);
-			ignoredLines.add(se);
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			warnings.add(se);
 		}
 
 		@Override
 		public void error(String message, String sourceName, int line,
 				String lineSource, int lineOffset) {
-			ScriptEditorException se = new ScriptEditorException(message, sourceName, line, lineOffset, false);
-			ignoredLines.add(se);
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			errors.add(se);
 		}
 
 		@Override
@@ -118,6 +117,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				String sourceName, int line, String lineSource,
 				int lineOffset) {
 			System.out.println("runtimeError " + message + " " + sourceName + " " + line + " " + lineSource + " " + lineOffset);
+			ScriptException se = new ScriptException(message, sourceName, line, lineOffset);
+			errors.add(se);
 			return null;
 		}
 	}
@@ -562,7 +563,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				root = parser.parse(s, fileName, LINE_NUMBER_START);
 			} catch (RhinoException e)
 			{
-				throw new ScriptEditorException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber(), true);
+				throw new ScriptException(e.getMessage(), e.sourceName(), e.lineNumber(), e.columnNumber());
 			}
 
 			if (root == null || !root.hasChildren())
@@ -709,7 +710,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 				VariableType type = getRealType(right);
 				if (type != null && type.getClazz() == void.class)
 				{
-					throw new ScriptEditorException("This method returns \"void\" and cannot be assigned", fileName, n.getLineno(), -1, false);
+					throw new ScriptException("This method returns \"void\" and cannot be assigned", fileName, n.getLineno(), -1);
 				}
 				String typeString = "";
 				if (type != null)
@@ -907,7 +908,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			// unknown type
 			if (vt == null)
 			{
-				ignoredLines.add(new ScriptEditorException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno(), true));
+				warnings.add(new ScriptException("Unknown field or method: " + classNameOrFunctionNameOrVariable, null, n.getLineno()));
 				return null;
 			}
 
@@ -982,11 +983,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 							returnType = f.getType();
 						} catch (SecurityException e)
 						{
-							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+							warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						} catch (NoSuchFieldException e)
 						{
-							ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+							warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 							return null;
 						}
 					}
@@ -1004,11 +1005,11 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 						returnType = f.getType();
 					} catch (SecurityException e)
 					{
-						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					} catch (NoSuchFieldException e)
 					{
-						ignoredLines.add(new ScriptEditorException("Unknown field or method: " + call, null, n.getLineno(), true));
+						warnings.add(new ScriptException("Unknown field or method: " + call, null, n.getLineno()));
 						return null;
 					}
 				}
@@ -2587,8 +2588,8 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 		try
 		{
 			detectVariables(currentText);
-			ArrayList<ScriptEditorException> listCopy = new ArrayList<ScriptEditorException>(ignoredLines);
-			for (ScriptEditorException e : listCopy)
+			ArrayList<ScriptException> listCopy = new ArrayList<ScriptException>(errors);
+			for (ScriptException e : listCopy)
 			{
 				String message = e.getMessage();
 				if (message.contains("Unknown field or method: "))

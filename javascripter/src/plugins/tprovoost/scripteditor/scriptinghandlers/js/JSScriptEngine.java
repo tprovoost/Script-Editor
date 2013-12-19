@@ -13,14 +13,12 @@ import java.util.HashMap;
 import javax.script.ScriptException;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.ImporterTopLevel;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.RhinoException;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.ScriptableObject;
 
-import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEditorException;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngine;
 
 public class JSScriptEngine extends ScriptEngine
@@ -87,7 +85,7 @@ public class JSScriptEngine extends ScriptEngine
 		File f = new File(fileName);
 		if (!f.exists())
 		{
-			throw new ScriptEditorException("The script file could not be found, please check if it is correctly saved on the disk.", fileName, -1);
+			throw new ScriptException("The script file could not be found, please check if it is correctly saved on the disk.", fileName, -1);
 		}
 
 		byte[] bytes = null;
@@ -99,7 +97,7 @@ public class JSScriptEngine extends ScriptEngine
 			bis.close();
 		} catch (IOException e1)
 		{
-			throw new ScriptEditorException(e1.getMessage(), fileName, -1);
+			throw new ScriptException(e1.getMessage(), fileName, -1);
 		}
 		String s = new String(bytes);
 
@@ -151,7 +149,7 @@ public class JSScriptEngine extends ScriptEngine
 			getWriter().write(Context.toString(o));
 		}
 
-		public void eval(Object o) throws ScriptEditorException, FileNotFoundException
+		public void eval(Object o) throws ScriptException, FileNotFoundException
 		{
 			File f;
 			if (o instanceof NativeJavaObject && ((NativeJavaObject) o).unwrap() instanceof File)
@@ -193,7 +191,7 @@ public class JSScriptEngine extends ScriptEngine
 			} catch (RhinoException e3)
 			{
 				// getErrorWriter().write(e3.getMessage());
-				throw new ScriptEditorException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
+				throw new ScriptException(e3.getMessage(), e3.sourceName(), e3.lineNumber(), e3.columnNumber());
 			} finally
 			{
 				Context.exit();

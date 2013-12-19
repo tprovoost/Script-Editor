@@ -62,11 +62,18 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 {
 
 	/**
-	 * {@link HashMap} containing all ignored Lines if they contains errors.
-	 * This allows the parser to no stop at the first line where the error is.
+	 * {@link ArrayList} containing all the errors found when parsing the file.
 	 */
-	protected ArrayList<ScriptEditorException> ignoredLines = new ArrayList<ScriptEditorException>();
-
+	protected ArrayList<ScriptException> errors = new ArrayList<ScriptException>();
+	/**
+	 * {@link ArrayList} containing all the warnings found when parsing the file.
+	 */
+	protected ArrayList<ScriptException> warnings = new ArrayList<ScriptException>();
+	/**
+	 * The error that stopped the script, if any.
+	 */
+	protected ScriptException runtimeError = null;
+	
 	/**
 	 * List of the variable completions found when script was parsed. Functions
 	 * and classes are considered as Variables too.
@@ -459,8 +466,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 	 */
 	public void interpret(boolean exec)
 	{
-		ignoredLines.clear();
-
 		// use either selected text if any or all text
 		String s = textArea.getSelectedText();
 		if (s == null)
@@ -493,10 +498,21 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 				// The parser may have found multiple errors/warnings on each line
 				// We walk the list to merge them.
 				ArrayList<Integer> lines = new ArrayList<Integer>();
-				ArrayList<Boolean> warnings = new ArrayList<Boolean>();
+				ArrayList<Boolean> areWarning = new ArrayList<Boolean>();
 				ArrayList<String> messages = new ArrayList<String>();
+				
+				if (runtimeError != null)
+				{
+					lines.add(runtimeError.getLineNumber());
+					areWarning.add(false);
+					
+					// We will wrap the message in HTML to handle multiple errors on a single line
+					// so first make sure we have nothing that could break HTML in the raw messages
+					String normalizedMessage = runtimeError.getMessage().replaceAll("<", "").replaceAll(">", "");
+					messages.add(normalizedMessage);
+				}
 
-				for (ScriptEditorException see : new ArrayList<ScriptEditorException>(ignoredLines))
+				for (ScriptException see : errors)
 				{
 					// We will wrap the message in HTML to handle multiple errors on a single line
 					// so first make sure we have nothing that could break HTML in the raw messages
@@ -507,15 +523,36 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 						// there was already an error on this line
 						int index = lines.indexOf(see.getLineNumber());
 						String message = messages.get(index) + "<br>" + normalizedMessage;
-						// if there is an error, make it an error, not a warning
-						boolean warning = warnings.get(index) && see.isWarning();
 						messages.set(index, message);
-						warnings.set(index, warning);
+						// if there is an error, make it an error, not a warning
+						areWarning.set(index, false);
 					}
 					else
 					{
 						lines.add(see.getLineNumber());
-						warnings.add(see.isWarning());
+						areWarning.add(false);
+						messages.add(normalizedMessage);
+					}
+				}
+				
+				for (ScriptException see : warnings)
+				{
+					// We will wrap the message in HTML to handle multiple errors on a single line
+					// so first make sure we have nothing that could break HTML in the raw messages
+					String normalizedMessage = see.getMessage().replaceAll("<", "").replaceAll(">", "");
+
+					if (lines.contains(see.getLineNumber()))
+					{
+						// there was already an error on this line
+						int index = lines.indexOf(see.getLineNumber());
+						String message = messages.get(index) + "<br>" + normalizedMessage;
+						messages.set(index, message);
+						// no need to change areWarning here
+					}
+					else
+					{
+						lines.add(see.getLineNumber());
+						areWarning.add(false);
 						messages.add(normalizedMessage);
 					}
 				}
@@ -525,7 +562,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					try
 					{
 						IcyIcon icon;
-						if (warnings.get(i))
+						if (areWarning.get(i))
 							icon = ICON_ERROR_TOOLTIP;
 						else
 							icon = ICON_ERROR;
@@ -576,20 +613,23 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 			registerImports();
 			if (varInterpretation)
 			{
+				cleanupErrors();
 				detectVariables(s);
 			}
 			setCompilationOk(true);
 		} catch (ScriptException e)
 		{
-			processError(s, e);
+			runtimeError = e;
 		}
 		// update the icons for warning/errors now that the script has been interpreted
 		updateGutter();
 	}
-
-	protected void processError(String s, ScriptException e)
+	
+	private void cleanupErrors()
 	{
-    	ignoredLines.add(new ScriptEditorException(e.getMessage(), e.getFileName(), e.getLineNumber(), e.getColumnNumber(), false));
+		errors.clear();
+		warnings.clear();
+		runtimeError = null;
 	}
 
 	protected void addExternalVariables()
@@ -1062,7 +1102,7 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 					@Override
 					public void run()
 					{
-						processError(s, e);
+						runtimeError = e;
 						updateGutter();
 					}
 				});
