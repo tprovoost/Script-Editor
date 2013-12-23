@@ -236,6 +236,24 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				{
 					super.setSelectedIndex(index);
 					saveEditorState();
+
+					// update the editor title with the absolute path of the selected tab
+					Component c = tabbedPane.getTabComponentAt(index);
+					if (c instanceof ButtonTabComponent)
+					{
+						ScriptingPanel panel = ((ButtonTabComponent) c).getPanel();
+						File f = panel.getSaveFile();
+						String s;
+						if (f != null)
+						{
+							s = f.getAbsolutePath();
+						}
+						else
+						{
+							s = panel.getPanelName();
+						}
+						setTitle("Script Editor - " + s);
+					}
 				}
 			}
 		};
