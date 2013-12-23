@@ -476,7 +476,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		tabbedPane.addTab(name, panelCreated);
 		tabbedPane.setTitleAt(idx, name);
 		tabbedPane.repaint();
-		tabbedPane.setTabComponentAt(idx, new ButtonTabComponent(this, panelCreated));
+		tabbedPane.setTabComponentAt(idx, new TabComponentButton(this, panelCreated));
 		tabbedPane.addTab("+", new JLabel());
 		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
@@ -955,9 +955,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	protected boolean closeTab(int i)
 	{
 		Component c = tabbedPane.getTabComponentAt(i);
-		if (c instanceof ButtonTabComponent)
+		if (c instanceof TabComponentButton)
 		{
-			ScriptingPanel panel = ((ButtonTabComponent) c).getPanel(); 
+			ScriptingPanel panel = ((TabComponentButton) c).getPanel(); 
 			boolean ok = panel.close(getCurrentDirectory());
 			
 			if (ok)
@@ -985,7 +985,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		return true;
 	}
 	
-	protected boolean closeTab(ButtonTabComponent tabComponent)
+	protected boolean closeTab(TabComponentButton tabComponent)
 	{
 		int i = tabbedPane.indexOfTabComponent(tabComponent);
 		return closeTab(i);

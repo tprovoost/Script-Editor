@@ -33,7 +33,7 @@ import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
  * 
  * @author Thomas Provoost
  */
-class PanelOptions extends JPanel
+class CommandPanel extends JPanel
 {
 
 	/** */
@@ -84,12 +84,12 @@ class PanelOptions extends JPanel
 	};
 	protected boolean lastIsNew = true;
 
-	public PanelOptions()
+	public CommandPanel()
 	{
 		this("JavaScript");
 	}
 
-	public PanelOptions(String language)
+	public CommandPanel(String language)
 	{
 		// final JButton btnBuild = new JButton("Verify");
 		btnRun = new JMenuItem("Run in Current Context", new IcyIcon(imgPlayback2, 16));

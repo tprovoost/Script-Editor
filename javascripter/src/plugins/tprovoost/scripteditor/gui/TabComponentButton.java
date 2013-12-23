@@ -27,14 +27,14 @@ import javax.swing.plaf.basic.BasicButtonUI;
  * Component to be used as tabComponent; Contains a JLabel to show the text and
  * a JButton to close the tab it belongs to
  */
-public class ButtonTabComponent extends JPanel
+public class TabComponentButton extends JPanel
 {
     /** */
     private static final long serialVersionUID = 1L;
     private final ScriptingPanel panel;
     private final ScriptingEditor editor;
 
-    public ButtonTabComponent(ScriptingEditor scriptingEditor, final ScriptingPanel panelCreated)
+    public TabComponentButton(ScriptingEditor scriptingEditor, final ScriptingPanel panelCreated)
     {
         // unset default FlowLayout' gaps
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -56,7 +56,7 @@ public class ButtonTabComponent extends JPanel
             public String getText()
             {
                 JTabbedPane pane = editor.getTabbedPane();
-                int i = pane.indexOfTabComponent(ButtonTabComponent.this);
+                int i = pane.indexOfTabComponent(TabComponentButton.this);
                 if (i != -1)
                 {
                     return pane.getTitleAt(i);
