@@ -23,7 +23,6 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.border.LineBorder;
 
 import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
