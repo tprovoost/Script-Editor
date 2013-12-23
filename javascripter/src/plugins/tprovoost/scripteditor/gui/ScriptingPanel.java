@@ -614,10 +614,28 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 			// setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVA);
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 			ac = new JSAutoCompletion(provider);
+			ThreadUtil.invokeLater(new Runnable()
+			{
+
+				@Override
+				public void run()
+				{
+					options.setRunButtonsEnabled(true);
+				}
+			});
 		} else if (language.contentEquals("Python"))
 		{
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 			ac = new PythonAutoCompletion(provider);
+			ThreadUtil.invokeLater(new Runnable()
+			{
+
+				@Override
+				public void run()
+				{
+					options.setRunButtonsEnabled(true);
+				}
+			});
 		} else
 		{
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_NONE);
