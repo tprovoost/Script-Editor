@@ -23,6 +23,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.border.LineBorder;
 
 import plugins.tprovoost.scripteditor.gui.action.SplitButtonActionListener;
 import plugins.tprovoost.scripteditor.scriptinghandlers.ScriptEngineHandler;
@@ -114,7 +115,6 @@ class PanelOptions extends JPanel
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 		setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
-		add(new JLabel("Lang: "));
 		ArrayList<String> values = new ArrayList<String>();
 		ScriptEngineManager manager = new ScriptEngineManager(PluginLoader.getLoader());
 		for (ScriptEngineFactory factory : manager.getEngineFactories())
@@ -123,7 +123,7 @@ class PanelOptions extends JPanel
 		}
 		comboLanguages = new JComboBox(values.toArray());
 		comboLanguages.setSelectedItem(language);
-		add(comboLanguages);
+		comboLanguages.setMaximumSize(comboLanguages.getPreferredSize());
 
 		btnRun.addActionListener(runInSameListener);
 
@@ -146,7 +146,9 @@ class PanelOptions extends JPanel
 		});
 		btnRunNew2.addActionListener(runInNewListener);
 
-		add(Box.createHorizontalStrut(STRUT_SIZE * 3));
+		add(new JLabel("Lang: "));
+		add(comboLanguages);
+		add(Box.createHorizontalStrut(STRUT_SIZE));
 		add(btnSplitRun);
 		add(Box.createHorizontalStrut(STRUT_SIZE));
 		add(btnStop);
