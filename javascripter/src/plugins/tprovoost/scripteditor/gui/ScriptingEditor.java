@@ -224,39 +224,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		setJMenuBar(createJMenuBar());
 
 		JPanel mainPanel = new JPanel(new BorderLayout());
-		tabbedPane = new JTabbedPane()
-		{
-			/** */
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public void setSelectedIndex(int index)
-			{
-				if (index < tabbedPane.getTabCount() - 1)
-				{
-					super.setSelectedIndex(index);
-					saveEditorState();
-
-					// update the editor title with the absolute path of the selected tab
-					Component c = tabbedPane.getTabComponentAt(index);
-					if (c instanceof ButtonTabComponent)
-					{
-						ScriptingPanel panel = ((ButtonTabComponent) c).getPanel();
-						File f = panel.getSaveFile();
-						String s;
-						if (f != null)
-						{
-							s = f.getAbsolutePath();
-						}
-						else
-						{
-							s = panel.getPanelName();
-						}
-						setTitle("Script Editor - " + s);
-					}
-				}
-			}
-		};
+		tabbedPane = new JTabbedPane();
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tabbedPane.addChangeListener(new ChangeListener()
 		{
@@ -267,9 +235,27 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				Component comp = tabbedPane.getSelectedComponent();
 				if (!(comp instanceof ScriptingPanel))
 					return;
+				
 				ScriptingPanel panel = (ScriptingPanel) comp;
+
+				// save the editor state to be able to restore the currently-opened tab
+				saveEditorState();
+				
 				// update the console language according to the selected panel
 				changeConsoleLanguage(panel.getLanguage());
+
+				// update the editor title with the absolute path of the selected tab
+				File f = panel.getSaveFile();
+				String s;
+				if (f != null)
+				{
+					s = f.getAbsolutePath();
+				}
+				else
+				{
+					s = panel.getPanelName();
+				}
+				setTitle("Script Editor - " + s);
 			}
 		});
 		
