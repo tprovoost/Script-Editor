@@ -104,31 +104,33 @@ public class ScriptingErrors {
 
 		for (int i=0; i<lines.size(); i++)
 		{
+			IcyIcon icon;
+			if (areWarning.get(i))
+				icon = ICON_ERROR_TOOLTIP;
+			else
+				icon = ICON_ERROR;
+			//wrap the tooltip in html to handle multi-lines
+			String tooltip = "<html>" + messages.get(i) + "</html>";
+			// if (tooltip.length() > 127)
+			// {
+			// tooltip = tooltip.substring(0, 127) + "...";
+			// }
+
+			// Warning! The Gutter displays lines starting from 1, BUT its
+			// internal implementation is based on a JTextArea that expects
+			// the line numbers to be counted from 0.
+			int textAreaLineNumber = lines.get(i)-1;
+
 			try
 			{
-				IcyIcon icon;
-				if (areWarning.get(i))
-					icon = ICON_ERROR_TOOLTIP;
-				else
-					icon = ICON_ERROR;
-				//wrap the tooltip in html to handle multi-lines
-				String tooltip = "<html>" + messages.get(i) + "</html>";
-				// if (tooltip.length() > 127)
-				// {
-				// tooltip = tooltip.substring(0, 127) + "...";
-				// }
-
-				// Warning! The Gutter displays lines starting from 1, BUT its
-				// internal implementation is based on a JTextArea that expects
-				// the line numbers to be counted from 0.
-				int textAreaLineNumber = lines.get(i)-1;
 				gutter.addLineTrackingIcon(textAreaLineNumber, icon, tooltip);
-				gutter.repaint();
 			} catch (BadLocationException e)
 			{
-				// if (DEBUG)
 				e.printStackTrace();
+				System.out.println(tooltip);
 			}
+
+			gutter.repaint();
 		}
 	}
 

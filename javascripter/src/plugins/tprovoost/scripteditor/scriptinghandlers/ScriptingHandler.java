@@ -501,7 +501,6 @@ public abstract class ScriptingHandler implements KeyListener, PluginRepositoryL
 		textArea.setText(s);
 		try
 		{
-			updateGutter();
 			clearScriptVariables();
 			registerImports();
 			if (varInterpretation)
