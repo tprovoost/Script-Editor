@@ -3,7 +3,6 @@ package plugins.tprovoost.scripteditor.gui;
 import icy.common.listener.AcceptListener;
 import icy.file.FileUtil;
 import icy.file.Loader;
-import icy.gui.component.button.IcyButton;
 import icy.gui.frame.IcyFrame;
 import icy.gui.frame.IcyFrameAdapter;
 import icy.gui.frame.IcyFrameEvent;
@@ -23,7 +22,7 @@ import icy.util.XMLUtil;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -73,7 +72,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 
 	// Scripting Panels
 	private JTabbedPane tabbedPane;
-	private JButton addPaneButton;
+	private JPanel addPanePanel;
 
 	// Console
 	private ConsoleOutput consoleOutput;
@@ -233,8 +232,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			public void stateChanged(ChangeEvent arg0)
 			{
 				Component comp = tabbedPane.getSelectedComponent();
-				if (!(comp instanceof ScriptingPanel))
-					return;
+				if (!(comp instanceof ScriptingPanel)) {
+					createNewPane();
+					return;				
+				}
 				
 				ScriptingPanel panel = (ScriptingPanel) comp;
 
@@ -261,25 +262,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		
 		new FileDrop(getExternalFrame(), fileDropListener);
 		new FileDrop(getInternalFrame(), fileDropListener);
-		
-		addPaneButton = new IcyButton(new IcyIcon("plus"));
-		addPaneButton.setBorderPainted(false);
-		addPaneButton.setPreferredSize(new Dimension(20, 20));
-		addPaneButton.setMinimumSize(new Dimension(20, 20));
-		addPaneButton.setMaximumSize(new Dimension(20, 20));
-		addPaneButton.setSize(20, 20);
-		addPaneButton.setOpaque(false);
 
-		addPaneButton.addActionListener(new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				createNewPane();
-			}
-		});
-
+		// unset default FlowLayout' gaps
+		addPanePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		addPanePanel.setOpaque(false);
+        addPanePanel.add(new JLabel(new IcyIcon("plus")));
+        
 		consoleOutput = new ConsoleOutput();
 
 		if (btnClearConsole != null)
@@ -478,9 +466,9 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 		tabbedPane.repaint();
 		tabbedPane.setTabComponentAt(idx, new TabComponentButton(this, panelCreated));
 		tabbedPane.addTab("+", new JLabel());
-		tabbedPane.setTabComponentAt(idx + 1, addPaneButton);
+		tabbedPane.setTabComponentAt(idx + 1, addPanePanel);
 		tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 2);
-		Insets i = addPaneButton.getInsets();
+		Insets i = addPanePanel.getInsets();
 		i.bottom = 0;
 		i.left = 0;
 		i.right = 0;
@@ -968,14 +956,18 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 				panel.removeHyperlinkListener(hyperlinkListener);
 				panel.removeLanguageListener(languageListener);
 				
+	            if (i == tabbedPane.getSelectedIndex() && i >= (tabbedPane.getTabCount() - 2))
+	            {
+	            	// We are closing the last tab.
+	            	// The next one is the virtual tab used a "plus" button to open a new tab.
+	            	// We want to avoid selecting that tab artificially,
+	            	// so go to the previous one.
+	            	tabbedPane.setSelectedIndex(i-1);
+	            }
+	            
 				// remove the tab
-		        int selectedIdx = tabbedPane.getSelectedIndex();
 		        if (i != -1)
-		        {
 		        	tabbedPane.remove(i);
-		            if (i == selectedIdx)
-		            	tabbedPane.setSelectedIndex(0);
-		        }
 		        
 		        saveEditorState();
 				
