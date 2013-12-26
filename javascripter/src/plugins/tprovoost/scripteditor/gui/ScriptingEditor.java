@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -409,11 +410,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			while (tabbedPane.getTabCount() > 1)
-			{
-				if (!closeTab(0))
-					return false;
-			}
+			if (!closeAllTabs())
+				return false;
 
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			close();
@@ -499,19 +497,32 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			return;
 		}
 		
-		// only one tab opened
-		if (tabbedPane.getTabCount() == 2)
-		{
-			// The user has chosen to open a file, while the editor only has the default "Untitled" pane
-			// Remove that default pane.
-			if (tabbedPane.getTitleAt(0).contentEquals("Untitled"))
-				closeTab(0);
-		}
-		
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
+		removeUntitledFirstPane();
 		saveEditorState();
+	}
+
+	private void removeUntitledFirstPane()
+	{
+		// the user has chosen to open a file,
+		// while the editor only has the default "Untitled" file opened.
+		// remove that pane if it is really empty
+
+		// if there are only two tabs, it means that the second one is the '+' tab
+		// removing the first one would select that '+' tab and recreate a new one...
+		// Avoid that !
+		if (tabbedPane.getTabCount() <= 2)
+			return;
+
+		ScriptingPanel panel = (ScriptingPanel) tabbedPane.getComponentAt(0);
+		if (tabbedPane.getTitleAt(0).contentEquals("Untitled")
+				&& panel.getTextArea().getText().isEmpty()
+				&& !panel.isDirty())
+		{
+			closeTab(0);
+		}
 	}
 
 	private void updateRecentFilesMenu()
@@ -562,14 +573,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	 */
 	public void openStream(String name, InputStream stream) throws IOException
 	{
-		if (tabbedPane.getTabCount() == 2)
-		{
-			ScriptingPanel panel = (ScriptingPanel) tabbedPane.getComponentAt(0);
-			if (!panel.isDirty() && panel.getPanelName().contentEquals("Untitled"))
-				tabbedPane.removeTabAt(0);
-		}
 		ScriptingPanel panel = createNewPane(name);
 		panel.openStream(stream);
+		removeUntitledFirstPane();
+		saveEditorState();
 	}
 
 	/**
@@ -714,11 +721,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				while (tabbedPane.getTabCount() > 1)
-				{
-					if (!closeTab(0))
-						break;
-				}
+				closeAllTabs();
 			}
 		});
 		menuFile.add(menuCloseAll);
@@ -731,15 +734,19 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			public void actionPerformed(ActionEvent e)
 			{
 				int idx = tabbedPane.getSelectedIndex();
-				int deleted = 0;
-				int idxDelete = 0;
-				while (tabbedPane.getTabCount() > 2)
+				int N = tabbedPane.getTabCount() - 1;
+
+				ArrayList<Integer> tabsToClose = new ArrayList<Integer>();
+				for (int i=0; i<N; i++)
+					tabsToClose.add(i);
+				tabsToClose.remove(idx);
+
+				// remove tabs in reverse order to not change the tab indexes on the way
+				ListIterator<Integer> iterator = tabsToClose.listIterator(tabsToClose.size());
+				while(iterator.hasPrevious())
 				{
-					if (!closeTab(idxDelete))
+					if (!closeTab(iterator.previous()))
 						break;
-					deleted++;
-					if (deleted >= idx)
-						idxDelete = 1;
 				}
 			}
 		});
@@ -938,6 +945,32 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	public void displayFindReplace()
 	{
 		FindAndReplaceDialog.showDialog(this);
+	}
+
+	/**
+	 * Tries to close all tabs.
+	 * The use will be asked to save the changes, and given the opportunity to cancel.
+	 *
+	 * @return false if the operation is cancelled.
+	 */
+	private boolean closeAllTabs()
+	{
+		boolean ok = true;
+
+		// number of files opened
+		int N = tabbedPane.getTabCount() - 1;
+		// close all tabs
+		// Note: do not use a while loop on getTabCount() here, it could loop
+		// indefinitely in case of a coding error involving the '+' tab...
+		for (int i=0; i<N; i++)
+		{
+			if (!closeTab(0))
+			{
+				ok = false;
+				break;
+			}
+		}
+		return ok;
 	}
 
 	protected boolean closeTab(int i)
