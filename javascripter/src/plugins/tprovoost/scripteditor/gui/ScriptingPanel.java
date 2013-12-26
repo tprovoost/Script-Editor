@@ -82,7 +82,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 	private ScriptingHandler scriptHandler;
 	private RSyntaxTextArea textArea;
 	private RTextScrollPane pane;
-	private PanelOptions options;
+	private CommandPanel options;
 	private String panelName;
 	private String saveFileString = "";
 
@@ -229,7 +229,7 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 		pane.setIconRowHeaderEnabled(true);
 
 		// creates the options panel
-		options = new PanelOptions(language);
+		options = new CommandPanel(language);
 		installLanguage(options.getLanguage());
 		options.addLanguageListener(languageListener);
 		options.addRunInSameListener(runInSameListener);
@@ -614,10 +614,28 @@ public class ScriptingPanel extends JPanel implements ScriptListener
 			// setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVA);
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 			ac = new JSAutoCompletion(provider);
+			ThreadUtil.invokeLater(new Runnable()
+			{
+
+				@Override
+				public void run()
+				{
+					options.setRunButtonsEnabled(true);
+				}
+			});
 		} else if (language.contentEquals("Python"))
 		{
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 			ac = new PythonAutoCompletion(provider);
+			ThreadUtil.invokeLater(new Runnable()
+			{
+
+				@Override
+				public void run()
+				{
+					options.setRunButtonsEnabled(true);
+				}
+			});
 		} else
 		{
 			setSyntax(SyntaxConstants.SYNTAX_STYLE_NONE);
