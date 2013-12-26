@@ -409,7 +409,12 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			while (tabbedPane.getTabCount() > 1)
+			// number of files opened
+			int N = tabbedPane.getTabCount() - 1;
+			// close all tabs
+			// Note: do not use a while loop on getTabCount() here, it could loop
+			// indefinitely in case of a coding error involving the '+' tab...
+			for (int i=0; i<N; i++)
 			{
 				if (!closeTab(0))
 					return false;
