@@ -409,16 +409,8 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	{
 		if (getInternalFrame().getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE)
 		{
-			// number of files opened
-			int N = tabbedPane.getTabCount() - 1;
-			// close all tabs
-			// Note: do not use a while loop on getTabCount() here, it could loop
-			// indefinitely in case of a coding error involving the '+' tab...
-			for (int i=0; i<N; i++)
-			{
-				if (!closeTab(0))
-					return false;
-			}
+			if (!closeAllTabs())
+				return false;
 
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			close();
@@ -728,11 +720,7 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				while (tabbedPane.getTabCount() > 1)
-				{
-					if (!closeTab(0))
-						break;
-				}
+				closeAllTabs();
 			}
 		});
 		menuFile.add(menuCloseAll);
@@ -952,6 +940,32 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	public void displayFindReplace()
 	{
 		FindAndReplaceDialog.showDialog(this);
+	}
+
+	/**
+	 * Tries to close all tabs.
+	 * The use will be asked to save the changes, and given the opportunity to cancel.
+	 *
+	 * @return false if the operation is cancelled.
+	 */
+	private boolean closeAllTabs()
+	{
+		boolean ok = true;
+
+		// number of files opened
+		int N = tabbedPane.getTabCount() - 1;
+		// close all tabs
+		// Note: do not use a while loop on getTabCount() here, it could loop
+		// indefinitely in case of a coding error involving the '+' tab...
+		for (int i=0; i<N; i++)
+		{
+			if (!closeTab(0))
+			{
+				ok = false;
+				break;
+			}
+		}
+		return ok;
 	}
 
 	protected boolean closeTab(int i)
