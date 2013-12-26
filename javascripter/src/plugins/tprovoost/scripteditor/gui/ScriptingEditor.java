@@ -504,19 +504,32 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			return;
 		}
 		
-		// only one tab opened
-		if (tabbedPane.getTabCount() == 2)
-		{
-			// The user has chosen to open a file, while the editor only has the default "Untitled" pane
-			// Remove that default pane.
-			if (tabbedPane.getTitleAt(0).contentEquals("Untitled"))
-				closeTab(0);
-		}
-		
 		ScriptingPanel panel = createNewPane(filename);
 		panel.openFile(f);
 		addRecentFile(f);
+		removeUntitledFirstPane();
 		saveEditorState();
+	}
+
+	private void removeUntitledFirstPane()
+	{
+		// the user has chosen to open a file,
+		// while the editor only has the default "Untitled" file opened.
+		// remove that pane if it is really empty
+
+		// if there are only two tabs, it means that the second one is the '+' tab
+		// removing the first one would select that '+' tab and recreate a new one...
+		// Avoid that !
+		if (tabbedPane.getTabCount() <= 2)
+			return;
+
+		ScriptingPanel panel = (ScriptingPanel) tabbedPane.getComponentAt(0);
+		if (tabbedPane.getTitleAt(0).contentEquals("Untitled")
+				&& panel.getTextArea().getText().isEmpty()
+				&& !panel.isDirty())
+		{
+			closeTab(0);
+		}
 	}
 
 	private void updateRecentFilesMenu()
@@ -567,14 +580,10 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 	 */
 	public void openStream(String name, InputStream stream) throws IOException
 	{
-		if (tabbedPane.getTabCount() == 2)
-		{
-			ScriptingPanel panel = (ScriptingPanel) tabbedPane.getComponentAt(0);
-			if (!panel.isDirty() && panel.getPanelName().contentEquals("Untitled"))
-				tabbedPane.removeTabAt(0);
-		}
 		ScriptingPanel panel = createNewPane(name);
 		panel.openStream(stream);
+		removeUntitledFirstPane();
+		saveEditorState();
 	}
 
 	/**
