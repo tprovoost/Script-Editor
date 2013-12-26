@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -733,15 +734,19 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 			public void actionPerformed(ActionEvent e)
 			{
 				int idx = tabbedPane.getSelectedIndex();
-				int deleted = 0;
-				int idxDelete = 0;
-				while (tabbedPane.getTabCount() > 2)
+				int N = tabbedPane.getTabCount() - 1;
+
+				ArrayList<Integer> tabsToClose = new ArrayList<Integer>();
+				for (int i=0; i<N; i++)
+					tabsToClose.add(i);
+				tabsToClose.remove(idx);
+
+				// remove tabs in reverse order to not change the tab indexes on the way
+				ListIterator<Integer> iterator = tabsToClose.listIterator(tabsToClose.size());
+				while(iterator.hasPrevious())
 				{
-					if (!closeTab(idxDelete))
+					if (!closeTab(iterator.previous()))
 						break;
-					deleted++;
-					if (deleted >= idx)
-						idxDelete = 1;
 				}
 			}
 		});
