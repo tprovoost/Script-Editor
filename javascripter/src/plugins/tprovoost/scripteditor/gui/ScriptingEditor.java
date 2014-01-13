@@ -353,7 +353,13 @@ public class ScriptingEditor extends IcyFrame implements ActionListener
 					}
 				}
 				int idx = openedFiles.getInt(PREF_IDX, 0);
-				tabbedPane.setSelectedIndex(idx);
+				// the maximum possible index is the tab count minus two
+				// because we must count the '+' tab and the offset of one
+				// between the count and the index
+				int maxIdx = tabbedPane.getTabCount() - 2;
+				if (idx <= maxIdx) {
+					tabbedPane.setSelectedIndex(idx);
+				}
 				// re-enable the state saving
 				saveStateEnabled = true;
 			}
