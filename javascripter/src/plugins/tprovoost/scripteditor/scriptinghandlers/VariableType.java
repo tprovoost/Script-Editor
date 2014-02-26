@@ -14,7 +14,10 @@ import plugins.tprovoost.scripteditor.completion.IcyCompletionProvider;
 public class VariableType
 {
 	private Class<?> cType;
-	private String type;
+
+	// many places use getType().isEmpty(), which would give a NullPointerException
+	// if type is not initialized
+	private String type = "";
 
 	public VariableType(Class<?> cType)
 	{

@@ -773,7 +773,7 @@ public class JSScriptingHandlerRhino extends ScriptingHandler
 			ArrayList<Parameter> params = new ArrayList<Parameter>();
 			for (AstNode param : paramsFn)
 			{
-				params.add(new Parameter("", param.getString()));
+				params.add(new Parameter("", param.toSource()));
 			}
 			fc.setParams(params);
 			fc.setDefinedIn("script");
